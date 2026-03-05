@@ -2,6 +2,10 @@
 
 Next.js 기반 로컬 웹앱입니다. 이력서/채용공고 텍스트를 받아 `@openai/codex-sdk`와 `SKILL.md` 파이프라인으로 구조화 JSON을 만들고, 회사 맞춤 자기소개를 생성합니다.
 
+## 기획 문서
+
+- [서비스 기획서](/Users/jino/study/project/resumeMake/docs/SERVICE_PLAN.md)
+
 ## 1) 준비
 
 1. Node.js 20+
