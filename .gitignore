@@ -1,0 +1,22 @@
+node_modules/
+
+.next/
+out/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+coverage/
+.nyc_output/
+
+# 초기 기획 산출물(앱 런타임에서 미사용)
+files/
