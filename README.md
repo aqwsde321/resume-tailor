@@ -22,6 +22,12 @@ npm install
 npm run dev
 ```
 
+Codex CLI 경로가 기본 PATH에 없다면 환경변수를 지정하세요.
+
+```bash
+CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
+```
+
 ## 3) API 구성
 
 - `POST /api/resume` : resume-to-json
@@ -48,3 +54,12 @@ CODEX_SKILLS_DIR=/Users/your-name/.codex/skills
 - MVP는 `txt` 업로드만 지원합니다.
 - PDF는 추후 `pdf-parse` 연동으로 확장 가능합니다.
 - 로컬 1인 사용 시나리오를 우선 대상으로 설계했습니다.
+
+## 6) 검증 명령
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```

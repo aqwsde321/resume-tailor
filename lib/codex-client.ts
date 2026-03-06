@@ -6,10 +6,16 @@ import type { SkillName } from "@/lib/types";
 
 type JsonSchema = Record<string, unknown>;
 
-const codex = new Codex({
-  cwd: process.cwd(),
-  skipGitRepoCheck: true
-});
+let codex: Codex | null = null;
+
+function getCodexClient(): Codex {
+  if (!codex) {
+    codex = new Codex({
+      codexPathOverride: process.env.CODEX_CLI_PATH ?? "codex"
+    });
+  }
+  return codex;
+}
 
 let serialQueue: Promise<void> = Promise.resolve();
 
@@ -87,19 +93,16 @@ export async function runSkillJson<T>(params: {
   return enqueue(async () => {
     try {
       const skillMarkdown = await readSkillMarkdown(params.skillName);
-      const thread = codex.startThread({
-        approvalMode: "full-auto"
+      const thread = getCodexClient().startThread({
+        workingDirectory: process.cwd(),
+        skipGitRepoCheck: true,
+        approvalPolicy: "never"
       });
 
       const turn = await thread.run(buildPrompt(skillMarkdown, params.inputText), {
         outputSchema: params.outputSchema
       });
-
-      const response =
-        (turn as { finalResponse?: unknown }).finalResponse ??
-        (turn as { response?: unknown }).response;
-
-      return parseFinalResponse<T>(response);
+      return parseFinalResponse<T>(turn.finalResponse);
     } catch (error) {
       throw toUserFacingError(error);
     }
