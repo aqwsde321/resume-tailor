@@ -136,6 +136,26 @@ function buildMatchInsights(resume: Resume, company: Company) {
   };
 }
 
+function getIntroInsights(intro: Intro | null) {
+  if (!intro) {
+    return null;
+  }
+
+  const fitReasons = Array.isArray(intro.fitReasons) ? intro.fitReasons.filter(Boolean) : [];
+  const matchedSkills = Array.isArray(intro.matchedSkills) ? intro.matchedSkills.filter(Boolean) : [];
+  const gapNotes = Array.isArray(intro.gapNotes) ? intro.gapNotes.filter(Boolean) : [];
+
+  if (fitReasons.length === 0 && matchedSkills.length === 0 && gapNotes.length === 0) {
+    return null;
+  }
+
+  return {
+    fitReasons,
+    matchedSkills,
+    gapNotes
+  };
+}
+
 export default function ResultPage() {
   const {
     state,
@@ -183,6 +203,25 @@ export default function ResultPage() {
 
     return buildMatchInsights(confirmedResume, confirmedCompany);
   }, [confirmedResume, confirmedCompany]);
+  const introInsights = useMemo(() => getIntroInsights(state.intro), [state.intro]);
+  const insightView = useMemo(() => {
+    if (!introInsights && !matchInsights) {
+      return null;
+    }
+
+    return {
+      kicker: introInsights ? "AI 생성 근거" : "매칭 분석",
+      title: introInsights ? "자기소개가 참조한 지원 근거" : "지원 근거 미리보기",
+      description: introInsights
+        ? "자기소개 생성과 함께 모델이 구조화한 근거입니다. 공고를 다시 생성하면 이 내용도 함께 갱신됩니다."
+        : "자기소개 생성 전에, 확정된 이력서와 채용공고가 어디서 맞물리는지 자동으로 요약합니다.",
+      highlights: introInsights?.fitReasons.length ? introInsights.fitReasons : (matchInsights?.highlights ?? []),
+      gaps: introInsights?.gapNotes.length ? introInsights.gapNotes : (matchInsights?.gaps ?? []),
+      keywords: introInsights?.matchedSkills.length
+        ? introInsights.matchedSkills
+        : (matchInsights?.keywords ?? [])
+    };
+  }, [introInsights, matchInsights]);
 
   const handleGenerate = async () => {
     clearStatus();
@@ -322,24 +361,22 @@ export default function ResultPage() {
         </div>
       </section>
 
-      {matchInsights && (
+      {insightView && (
         <section className="card">
           <div className="card-head">
             <div>
-              <p className="card-kicker">매칭 분석</p>
-              <h2>지원 근거 미리보기</h2>
+              <p className="card-kicker">{insightView.kicker}</p>
+              <h2>{insightView.title}</h2>
             </div>
           </div>
 
-          <p className="card-copy">
-            자기소개 생성 전에, 확정된 이력서와 채용공고가 어디서 맞물리는지 자동으로 요약합니다.
-          </p>
+          <p className="card-copy">{insightView.description}</p>
 
           <div className="insight-grid">
             <article className="insight-card ok">
               <h3>매칭 근거</h3>
               <ul className="insight-list">
-                {matchInsights.highlights.map((item) => (
+                {insightView.highlights.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -348,16 +385,16 @@ export default function ResultPage() {
             <article className="insight-card warn">
               <h3>보완 포인트</h3>
               <ul className="insight-list">
-                {matchInsights.gaps.map((item) => (
+                {insightView.gaps.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </article>
           </div>
 
-          {matchInsights.keywords.length > 0 && (
+          {insightView.keywords.length > 0 && (
             <div className="keyword-cloud">
-              {matchInsights.keywords.map((item) => (
+              {insightView.keywords.map((item) => (
                 <span key={item} className="keyword-chip">
                   {item}
                 </span>

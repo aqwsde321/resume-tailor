@@ -7,7 +7,7 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 
 ## 목적
 `output/resume.json`과 `output/company.json`을 읽어
-회사 맞춤 한줄 소개(oneLineIntro)와 자기소개(shortIntro)를 생성하고
+회사 맞춤 한줄 소개(oneLineIntro), 자기소개(shortIntro), 지원 근거(fitReasons, matchedSkills, gapNotes)를 생성하고
 `output/intro.json`으로 저장한다.
 
 ---
@@ -40,7 +40,18 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
   - 2문장: 핵심 프로젝트·성과 연결
   - 3문장: `company.json`의 requirements와 `resume.json`의 techStack 교집합을 자연스럽게 포함
   - 4문장(선택): 기여 기대 또는 마무리
+- `fitReasons`: 2~4개 문자열 배열
+  - 왜 이 이력서가 공고와 맞는지 구체적 근거를 문장으로 작성
+  - 반드시 `resume.json`과 `company.json`에 모두 등장하는 사실만 사용
+  - 일반론 금지, 요구사항/프로젝트/기술스택 연결 중심
+- `matchedSkills`: 2~6개 문자열 배열
+  - 공고와 이력서에서 직접 겹치는 기술/역량만 추출
+  - 없으면 빈 배열
+- `gapNotes`: 0~3개 문자열 배열
+  - 공고 요구사항 중 이력서에서 직접 근거가 약한 항목만 작성
+  - 억지로 채우지 말고 없으면 빈 배열
 - 과장 금지, resume.json의 사실 기반으로만 작성
+- `fitReasons`, `matchedSkills`, `gapNotes`도 모두 사실 기반으로만 작성
 - 전문적·간결한 톤
 - 설명문·주석 없이 유효한 JSON만 출력
 
@@ -48,7 +59,10 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 ```json
 {
   "oneLineIntro": "",
-  "shortIntro": ""
+  "shortIntro": "",
+  "fitReasons": [],
+  "matchedSkills": [],
+  "gapNotes": []
 }
 ```
 

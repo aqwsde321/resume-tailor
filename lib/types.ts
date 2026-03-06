@@ -41,6 +41,9 @@ export interface Company {
 export interface Intro {
   oneLineIntro: string;
   shortIntro: string;
+  fitReasons: string[];
+  matchedSkills: string[];
+  gapNotes: string[];
 }
 
 export interface ApiSuccess<T> {

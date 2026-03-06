@@ -58,6 +58,26 @@ const initialState: PipelineState = {
   logs: []
 };
 
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function normalizeIntro(raw: unknown): Intro | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const value = raw as Partial<Intro>;
+
+  return {
+    oneLineIntro: typeof value.oneLineIntro === "string" ? value.oneLineIntro : "",
+    shortIntro: typeof value.shortIntro === "string" ? value.shortIntro : "",
+    fitReasons: normalizeStringArray(value.fitReasons),
+    matchedSkills: normalizeStringArray(value.matchedSkills),
+    gapNotes: normalizeStringArray(value.gapNotes)
+  };
+}
+
 function normalizeState(raw: unknown): PipelineState {
   if (!raw || typeof raw !== "object") {
     return initialState;
@@ -68,6 +88,8 @@ function normalizeState(raw: unknown): PipelineState {
   return {
     ...initialState,
     ...value,
+    intro: normalizeIntro(value.intro),
+    previousIntro: normalizeIntro(value.previousIntro),
     logs: Array.isArray(value.logs)
       ? value.logs.filter(
           (item): item is PipelineLog =>
