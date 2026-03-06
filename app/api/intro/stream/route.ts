@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
+import { buildIntroSkillInput } from "@/lib/intro-insights";
 import { CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
 
@@ -22,13 +23,7 @@ export async function POST(request: Request) {
       try {
         const generated = await runSkillJsonStream<unknown>({
           skillName: "generate-intro",
-          inputText: [
-            "output/resume.json 내용:",
-            JSON.stringify(body.resume, null, 2),
-            "",
-            "output/company.json 내용:",
-            JSON.stringify(body.company, null, 2)
-          ].join("\n"),
+          inputText: buildIntroSkillInput(body.resume, body.company),
           outputSchema: introOutputSchema,
           onLog: (payload) => send("log", payload)
         });

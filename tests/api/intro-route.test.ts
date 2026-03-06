@@ -62,6 +62,8 @@ describe("POST /api/intro", () => {
     expect(body.data.fitReasons).toHaveLength(1);
     expect(body.data.matchedSkills).toContain("TypeScript");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("generate-intro");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[분석 힌트]");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("\"matchedSkills\": [");
   });
 
   it("이전 형식 응답이면 새 배열 필드를 빈 배열로 보정한다", async () => {

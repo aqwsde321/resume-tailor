@@ -33,22 +33,28 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 `output/resume.json`과 `output/company.json`을 읽고
 아래 가이드라인에 따라 자기소개를 생성해 `output/intro.json`으로 저장한다.
 
+입력에 `[분석 힌트]` 섹션이 함께 주어지면, 그 안의 `requirementMatches`, `preferredMatches`, `matchedSkills`, `gapCandidates`를 우선 참고한다.
+다만 힌트와 원본 JSON이 충돌하면 원본 JSON만 신뢰한다.
+
 **가이드라인:**
 - `oneLineIntro`: 30~40자, 지원 직무와 핵심 강점 중심
 - `shortIntro`: 3~5문장 한국어
   - 1문장: 직무·경력 연차 요약
   - 2문장: 핵심 프로젝트·성과 연결
-  - 3문장: `company.json`의 requirements와 `resume.json`의 techStack 교집합을 자연스럽게 포함
+  - 3문장: `company.json`의 requirements와 `resume.json`의 techStack 교집합 또는 `[분석 힌트]`의 근거를 자연스럽게 포함
   - 4문장(선택): 기여 기대 또는 마무리
 - `fitReasons`: 2~4개 문자열 배열
   - 왜 이 이력서가 공고와 맞는지 구체적 근거를 문장으로 작성
   - 반드시 `resume.json`과 `company.json`에 모두 등장하는 사실만 사용
+  - 가능하면 `[분석 힌트]`의 `requirementMatches`, `preferredMatches`에 있는 근거 문장을 재조합해 사용
   - 일반론 금지, 요구사항/프로젝트/기술스택 연결 중심
 - `matchedSkills`: 2~6개 문자열 배열
   - 공고와 이력서에서 직접 겹치는 기술/역량만 추출
+  - `[분석 힌트]`의 `matchedSkills` 범위를 넘기지 않는다
   - 없으면 빈 배열
 - `gapNotes`: 0~3개 문자열 배열
   - 공고 요구사항 중 이력서에서 직접 근거가 약한 항목만 작성
+  - `[분석 힌트]`의 `gapCandidates`에 없는 항목은 추가하지 않는다
   - 억지로 채우지 말고 없으면 빈 배열
 - 과장 금지, resume.json의 사실 기반으로만 작성
 - `fitReasons`, `matchedSkills`, `gapNotes`도 모두 사실 기반으로만 작성
