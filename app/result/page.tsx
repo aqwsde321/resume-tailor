@@ -124,10 +124,33 @@ export default function ResultPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2>자기소개 생성</h2>
+          <div>
+            <p className="card-kicker">결과 출력</p>
+            <h2>자기소개 생성</h2>
+          </div>
           <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
             {state.currentTask === "intro" ? "생성 중..." : introFresh ? "다시 생성" : "자기소개 생성"}
           </button>
+        </div>
+
+        <p className="card-copy">
+          확정된 이력서와 채용공고를 조합해 회사 맞춤 자기소개를 만듭니다. 공고만 다시 바꾼 뒤 재생성하는
+          흐름을 기준으로 설계되어 있습니다.
+        </p>
+
+        <div className="mini-grid">
+          <div className={`mini-stat ${canGenerate ? "ok" : "warn"}`}>
+            <span>생성 준비</span>
+            <strong>{canGenerate ? "실행 가능" : "선행 단계 필요"}</strong>
+          </div>
+          <div className={`mini-stat ${introFresh ? "ok" : "warn"}`}>
+            <span>결과 상태</span>
+            <strong>{introFresh ? "최신 유지" : state.intro ? "재생성 필요" : "아직 생성 전"}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>비교 데이터</span>
+            <strong>{state.previousIntro ? "직전 결과 보유" : "첫 결과 생성 전"}</strong>
+          </div>
         </div>
 
         <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
@@ -144,11 +167,11 @@ export default function ResultPage() {
       <section className="card result-card">
         <article className="result-block">
           <div className="result-head">
-            <h3>oneLineIntro</h3>
+            <h3>한 줄 소개</h3>
             <button
               type="button"
               className="secondary"
-              onClick={() => void copyText(state.intro?.oneLineIntro ?? "", "oneLineIntro")}
+              onClick={() => void copyText(state.intro?.oneLineIntro ?? "", "한 줄 소개")}
               disabled={isBusy || !state.intro}
             >
               복사
@@ -159,11 +182,11 @@ export default function ResultPage() {
 
         <article className="result-block">
           <div className="result-head">
-            <h3>shortIntro</h3>
+            <h3>짧은 자기소개</h3>
             <button
               type="button"
               className="secondary"
-              onClick={() => void copyText(state.intro?.shortIntro ?? "", "shortIntro")}
+              onClick={() => void copyText(state.intro?.shortIntro ?? "", "짧은 자기소개")}
               disabled={isBusy || !state.intro}
             >
               복사
@@ -182,28 +205,28 @@ export default function ResultPage() {
           <div className="compare-grid">
             <article className="result-block compare-old">
               <div className="result-head">
-                <h3>직전 oneLineIntro</h3>
+                <h3>직전 한 줄 소개</h3>
               </div>
               <p>{state.previousIntro.oneLineIntro}</p>
             </article>
 
             <article className="result-block compare-new">
               <div className="result-head">
-                <h3>현재 oneLineIntro</h3>
+                <h3>현재 한 줄 소개</h3>
               </div>
               <p>{state.intro.oneLineIntro}</p>
             </article>
 
             <article className="result-block compare-old">
               <div className="result-head">
-                <h3>직전 shortIntro</h3>
+                <h3>직전 짧은 자기소개</h3>
               </div>
               <p>{state.previousIntro.shortIntro}</p>
             </article>
 
             <article className="result-block compare-new">
               <div className="result-head">
-                <h3>현재 shortIntro</h3>
+                <h3>현재 짧은 자기소개</h3>
               </div>
               <p>{state.intro.shortIntro}</p>
             </article>

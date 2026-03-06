@@ -90,6 +90,7 @@ export default function CompanyPage() {
   }
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
+  const companyTextCount = state.companyText.trim().length;
 
   useEffect(() => {
     const next = toCompanyDraft(state.companyJsonText);
@@ -228,7 +229,10 @@ export default function CompanyPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2>채용공고 입력</h2>
+          <div>
+            <p className="card-kicker">공고 원문 입력</p>
+            <h2>채용공고 입력</h2>
+          </div>
           <button
             type="button"
             className="primary"
@@ -237,6 +241,26 @@ export default function CompanyPage() {
           >
             {state.currentTask === "company" ? "분석 중..." : "채용공고 분석 시작"}
           </button>
+        </div>
+
+        <p className="card-copy">
+          회사 공고 전문을 넣으면 필수 요구사항과 직무 정보를 구조화합니다. 이 단계는 STEP 1 이력서 확정이
+          완료돼야 활성화됩니다.
+        </p>
+
+        <div className="mini-grid">
+          <div className="mini-stat">
+            <span>입력 방식</span>
+            <strong>{state.companyInputMode === "text" ? "텍스트 직접 입력" : "txt 업로드"}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>원문 길이</span>
+            <strong>{companyTextCount > 0 ? `${companyTextCount.toLocaleString()}자` : "비어 있음"}</strong>
+          </div>
+          <div className={`mini-stat ${canEdit ? "ok" : "warn"}`}>
+            <span>선행 조건</span>
+            <strong>{canEdit ? "이력서 확정 완료" : "이력서 확정 필요"}</strong>
+          </div>
         </div>
 
         <div className="tabs">
@@ -277,7 +301,10 @@ export default function CompanyPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2>채용공고 항목 수정 (한글 폼)</h2>
+          <div>
+            <p className="card-kicker">회사 기준 검토</p>
+            <h2>채용공고 항목 수정</h2>
+          </div>
           {companyNeedsConfirm ? (
             <span className="inline-badge warn">미확정 변경 있음</span>
           ) : state.companyConfirmedJson ? (
@@ -285,6 +312,32 @@ export default function CompanyPage() {
           ) : (
             <span className="inline-badge">분석 전</span>
           )}
+        </div>
+
+        <p className="card-copy">
+          공고에서 추출된 회사명, 채용 직무, 요구사항을 정리하는 단계입니다. 확정 후에만 STEP 3에서
+          자기소개 생성이 열립니다.
+        </p>
+
+        <div className="mini-grid compact">
+          <div className={`mini-stat ${hasMissingCompanyRequired ? "warn" : "ok"}`}>
+            <span>필수 항목</span>
+            <strong>
+              {hasMissingCompanyRequired
+                ? `${missingCompanyRequired.length}개 보완 필요`
+                : "입력 완료"}
+            </strong>
+          </div>
+          <div className={`mini-stat ${companyNeedsConfirm ? "warn" : "ok"}`}>
+            <span>확정 상태</span>
+            <strong>
+              {companyNeedsConfirm ? "확정 전 수정됨" : state.companyConfirmedJson ? "확정 완료" : "분석 전"}
+            </strong>
+          </div>
+          <div className="mini-stat">
+            <span>결과 영향</span>
+            <strong>{state.companyConfirmedJson ? "결과 생성 가능" : "확정 후 생성 가능"}</strong>
+          </div>
         </div>
 
         <div className="form-grid two">

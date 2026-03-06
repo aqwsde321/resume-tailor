@@ -108,6 +108,7 @@ export default function ResumePage() {
   }
 
   const hasMissingResumeRequired = missingResumeRequired.length > 0;
+  const resumeTextCount = state.resumeText.trim().length;
 
   useEffect(() => {
     const next = toResumeDraft(state.resumeJsonText);
@@ -271,10 +272,33 @@ export default function ResumePage() {
     >
       <section className="card">
         <div className="card-head">
-          <h2>이력서 입력</h2>
+          <div>
+            <p className="card-kicker">원문 입력</p>
+            <h2>이력서 입력</h2>
+          </div>
           <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
             {state.currentTask === "resume" ? "분석 중..." : "이력서 분석 시작"}
           </button>
+        </div>
+
+        <p className="card-copy">
+          txt 업로드 또는 직접 붙여넣기 후 분석을 시작합니다. 원문은 길어도 괜찮고, 아래 폼에서 다시
+          정리할 수 있습니다.
+        </p>
+
+        <div className="mini-grid">
+          <div className="mini-stat">
+            <span>입력 방식</span>
+            <strong>{state.resumeInputMode === "text" ? "텍스트 직접 입력" : "txt 업로드"}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>원문 길이</span>
+            <strong>{resumeTextCount > 0 ? `${resumeTextCount.toLocaleString()}자` : "비어 있음"}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>다음 액션</span>
+            <strong>{state.resumeJsonText.trim() ? "폼 검토 및 확정" : "먼저 분석 실행"}</strong>
+          </div>
         </div>
 
         <div className="tabs">
@@ -315,7 +339,10 @@ export default function ResumePage() {
 
       <section className="card">
         <div className="card-head">
-          <h2>이력서 항목 수정 (한글 폼)</h2>
+          <div>
+            <p className="card-kicker">구조화 검토</p>
+            <h2>이력서 항목 수정</h2>
+          </div>
           {resumeNeedsConfirm ? (
             <span className="inline-badge warn">미확정 변경 있음</span>
           ) : state.resumeConfirmedJson ? (
@@ -323,6 +350,30 @@ export default function ResumePage() {
           ) : (
             <span className="inline-badge">분석 전</span>
           )}
+        </div>
+
+        <p className="card-copy">
+          분석 결과는 JSON이 아닌 한글 폼으로 다듬습니다. 필수 항목을 채우고 하단에서 이력서를 확정하면
+          STEP 2가 열립니다.
+        </p>
+
+        <div className="mini-grid compact">
+          <div className={`mini-stat ${hasMissingResumeRequired ? "warn" : "ok"}`}>
+            <span>필수 항목</span>
+            <strong>
+              {hasMissingResumeRequired
+                ? `${missingResumeRequired.length}개 보완 필요`
+                : "입력 완료"}
+            </strong>
+          </div>
+          <div className={`mini-stat ${resumeNeedsConfirm ? "warn" : "ok"}`}>
+            <span>확정 상태</span>
+            <strong>{resumeNeedsConfirm ? "확정 전 수정됨" : state.resumeConfirmedJson ? "확정 완료" : "분석 전"}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>구조화 데이터</span>
+            <strong>{state.resumeJsonText.trim() ? "생성됨" : "아직 없음"}</strong>
+          </div>
         </div>
 
         <div className="form-grid two">

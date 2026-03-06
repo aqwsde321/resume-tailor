@@ -8,7 +8,38 @@ import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 
 type StepKey = "resume" | "company" | "result";
 type StepRoute = "/resume" | "/company" | "/result";
-type StepStatus = "locked" | "ready" | "working" | "done";
+type StepStatus = "blocked" | "locked" | "ready" | "working" | "done";
+
+const STEP_META: Record<
+  StepKey,
+  {
+    eyebrow: string;
+    objective: string;
+    detail: string;
+  }
+> = {
+  resume: {
+    eyebrow: "Resume Intake",
+    objective: "이력서 원문을 구조화하고 지원 기준이 되는 기본 프로필을 확정합니다.",
+    detail: "입력 원문은 자유롭게 수정할 수 있지만, 다음 단계는 이력서 확정 후에만 열립니다."
+  },
+  company: {
+    eyebrow: "Company Targeting",
+    objective: "채용공고에서 핵심 요구사항만 분리해 회사 기준 JSON을 확정합니다.",
+    detail: "이 단계에서 공고를 다시 분석하면 결과는 자동으로 재생성 필요 상태가 됩니다."
+  },
+  result: {
+    eyebrow: "Intro Output",
+    objective: "확정된 이력서와 채용공고를 조합해 회사 맞춤 자기소개를 생성합니다.",
+    detail: "회사 공고만 바꿔 다시 생성하는 흐름이 자연스럽게 유지되도록 설계되어 있습니다."
+  }
+};
+
+const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
+  resume: "이력서 분석",
+  company: "채용공고 분석",
+  intro: "자기소개 생성"
+};
 
 interface AppFrameProps {
   step: StepKey;
@@ -40,6 +71,8 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const introFresh = isIntroFresh(state);
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
+  const completedStepCount = [hasResume, hasCompany, introFresh].filter(Boolean).length;
+  const stepMeta = STEP_META[step];
 
   const steps = useMemo(() => {
     const stepStatusLabel = (status: StepStatus): string => {
@@ -50,6 +83,8 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           return "진행";
         case "locked":
           return "잠김";
+        case "blocked":
+          return "선행 필요";
         default:
           return "대기";
       }
@@ -57,14 +92,18 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
 
     const resumeStatus: StepStatus = hasResume ? "done" : step === "resume" ? "working" : "ready";
     const companyStatus: StepStatus = !hasResume
-      ? "locked"
+      ? step === "company"
+        ? "blocked"
+        : "locked"
       : hasCompany
         ? "done"
         : step === "company"
           ? "working"
           : "ready";
     const resultStatus: StepStatus = !hasResume || !hasCompany
-      ? "locked"
+      ? step === "result"
+        ? "blocked"
+        : "locked"
       : introFresh
         ? "done"
         : step === "result"
@@ -121,33 +160,69 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
     <main className="page">
       <div className="backdrop" />
       <div className="container">
-        <header className="hero">
-          <p className="eyebrow">ResumeMake Local MVP</p>
-          <h1>{title}</h1>
-          <p>{description}</p>
+        <header className="hero-grid">
+          <div className="hero">
+            <p className="eyebrow">ResumeMake Local MVP</p>
+            <h1>{title}</h1>
+            <p>{description}</p>
+          </div>
+
+          <aside className="hero-panel">
+            <p className="eyebrow">{stepMeta.eyebrow}</p>
+            <h2>{stepMeta.objective}</h2>
+            <p>{stepMeta.detail}</p>
+
+            <div className="hero-metrics">
+              <div className="hero-metric">
+                <span>진행도</span>
+                <strong>{completedStepCount}/3 단계</strong>
+              </div>
+              <div className="hero-metric">
+                <span>로그</span>
+                <strong>{state.logs.length}개</strong>
+              </div>
+              <div className="hero-metric">
+                <span>상태</span>
+                <strong>{state.currentTask ? "작업 중" : "대기 중"}</strong>
+              </div>
+            </div>
+          </aside>
         </header>
 
         <section className="sticky-shell">
-          <ol className="steps">
-            {steps.map((item) => (
-              <li
-                key={item.key}
-                className={`step-item ${step === item.key ? "active" : ""} ${item.status}`}
-              >
-                {item.enabled ? (
-                  <Link href={item.href as Route} className="step-link step-content">
-                    <span>{item.label}</span>
-                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                  </Link>
-                ) : (
-                  <span className="step-link step-content disabled">
-                    <span>{item.label}</span>
-                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
+          <div className="sticky-topline">
+            <ol className="steps">
+              {steps.map((item) => (
+                <li
+                  key={item.key}
+                  className={`step-item ${step === item.key ? "active" : ""} ${item.status}`}
+                >
+                  {item.enabled ? (
+                    <Link href={item.href as Route} className="step-link step-content">
+                      <span>{item.label}</span>
+                      <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
+                    </Link>
+                  ) : (
+                    <span className="step-link step-content disabled">
+                      <span>{item.label}</span>
+                      <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+
+            <div className="sticky-summary">
+              <div className="summary-chip">
+                <span>현재 단계</span>
+                <strong>{title.replace(" 분석/확정", "").replace(" 생성", "")}</strong>
+              </div>
+              <div className="summary-chip">
+                <span>현재 작업</span>
+                <strong>{state.currentTask ? TASK_LABEL[state.currentTask] : "없음"}</strong>
+              </div>
+            </div>
+          </div>
 
           <div className="badge-row">
             <span className={`badge ${state.resumeConfirmedJson ? "ok" : "warn"}`}>
@@ -164,7 +239,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           {state.currentTask && (
             <section className="busy-banner" aria-live="polite">
               <span className="spinner" />
-              <strong>{state.currentTask.toUpperCase()} 작업 진행 중</strong>
+              <strong>{TASK_LABEL[state.currentTask]} 진행 중</strong>
               <span>{elapsedSeconds}s 경과</span>
             </section>
           )}
