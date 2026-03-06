@@ -2,15 +2,56 @@
 
 import type { Route } from "next";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
+import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
 import type { Company } from "@/lib/types";
 
+const EMPTY_COMPANY: Company = {
+  companyName: "",
+  companyDescription: "",
+  jobTitle: "",
+  jobDescription: "",
+  requirements: [],
+  preferredSkills: [],
+  techStack: []
+};
+
 function formatIssueDetails(errorMessage: string): string {
   return errorMessage.length > 180 ? `${errorMessage.slice(0, 180)}...` : errorMessage;
+}
+
+function parseCsv(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function stringifyCsv(value: string[]): string {
+  return value.join(", ");
+}
+
+function toCompanyDraft(jsonText: string): Company {
+  if (!jsonText.trim()) {
+    return EMPTY_COMPANY;
+  }
+
+  try {
+    const raw = JSON.parse(jsonText);
+    const parsed = CompanySchema.safeParse(raw);
+    if (parsed.success) {
+      return parsed.data;
+    }
+  } catch {
+    return EMPTY_COMPANY;
+  }
+
+  return EMPTY_COMPANY;
 }
 
 export default function CompanyPage() {
@@ -29,6 +70,35 @@ export default function CompanyPage() {
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
 
+  const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
+  const [requirementsText, setRequirementsText] = useState("");
+  const [preferredSkillsText, setPreferredSkillsText] = useState("");
+  const [techStackText, setTechStackText] = useState("");
+  const normalizedDraftJson = JSON.stringify(draft, null, 2);
+  const companyNeedsConfirm =
+    state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
+
+  const missingCompanyRequired: string[] = [];
+  if (!draft.companyName.trim()) {
+    missingCompanyRequired.push("회사명");
+  }
+  if (!draft.jobTitle.trim()) {
+    missingCompanyRequired.push("채용 직무");
+  }
+  if (draft.requirements.length === 0) {
+    missingCompanyRequired.push("필수 요구사항");
+  }
+
+  const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
+
+  useEffect(() => {
+    const next = toCompanyDraft(state.companyJsonText);
+    setDraft(next);
+    setRequirementsText(stringifyCsv(next.requirements));
+    setPreferredSkillsText(stringifyCsv(next.preferredSkills));
+    setTechStackText(stringifyCsv(next.techStack));
+  }, [state.companyJsonText]);
+
   const setCompanyText = (value: string) => {
     patch((prev) => ({
       ...prev,
@@ -45,6 +115,11 @@ export default function CompanyPage() {
       companyConfirmedJson: null,
       introSource: null
     }));
+  };
+
+  const syncDraft = (next: Company) => {
+    setDraft(next);
+    setCompanyJsonText(JSON.stringify(next, null, 2));
   };
 
   const handleTxtUpload = async (file: File | undefined) => {
@@ -68,7 +143,7 @@ export default function CompanyPage() {
     clearStatus();
 
     if (!canEdit) {
-      setError("먼저 STEP 1에서 이력서 JSON을 확정하세요.");
+      setError("먼저 STEP 1에서 이력서 정보를 확정하세요.");
       return;
     }
 
@@ -96,7 +171,7 @@ export default function CompanyPage() {
         introSource: null
       }));
 
-      setMessage("company.json 생성 완료. 확인 후 '채용공고 JSON 확정'을 눌러주세요.");
+      setMessage("채용공고 항목 분석 완료. 폼을 검토 후 '채용공고 정보 확정'을 눌러주세요.");
     } catch (error) {
       setError(error instanceof Error ? error.message : "채용공고 분석 중 오류가 발생했습니다.");
     } finally {
@@ -107,20 +182,17 @@ export default function CompanyPage() {
   const handleConfirmCompany = () => {
     clearStatus();
 
-    let parsedJson: unknown;
-    try {
-      parsedJson = JSON.parse(state.companyJsonText);
-    } catch {
-      setError("company.json 형식이 올바르지 않습니다.");
+    if (hasMissingCompanyRequired) {
+      setError(`필수 항목을 입력하세요: ${missingCompanyRequired.join(", ")}`);
       return;
     }
 
-    const validated = CompanySchema.safeParse(parsedJson);
+    const validated = CompanySchema.safeParse(draft);
     if (!validated.success) {
       const details = validated.error.issues
         .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
         .join(" | ");
-      setError(`company.json 검증 실패: ${formatIssueDetails(details)}`);
+      setError(`채용공고 항목 검증 실패: ${formatIssueDetails(details)}`);
       return;
     }
 
@@ -133,19 +205,19 @@ export default function CompanyPage() {
       introSource: null
     }));
 
-    setMessage("채용공고 JSON 확정 완료. STEP 3에서 자기소개를 생성하세요.");
+    setMessage("채용공고 정보 확정 완료. STEP 3에서 자기소개를 생성하세요.");
   };
 
   return (
     <AppFrame
       step="company"
       title="STEP 2 채용공고 분석/확정"
-      description="확정된 이력서를 기준으로 채용공고를 JSON으로 변환하고 확정합니다."
+      description="확정된 이력서를 기준으로 채용공고를 구조화하고 확정합니다."
     >
       {!canEdit && (
         <section className="card">
           <h2>먼저 이력서 확정이 필요합니다.</h2>
-          <p>STEP 1에서 resume.json을 확정해야 STEP 2를 진행할 수 있습니다.</p>
+          <p>STEP 1에서 이력서 정보를 확정해야 STEP 2를 진행할 수 있습니다.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
               STEP 1으로 이동
@@ -163,7 +235,7 @@ export default function CompanyPage() {
             onClick={handleAnalyze}
             disabled={isBusy || !canEdit}
           >
-            {state.currentTask === "company" ? "분석 중..." : "company.json 생성"}
+            {state.currentTask === "company" ? "분석 중..." : "채용공고 분석 시작"}
           </button>
         </div>
 
@@ -205,31 +277,124 @@ export default function CompanyPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2>company.json 확인/수정</h2>
-          <button
-            type="button"
-            className="secondary"
-            onClick={handleConfirmCompany}
-            disabled={isBusy || !canEdit || !state.companyJsonText.trim()}
-          >
-            채용공고 JSON 확정
-          </button>
+          <h2>채용공고 항목 수정 (한글 폼)</h2>
+          {companyNeedsConfirm ? (
+            <span className="inline-badge warn">미확정 변경 있음</span>
+          ) : state.companyConfirmedJson ? (
+            <span className="inline-badge ok">확정됨</span>
+          ) : (
+            <span className="inline-badge">분석 전</span>
+          )}
         </div>
 
-        <textarea
-          value={state.companyJsonText}
-          onChange={(event) => setCompanyJsonText(event.target.value)}
-          placeholder="company.json"
-          disabled={isBusy || !canEdit}
-        />
+        <div className="form-grid two">
+          <label className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}>
+            <span>회사명</span>
+            <input
+              className="form-input"
+              value={draft.companyName}
+              onChange={(event) => syncDraft({ ...draft, companyName: event.target.value })}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label className={`field ${!draft.jobTitle.trim() ? "field-error" : ""}`}>
+            <span>채용 직무</span>
+            <input
+              className="form-input"
+              value={draft.jobTitle}
+              onChange={(event) => syncDraft({ ...draft, jobTitle: event.target.value })}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label className="field field-full">
+            <span>회사 소개</span>
+            <AutoGrowTextarea
+              value={draft.companyDescription}
+              onChange={(event) =>
+                syncDraft({ ...draft, companyDescription: event.target.value })
+              }
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label className="field field-full">
+            <span>업무 설명</span>
+            <AutoGrowTextarea
+              value={draft.jobDescription}
+              onChange={(event) => syncDraft({ ...draft, jobDescription: event.target.value })}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label
+            className={`field field-full ${draft.requirements.length === 0 ? "field-error" : ""}`}
+          >
+            <span>필수 요구사항 (쉼표 구분)</span>
+            <input
+              className="form-input"
+              value={requirementsText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setRequirementsText(value);
+                syncDraft({ ...draft, requirements: parseCsv(value) });
+              }}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label className="field field-full">
+            <span>우대사항 (쉼표 구분)</span>
+            <input
+              className="form-input"
+              value={preferredSkillsText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setPreferredSkillsText(value);
+                syncDraft({ ...draft, preferredSkills: parseCsv(value) });
+              }}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+
+          <label className="field field-full">
+            <span>기술 스택 (쉼표 구분)</span>
+            <input
+              className="form-input"
+              value={techStackText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTechStackText(value);
+                syncDraft({ ...draft, techStack: parseCsv(value) });
+              }}
+              disabled={isBusy || !canEdit}
+            />
+          </label>
+        </div>
+
+        {hasMissingCompanyRequired && (
+          <p className="required-help">필수 항목: {missingCompanyRequired.join(", ")}</p>
+        )}
 
         <div className="action-row">
-          {state.companyConfirmedJson ? (
+          <button
+            type="button"
+            className="primary"
+            onClick={handleConfirmCompany}
+            disabled={
+              isBusy ||
+              !canEdit ||
+              !state.companyJsonText.trim() ||
+              hasMissingCompanyRequired
+            }
+          >
+            채용공고 정보 확정
+          </button>
+          {state.companyConfirmedJson && (
             <Link className="nav-btn" href={"/result" as Route}>
               STEP 3 결과로 이동
             </Link>
-          ) : (
-            <span className="nav-btn disabled">STEP 3 결과로 이동</span>
           )}
         </div>
       </section>

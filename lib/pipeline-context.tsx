@@ -30,6 +30,7 @@ export interface PipelineState {
   resumeConfirmedJson: string | null;
   companyConfirmedJson: string | null;
   intro: Intro | null;
+  previousIntro: Intro | null;
   introSource: IntroSource | null;
   currentTask: TaskKind | null;
   taskStartedAt: number | null;
@@ -48,6 +49,7 @@ const initialState: PipelineState = {
   resumeConfirmedJson: null,
   companyConfirmedJson: null,
   intro: null,
+  previousIntro: null,
   introSource: null,
   currentTask: null,
   taskStartedAt: null,

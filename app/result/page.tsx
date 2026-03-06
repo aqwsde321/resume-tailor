@@ -30,7 +30,7 @@ export default function ResultPage() {
     clearStatus();
 
     if (!canGenerate) {
-      setError("STEP 1/2에서 JSON 확정을 완료하세요.");
+      setError("STEP 1/2에서 정보 확정을 완료하세요.");
       return;
     }
 
@@ -41,19 +41,19 @@ export default function ResultPage() {
       resumeRaw = JSON.parse(state.resumeConfirmedJson ?? "{}");
       companyRaw = JSON.parse(state.companyConfirmedJson ?? "{}");
     } catch {
-      setError("확정 JSON을 파싱하지 못했습니다. STEP 1/2를 다시 확인해주세요.");
+      setError("확정 정보를 읽지 못했습니다. STEP 1/2를 다시 확인해주세요.");
       return;
     }
 
     const resume = ResumeSchema.safeParse(resumeRaw);
     if (!resume.success) {
-      setError("확정된 resume.json 검증에 실패했습니다. STEP 1에서 다시 확정하세요.");
+      setError("확정된 이력서 정보 검증에 실패했습니다. STEP 1에서 다시 확정하세요.");
       return;
     }
 
     const company = CompanySchema.safeParse(companyRaw);
     if (!company.success) {
-      setError("확정된 company.json 검증에 실패했습니다. STEP 2에서 다시 확정하세요.");
+      setError("확정된 채용공고 정보 검증에 실패했습니다. STEP 2에서 다시 확정하세요.");
       return;
     }
 
@@ -74,6 +74,7 @@ export default function ResultPage() {
 
       patch((prev) => ({
         ...prev,
+        previousIntro: prev.intro,
         intro,
         introSource: {
           resumeConfirmedJson: prev.resumeConfirmedJson ?? "",
@@ -104,12 +105,12 @@ export default function ResultPage() {
     <AppFrame
       step="result"
       title="STEP 3 결과 생성"
-      description="확정된 resume/company JSON으로 자기소개를 생성합니다."
+      description="확정된 이력서/채용공고 정보를 바탕으로 자기소개를 생성합니다."
     >
       {!canGenerate && (
         <section className="card">
-          <h2>JSON 확정이 필요합니다.</h2>
-          <p>STEP 1에서 이력서, STEP 2에서 채용공고 JSON을 먼저 확정하세요.</p>
+          <h2>정보 확정이 필요합니다.</h2>
+          <p>STEP 1에서 이력서, STEP 2에서 채용공고 정보를 먼저 확정하세요.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
               STEP 1로 이동
@@ -130,7 +131,7 @@ export default function ResultPage() {
         </div>
 
         <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
-          {introFresh ? "현재 결과는 최신입니다." : "확정 JSON이 변경되어 재생성이 필요합니다."}
+          {introFresh ? "현재 결과는 최신입니다." : "확정 정보가 변경되어 재생성이 필요합니다."}
         </p>
 
         <div className="action-row">
@@ -171,6 +172,44 @@ export default function ResultPage() {
           <p>{state.intro?.shortIntro ?? "아직 생성되지 않았습니다."}</p>
         </article>
       </section>
+
+      {state.previousIntro && state.intro && (
+        <section className="card">
+          <div className="card-head">
+            <h2>이전 결과 비교</h2>
+          </div>
+
+          <div className="compare-grid">
+            <article className="result-block compare-old">
+              <div className="result-head">
+                <h3>직전 oneLineIntro</h3>
+              </div>
+              <p>{state.previousIntro.oneLineIntro}</p>
+            </article>
+
+            <article className="result-block compare-new">
+              <div className="result-head">
+                <h3>현재 oneLineIntro</h3>
+              </div>
+              <p>{state.intro.oneLineIntro}</p>
+            </article>
+
+            <article className="result-block compare-old">
+              <div className="result-head">
+                <h3>직전 shortIntro</h3>
+              </div>
+              <p>{state.previousIntro.shortIntro}</p>
+            </article>
+
+            <article className="result-block compare-new">
+              <div className="result-head">
+                <h3>현재 shortIntro</h3>
+              </div>
+              <p>{state.intro.shortIntro}</p>
+            </article>
+          </div>
+        </section>
+      )}
     </AppFrame>
   );
 }
