@@ -2,12 +2,139 @@
 
 import type { Route } from "next";
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
-import type { Intro } from "@/lib/types";
+import type { Company, Intro, Resume } from "@/lib/types";
+
+const STOPWORDS = new Set([
+  "및",
+  "또는",
+  "관련",
+  "기반",
+  "사용",
+  "능력",
+  "경험",
+  "개발",
+  "프로젝트",
+  "업무",
+  "이상",
+  "이해",
+  "보유",
+  "우대",
+  "필수",
+  "가능",
+  "preferred",
+  "required"
+]);
+
+function normalizePhrase(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function unique(items: string[]): string[] {
+  return Array.from(new Set(items));
+}
+
+function tokenize(value: string): string[] {
+  return normalizePhrase(value)
+    .split(/[^a-z0-9가-힣+#.]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2 && !STOPWORDS.has(token));
+}
+
+function collectResumeKeywords(resume: Resume): Set<string> {
+  const raw = [
+    resume.desiredPosition,
+    resume.summary,
+    ...resume.techStack,
+    ...resume.achievements,
+    ...resume.strengths,
+    ...resume.experience.flatMap((item) => [item.company, item.role, item.period, item.description]),
+    ...resume.projects.flatMap((item) => [item.name, item.description, ...item.techStack])
+  ];
+
+  return new Set(unique(raw.flatMap(tokenize)));
+}
+
+function collectResumeTech(resume: Resume): Set<string> {
+  return new Set(
+    unique([...resume.techStack, ...resume.projects.flatMap((item) => item.techStack)].map(normalizePhrase))
+  );
+}
+
+function buildMatchInsights(resume: Resume, company: Company) {
+  const resumeKeywords = collectResumeKeywords(resume);
+  const resumeTech = collectResumeTech(resume);
+  const jobTokens = tokenize(company.jobTitle);
+  const desiredTokens = tokenize(`${resume.desiredPosition} ${resume.summary}`);
+
+  const roleOverlap = unique(desiredTokens.filter((token) => jobTokens.includes(token))).slice(0, 3);
+  const matchedTech = unique(
+    company.techStack.filter((skill) => {
+      const normalized = normalizePhrase(skill);
+      return resumeTech.has(normalized) || tokenize(skill).some((token) => resumeKeywords.has(token));
+    })
+  ).slice(0, 4);
+  const requirementEvidence = unique(
+    company.requirements.flatMap((item) => tokenize(item).filter((token) => resumeKeywords.has(token)))
+  ).slice(0, 5);
+  const preferredEvidence = unique(
+    company.preferredSkills.flatMap((item) => tokenize(item).filter((token) => resumeKeywords.has(token)))
+  ).slice(0, 4);
+
+  const highlights: string[] = [];
+
+  if (roleOverlap.length > 0) {
+    highlights.push(`희망 직무와 공고 직무에서 ${roleOverlap.join(", ")} 키워드가 겹칩니다.`);
+  }
+
+  if (matchedTech.length > 0) {
+    highlights.push(`공고 기술 스택 중 ${matchedTech.join(", ")}가 이력서에서 확인됩니다.`);
+  }
+
+  if (requirementEvidence.length > 0) {
+    highlights.push(`필수 요구사항과 연결되는 이력서 키워드는 ${requirementEvidence.join(", ")}입니다.`);
+  }
+
+  if (preferredEvidence.length > 0) {
+    highlights.push(`우대사항과 맞닿는 추가 키워드는 ${preferredEvidence.join(", ")}입니다.`);
+  }
+
+  const missingTech = unique(
+    company.techStack.filter((skill) => !matchedTech.includes(skill))
+  ).slice(0, 4);
+  const missingRequirements = company.requirements
+    .filter((item) => tokenize(item).every((token) => !resumeKeywords.has(token)))
+    .slice(0, 3);
+  const missingPreferred = company.preferredSkills
+    .filter((item) => tokenize(item).every((token) => !resumeKeywords.has(token)))
+    .slice(0, 2);
+
+  const gaps: string[] = [];
+
+  if (missingTech.length > 0) {
+    gaps.push(`공고 기술 스택 중 ${missingTech.join(", ")}는 현재 이력서 근거가 약합니다.`);
+  }
+
+  missingRequirements.forEach((item) => {
+    gaps.push(`필수 요구사항 보완 필요: ${item}`);
+  });
+
+  missingPreferred.forEach((item) => {
+    gaps.push(`우대사항 보완 후보: ${item}`);
+  });
+
+  return {
+    highlights:
+      highlights.length > 0 ? highlights : ["현재 데이터 기준으로는 강한 매칭 근거가 적어, 수동 검토가 필요합니다."],
+    gaps: gaps.length > 0 ? gaps : ["확인된 큰 공백은 없지만, 공고 문구와 표현 톤을 더 맞추면 결과가 좋아집니다."],
+    keywords: unique([...roleOverlap, ...matchedTech, ...requirementEvidence, ...preferredEvidence]).slice(0, 10)
+  };
+}
 
 export default function ResultPage() {
   const {
@@ -25,6 +152,37 @@ export default function ResultPage() {
   const isBusy = state.currentTask !== null;
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
   const introFresh = isIntroFresh(state);
+  const confirmedResume = useMemo(() => {
+    if (!state.resumeConfirmedJson) {
+      return null;
+    }
+
+    try {
+      const parsed = ResumeSchema.safeParse(JSON.parse(state.resumeConfirmedJson));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }, [state.resumeConfirmedJson]);
+  const confirmedCompany = useMemo(() => {
+    if (!state.companyConfirmedJson) {
+      return null;
+    }
+
+    try {
+      const parsed = CompanySchema.safeParse(JSON.parse(state.companyConfirmedJson));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }, [state.companyConfirmedJson]);
+  const matchInsights = useMemo(() => {
+    if (!confirmedResume || !confirmedCompany) {
+      return null;
+    }
+
+    return buildMatchInsights(confirmedResume, confirmedCompany);
+  }, [confirmedResume, confirmedCompany]);
 
   const handleGenerate = async () => {
     clearStatus();
@@ -163,6 +321,51 @@ export default function ResultPage() {
           </Link>
         </div>
       </section>
+
+      {matchInsights && (
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <p className="card-kicker">매칭 분석</p>
+              <h2>지원 근거 미리보기</h2>
+            </div>
+          </div>
+
+          <p className="card-copy">
+            자기소개 생성 전에, 확정된 이력서와 채용공고가 어디서 맞물리는지 자동으로 요약합니다.
+          </p>
+
+          <div className="insight-grid">
+            <article className="insight-card ok">
+              <h3>매칭 근거</h3>
+              <ul className="insight-list">
+                {matchInsights.highlights.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="insight-card warn">
+              <h3>보완 포인트</h3>
+              <ul className="insight-list">
+                {matchInsights.gaps.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          {matchInsights.keywords.length > 0 && (
+            <div className="keyword-cloud">
+              {matchInsights.keywords.map((item) => (
+                <span key={item} className="keyword-chip">
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="card result-card">
         <article className="result-block">
