@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
-import { buildIntroSkillInput } from "@/lib/intro-insights";
+import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/lib/intro-insights";
 import { CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
 import type { ApiSuccess, Intro } from "@/lib/types";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       outputSchema: introOutputSchema
     });
 
-    const validated = IntroSchema.parse(generated);
+    const validated = normalizeIntroWithGuidance(IntroSchema.parse(generated), body.resume, body.company);
 
     const payload: ApiSuccess<Intro> = {
       ok: true,

@@ -40,8 +40,11 @@ describe("POST /api/intro", () => {
       oneLineIntro: "백엔드 실무 3년, 문제 해결형 개발자",
       shortIntro: "실무 3년 경력의 백엔드 개발자입니다.",
       fitReasons: ["Node.js 기반 서버 개발 경험이 공고 요구사항과 맞닿아 있습니다."],
-      matchedSkills: ["Node.js", "TypeScript"],
-      gapNotes: ["AWS 경험은 이력서에서 직접 확인되지 않습니다."]
+      matchedSkills: ["Node.js", "TypeScript", "Spring Boot"],
+      gapNotes: [
+        "AWS 경험은 이력서에서 직접 확인되지 않습니다.",
+        "Kubernetes 경험이 필요합니다."
+      ]
     });
 
     const request = new Request("http://localhost/api/intro", {
@@ -60,13 +63,14 @@ describe("POST /api/intro", () => {
     expect(body.ok).toBe(true);
     expect(body.data.oneLineIntro).toContain("개발자");
     expect(body.data.fitReasons).toHaveLength(1);
-    expect(body.data.matchedSkills).toContain("TypeScript");
+    expect(body.data.matchedSkills).toEqual(["TypeScript"]);
+    expect(body.data.gapNotes).toEqual(["AWS 경험은 이력서에서 직접 확인되지 않습니다."]);
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("generate-intro");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[분석 힌트]");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("\"matchedSkills\": [");
   });
 
-  it("이전 형식 응답이면 새 배열 필드를 빈 배열로 보정한다", async () => {
+  it("이전 형식 응답이면 분석 힌트를 기준으로 기본 기술을 보정한다", async () => {
     const mockedRunSkillJson = vi.mocked(runSkillJson);
     mockedRunSkillJson.mockResolvedValue({
       oneLineIntro: "백엔드 실무 3년, 문제 해결형 개발자",
@@ -88,7 +92,7 @@ describe("POST /api/intro", () => {
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.data.fitReasons).toEqual([]);
-    expect(body.data.matchedSkills).toEqual([]);
+    expect(body.data.matchedSkills).toEqual(["TypeScript"]);
     expect(body.data.gapNotes).toEqual([]);
   });
 

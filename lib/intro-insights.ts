@@ -1,4 +1,4 @@
-import type { Company, Resume } from "@/lib/types";
+import type { Company, Intro, Resume } from "@/lib/types";
 
 const STOPWORDS = new Set([
   "및",
@@ -84,6 +84,14 @@ function getMeaningfulTokens(value: string): string[] {
 function truncate(value: string, maxLength = 140): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized;
+}
+
+function normalizeList(items: string[], maxLength: number): string[] {
+  return unique(
+    items
+      .map((item) => item.replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+  ).slice(0, maxLength);
 }
 
 function buildEvidenceEntries(resume: Resume): EvidenceEntry[] {
@@ -188,6 +196,57 @@ function findTechAnchors(target: string, company: Company): string[] {
 function hasSkillEvidence(skill: string, resumeKeywords: Set<string>, resumeTech: Set<string>): boolean {
   const normalizedSkill = normalizePhrase(skill);
   return resumeTech.has(normalizedSkill) || tokenize(skill).some((token) => resumeKeywords.has(token));
+}
+
+function canonicalizeSkill(skill: string, allowedSkills: string[]): string | null {
+  const normalizedSkill = normalizePhrase(skill);
+  const skillTokens = tokenize(skill);
+
+  for (const allowedSkill of allowedSkills) {
+    const normalizedAllowed = normalizePhrase(allowedSkill);
+    const allowedTokens = tokenize(allowedSkill);
+
+    if (
+      normalizedSkill === normalizedAllowed ||
+      normalizedSkill.includes(normalizedAllowed) ||
+      normalizedAllowed.includes(normalizedSkill)
+    ) {
+      return allowedSkill;
+    }
+
+    if (
+      skillTokens.length > 0 &&
+      allowedTokens.length > 0 &&
+      (skillTokens.every((token) => allowedTokens.includes(token)) ||
+        allowedTokens.every((token) => skillTokens.includes(token)))
+    ) {
+      return allowedSkill;
+    }
+  }
+
+  return null;
+}
+
+function referencesTarget(text: string, target: string): boolean {
+  const normalizedText = normalizePhrase(text);
+  const normalizedTarget = normalizePhrase(target);
+
+  if (!normalizedText || !normalizedTarget) {
+    return false;
+  }
+
+  if (normalizedText.includes(normalizedTarget) || normalizedTarget.includes(normalizedText)) {
+    return true;
+  }
+
+  const textTokens = tokenize(text);
+  const targetTokens = getMeaningfulTokens(target);
+
+  if (targetTokens.length === 0) {
+    return false;
+  }
+
+  return targetTokens.some((token) => textTokens.includes(token) || normalizedText.includes(token));
 }
 
 function buildEvidenceMatches(
@@ -346,4 +405,42 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
     "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다."
   ].join("\n");
+}
+
+export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company: Company): Intro {
+  const guidance = buildIntroGuidance(resume, company);
+  const rawFitReasons = normalizeList(intro.fitReasons, 4);
+  const rawGapNotes = normalizeList(intro.gapNotes, 3);
+  const canonicalMatchedSkills = normalizeList(
+    intro.matchedSkills
+      .map((item) => canonicalizeSkill(item, guidance.matchedSkills))
+      .filter((item): item is string => item !== null),
+    6
+  );
+
+  const fitReferences = [
+    ...guidance.matchedSkills,
+    ...guidance.roleOverlap,
+    ...guidance.requirementMatches.map((item) => item.target),
+    ...guidance.preferredMatches.map((item) => item.target),
+    ...guidance.requirementMatches.flatMap((item) => item.evidence),
+    ...guidance.preferredMatches.flatMap((item) => item.evidence)
+  ];
+  const filteredFitReasons = rawFitReasons.filter((item) =>
+    fitReferences.some((target) => referencesTarget(item, target))
+  );
+  const filteredGapNotes = rawGapNotes.filter((item) =>
+    guidance.gapCandidates.some((target) => referencesTarget(item, target))
+  );
+
+  return {
+    oneLineIntro: intro.oneLineIntro.trim(),
+    shortIntro: intro.shortIntro.trim(),
+    fitReasons: filteredFitReasons.length > 0 ? filteredFitReasons : rawFitReasons,
+    matchedSkills:
+      canonicalMatchedSkills.length > 0
+        ? canonicalMatchedSkills
+        : guidance.matchedSkills.slice(0, Math.min(4, guidance.matchedSkills.length)),
+    gapNotes: filteredGapNotes
+  };
 }

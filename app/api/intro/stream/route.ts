@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
-import { buildIntroSkillInput } from "@/lib/intro-insights";
+import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/lib/intro-insights";
 import { CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
 
@@ -28,7 +28,11 @@ export async function POST(request: Request) {
           onLog: (payload) => send("log", payload)
         });
 
-        const validated = IntroSchema.parse(generated);
+        const validated = normalizeIntroWithGuidance(
+          IntroSchema.parse(generated),
+          body.resume,
+          body.company
+        );
 
         send("result", {
           data: validated
