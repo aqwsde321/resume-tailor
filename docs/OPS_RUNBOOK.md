@@ -7,13 +7,14 @@
 ## 2) 필수 전제
 
 - Node.js 20+
-- Codex CLI 사용 가능
+- Codex 앱 또는 Codex CLI 설치 완료
 - Codex 인증 완료 상태
 
 ## 3) 초기 실행 절차
 
 ```bash
-cd /Users/jino/study/project/resumeMake
+git clone <repo-url>
+cd resumeMake
 npm install
 codex auth login
 npm run dev
@@ -33,7 +34,7 @@ npm run dev
 예시:
 ```bash
 export CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
-export CODEX_SKILLS_DIR=/Users/jino/.codex/skills
+export CODEX_SKILLS_DIR="$HOME/.codex/skills"
 ```
 
 ## 5) 일상 점검 체크리스트

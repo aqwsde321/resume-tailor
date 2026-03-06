@@ -1,7 +1,7 @@
-# Docs Index
+# 문서 인덱스
 
-- [서비스 기획서](/Users/jino/study/project/resumeMake/docs/SERVICE_PLAN.md)
-- [다음 작업 로드맵](/Users/jino/study/project/resumeMake/docs/NEXT_STEPS.md)
-- [릴리즈 노트](/Users/jino/study/project/resumeMake/docs/RELEASE_NOTES.md)
-- [운영 런북](/Users/jino/study/project/resumeMake/docs/OPS_RUNBOOK.md)
-- [자기소개 품질 가이드](/Users/jino/study/project/resumeMake/docs/INTRO_QUALITY_GUIDE.md)
+- [서비스 기획서](./SERVICE_PLAN.md)
+- [다음 작업 로드맵](./NEXT_STEPS.md)
+- [릴리즈 노트](./RELEASE_NOTES.md)
+- [운영 런북](./OPS_RUNBOOK.md)
+- [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md)

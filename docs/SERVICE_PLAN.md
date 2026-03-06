@@ -194,4 +194,4 @@ R3. 생성 JSON 품질 편차:
 
 ## 12. 다음 마일스톤
 
-우선순위와 세부 작업은 [다음 작업 로드맵](/Users/jino/study/project/resumeMake/docs/NEXT_STEPS.md)에서 관리한다.
+우선순위와 세부 작업은 [다음 작업 로드맵](./NEXT_STEPS.md)에서 관리한다.
