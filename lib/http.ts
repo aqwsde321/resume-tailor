@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { ZodSchema } from "zod";
+import { ZodError, type ZodSchema } from "zod";
 
 import type { ApiFailure } from "@/lib/types";
 
@@ -12,6 +12,32 @@ export class HttpError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+export function normalizeApiError(error: unknown): ApiFailure["error"] {
+  if (error instanceof HttpError) {
+    return {
+      message: error.message,
+      details: error.details
+    };
+  }
+
+  if (error instanceof ZodError) {
+    const details = error.issues
+      .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
+      .join(" | ");
+
+    return {
+      message: "응답 데이터 검증에 실패했습니다.",
+      details
+    };
+  }
+
+  const message = error instanceof Error ? error.message : "알 수 없는 서버 오류";
+  return {
+    message: "서버 처리 중 오류가 발생했습니다.",
+    details: message
+  };
 }
 
 export async function parseJsonBody<T>(
@@ -43,24 +69,16 @@ export function apiErrorResponse(error: unknown): NextResponse<ApiFailure> {
     return NextResponse.json(
       {
         ok: false,
-        error: {
-          message: error.message,
-          details: error.details
-        }
+        error: normalizeApiError(error)
       },
       { status: error.status }
     );
   }
 
-  const message = error instanceof Error ? error.message : "알 수 없는 서버 오류";
-
   return NextResponse.json(
     {
       ok: false,
-      error: {
-        message: "서버 처리 중 오류가 발생했습니다.",
-        details: message
-      }
+      error: normalizeApiError(error)
     },
     { status: 500 }
   );

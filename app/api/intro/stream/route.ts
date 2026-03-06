@@ -1,0 +1,61 @@
+import { z } from "zod";
+
+import { runSkillJsonStream } from "@/lib/codex-client";
+import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
+import { CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
+import { createSseResponse } from "@/lib/sse";
+
+export const runtime = "nodejs";
+
+const RequestSchema = z.object({
+  resume: ResumeSchema,
+  company: CompanySchema
+});
+
+export async function POST(request: Request) {
+  try {
+    const body = await parseJsonBody(request, RequestSchema);
+
+    return createSseResponse(async (send) => {
+      const startedAt = Date.now();
+
+      try {
+        const generated = await runSkillJsonStream<unknown>({
+          skillName: "generate-intro",
+          inputText: [
+            "output/resume.json 내용:",
+            JSON.stringify(body.resume, null, 2),
+            "",
+            "output/company.json 내용:",
+            JSON.stringify(body.company, null, 2)
+          ].join("\n"),
+          outputSchema: introOutputSchema,
+          onLog: (payload) => send("log", payload)
+        });
+
+        const validated = IntroSchema.parse(generated);
+
+        send("result", {
+          data: validated
+        });
+        send("done", {
+          ok: true,
+          elapsedMs: Date.now() - startedAt
+        });
+      } catch (error) {
+        const normalized = normalizeApiError(error);
+        send("error", normalized);
+        send("done", {
+          ok: false,
+          elapsedMs: Date.now() - startedAt
+        });
+      }
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return apiErrorResponse(error);
+    }
+
+    return apiErrorResponse(error);
+  }
+}

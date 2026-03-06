@@ -1,8 +1,8 @@
-import { Codex } from "@openai/codex-sdk";
+import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
-import { readSkillMarkdown } from "@/lib/skills";
 import { HttpError } from "@/lib/http";
-import type { SkillName } from "@/lib/types";
+import { readSkillMarkdown } from "@/lib/skills";
+import type { SkillName, StreamLogPayload } from "@/lib/types";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -15,6 +15,14 @@ function getCodexClient(): Codex {
     });
   }
   return codex;
+}
+
+function startThread() {
+  return getCodexClient().startThread({
+    workingDirectory: process.cwd(),
+    skipGitRepoCheck: true,
+    approvalPolicy: "never"
+  });
 }
 
 let serialQueue: Promise<void> = Promise.resolve();
@@ -85,6 +93,97 @@ function toUserFacingError(error: unknown): HttpError {
   return new HttpError(502, "Codex 실행 중 오류가 발생했습니다.", message);
 }
 
+function normalizeText(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim();
+}
+
+function truncate(text: string, max = 120): string {
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function toItemLog(item: ThreadItem, lifecycle: "started" | "completed"): StreamLogPayload {
+  switch (item.type) {
+    case "reasoning": {
+      const text = normalizeText(item.text);
+      return {
+        level: lifecycle === "completed" ? "success" : "info",
+        phase: "reasoning",
+        message:
+          lifecycle === "completed"
+            ? `분석 요약: ${truncate(text)}`
+            : "모델이 분석을 시작했습니다."
+      };
+    }
+    case "command_execution": {
+      const statusText =
+        lifecycle === "completed"
+          ? ` (exit: ${item.exit_code ?? "?"}, status: ${item.status})`
+          : "";
+      return {
+        level: item.status === "failed" ? "error" : "info",
+        phase: "command",
+        message: `명령 실행: ${item.command}${statusText}`
+      };
+    }
+    case "mcp_tool_call": {
+      return {
+        level: item.status === "failed" ? "error" : "info",
+        phase: "mcp",
+        message: `MCP 호출: ${item.server}.${item.tool} (${item.status})`
+      };
+    }
+    case "web_search": {
+      return {
+        level: "info",
+        phase: "search",
+        message: `검색: ${truncate(normalizeText(item.query), 80)}`
+      };
+    }
+    case "todo_list": {
+      return {
+        level: "info",
+        phase: "plan",
+        message: `작업 계획 업데이트 (${item.items.length}개 단계)`
+      };
+    }
+    case "file_change": {
+      return {
+        level: item.status === "failed" ? "error" : "info",
+        phase: "patch",
+        message: `파일 변경 ${item.changes.length}건 (${item.status})`
+      };
+    }
+    case "error": {
+      return {
+        level: "error",
+        phase: "error",
+        message: item.message
+      };
+    }
+    case "agent_message": {
+      return {
+        level: lifecycle === "completed" ? "success" : "info",
+        phase: "response",
+        message: lifecycle === "completed" ? "최종 응답 생성 완료" : "최종 응답 작성 중"
+      };
+    }
+    default: {
+      return {
+        level: "info",
+        phase: "unknown",
+        message: `${lifecycle} 이벤트 수신`
+      };
+    }
+  }
+}
+
+function emitLog(
+  onLog: ((payload: StreamLogPayload) => void) | undefined,
+  payload: StreamLogPayload
+) {
+  onLog?.(payload);
+}
+
 export async function runSkillJson<T>(params: {
   skillName: SkillName;
   inputText: string;
@@ -93,16 +192,117 @@ export async function runSkillJson<T>(params: {
   return enqueue(async () => {
     try {
       const skillMarkdown = await readSkillMarkdown(params.skillName);
-      const thread = getCodexClient().startThread({
-        workingDirectory: process.cwd(),
-        skipGitRepoCheck: true,
-        approvalPolicy: "never"
-      });
+      const thread = startThread();
 
       const turn = await thread.run(buildPrompt(skillMarkdown, params.inputText), {
         outputSchema: params.outputSchema
       });
       return parseFinalResponse<T>(turn.finalResponse);
+    } catch (error) {
+      throw toUserFacingError(error);
+    }
+  });
+}
+
+export async function runSkillJsonStream<T>(params: {
+  skillName: SkillName;
+  inputText: string;
+  outputSchema: JsonSchema;
+  onLog?: (payload: StreamLogPayload) => void;
+}): Promise<T> {
+  return enqueue(async () => {
+    try {
+      const skillMarkdown = await readSkillMarkdown(params.skillName);
+      const thread = startThread();
+
+      emitLog(params.onLog, {
+        level: "info",
+        phase: "start",
+        message: `${params.skillName} 실행 시작`
+      });
+
+      const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {
+        outputSchema: params.outputSchema
+      });
+
+      let finalResponse = "";
+      let turnFailureMessage: string | null = null;
+
+      for await (const event of events) {
+        switch (event.type) {
+          case "thread.started": {
+            emitLog(params.onLog, {
+              level: "info",
+              phase: "thread",
+              message: `스레드 시작: ${event.thread_id}`
+            });
+            break;
+          }
+          case "turn.started": {
+            emitLog(params.onLog, {
+              level: "info",
+              phase: "turn",
+              message: "모델 분석 시작"
+            });
+            break;
+          }
+          case "item.started": {
+            emitLog(params.onLog, toItemLog(event.item, "started"));
+            break;
+          }
+          case "item.updated": {
+            if (event.item.type === "command_execution") {
+              emitLog(params.onLog, {
+                level: "info",
+                phase: "command",
+                message: `명령 진행중: ${event.item.command}`
+              });
+            }
+            break;
+          }
+          case "item.completed": {
+            emitLog(params.onLog, toItemLog(event.item, "completed"));
+            if (event.item.type === "agent_message") {
+              finalResponse = event.item.text;
+            }
+            break;
+          }
+          case "turn.completed": {
+            emitLog(params.onLog, {
+              level: "success",
+              phase: "turn",
+              message: `분석 완료 (input: ${event.usage.input_tokens}, output: ${event.usage.output_tokens})`
+            });
+            break;
+          }
+          case "turn.failed": {
+            turnFailureMessage = event.error.message;
+            emitLog(params.onLog, {
+              level: "error",
+              phase: "turn",
+              message: `분석 실패: ${event.error.message}`
+            });
+            break;
+          }
+          case "error": {
+            turnFailureMessage = event.message;
+            emitLog(params.onLog, {
+              level: "error",
+              phase: "error",
+              message: event.message
+            });
+            break;
+          }
+          default:
+            break;
+        }
+      }
+
+      if (turnFailureMessage) {
+        throw new HttpError(502, "Codex 분석에 실패했습니다.", turnFailureMessage);
+      }
+
+      return parseFinalResponse<T>(finalResponse);
     } catch (error) {
       throw toUserFacingError(error);
     }

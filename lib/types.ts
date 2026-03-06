@@ -1,4 +1,7 @@
 export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro";
+export type InputMode = "text" | "file";
+export type TaskKind = "resume" | "company" | "intro";
+export type LogLevel = "info" | "success" | "error";
 
 export interface ResumeExperienceItem {
   company: string;
@@ -51,4 +54,16 @@ export interface ApiFailure {
     message: string;
     details?: string;
   };
+}
+
+export interface StreamLogPayload {
+  level: LogLevel;
+  phase: string;
+  message: string;
+}
+
+export interface PipelineLog extends StreamLogPayload {
+  id: string;
+  task: TaskKind;
+  at: string;
 }
