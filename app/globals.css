@@ -808,6 +808,39 @@ textarea {
   color: var(--muted);
 }
 
+.field-help {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.list-preview {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(35, 56, 102, 0.1);
+  background: rgba(247, 250, 255, 0.82);
+}
+
+.list-preview strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-strong);
+}
+
+.list-preview ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+}
+
+.list-preview li {
+  line-height: 1.5;
+}
+
 .field-full {
   grid-column: 1 / -1;
 }
@@ -828,6 +861,10 @@ textarea.form-input {
   min-height: 44px;
   overflow: hidden;
   resize: none;
+}
+
+.list-textarea {
+  min-height: 104px;
 }
 
 .inline-badge {
@@ -869,6 +906,86 @@ textarea.form-input {
 .field-error .form-input {
   border-color: rgba(161, 104, 26, 0.38);
   box-shadow: inset 0 0 0 1px rgba(161, 104, 26, 0.16);
+}
+
+.field-error .tag-input {
+  border-color: rgba(161, 104, 26, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(161, 104, 26, 0.16);
+}
+
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.tag-input:focus-within {
+  border-color: rgba(44, 88, 221, 0.28);
+  box-shadow: 0 0 0 4px rgba(44, 88, 221, 0.1);
+}
+
+.tag-input.disabled {
+  opacity: 0.72;
+  background: rgba(249, 250, 252, 0.96);
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(44, 88, 221, 0.16);
+  background: rgba(44, 88, 221, 0.08);
+  color: var(--primary-strong);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.tag-chip > span {
+  overflow-wrap: anywhere;
+}
+
+.tag-chip-remove {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(44, 88, 221, 0.12);
+  color: var(--primary-strong);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.tag-chip-remove:hover:not(:disabled) {
+  background: rgba(44, 88, 221, 0.18);
+}
+
+input.tag-input-entry {
+  width: auto;
+  flex: 1 1 140px;
+  min-width: 120px;
+  min-height: 32px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+input.tag-input-entry:focus {
+  box-shadow: none;
 }
 
 .array-section {

@@ -6,8 +6,11 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import { parseListText, stringifyLineList } from "@/lib/list-input";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
@@ -27,17 +30,6 @@ const EMPTY_RESUME: Resume = {
 
 function formatIssueDetails(errorMessage: string): string {
   return errorMessage.length > 180 ? `${errorMessage.slice(0, 180)}...` : errorMessage;
-}
-
-function parseCsv(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
-}
-
-function stringifyCsv(value: string[]): string {
-  return value.join(", ");
 }
 
 function toResumeDraft(jsonText: string): Resume {
@@ -92,7 +84,6 @@ export default function ResumePage() {
   const isResumeWorking = state.currentTask === "resume";
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
-  const [techStackText, setTechStackText] = useState("");
   const [achievementsText, setAchievementsText] = useState("");
   const [strengthsText, setStrengthsText] = useState("");
   const normalizedDraftJson = JSON.stringify(draft, null, 2);
@@ -111,9 +102,8 @@ export default function ResumePage() {
   useEffect(() => {
     const next = toResumeDraft(state.resumeJsonText);
     setDraft(next);
-    setTechStackText(stringifyCsv(next.techStack));
-    setAchievementsText(stringifyCsv(next.achievements));
-    setStrengthsText(stringifyCsv(next.strengths));
+    setAchievementsText(stringifyLineList(next.achievements));
+    setStrengthsText(stringifyLineList(next.strengths));
   }, [state.resumeJsonText]);
 
   const setResumeText = (value: string) => {
@@ -159,17 +149,20 @@ export default function ResumePage() {
   const updateProject = (index: number, key: keyof ResumeProjectItem, value: string) => {
     const next: Resume = {
       ...draft,
-      projects: draft.projects.map((item, itemIndex) => {
-        if (itemIndex !== index) {
-          return item;
-        }
+      projects: draft.projects.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item
+      )
+    };
 
-        if (key === "techStack") {
-          return { ...item, techStack: parseCsv(value) };
-        }
+    syncDraft(next);
+  };
 
-        return { ...item, [key]: value };
-      })
+  const updateProjectTechStack = (index: number, techStack: string[]) => {
+    const next: Resume = {
+      ...draft,
+      projects: draft.projects.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, techStack } : item
+      )
     };
 
     syncDraft(next);
@@ -405,45 +398,48 @@ export default function ResumePage() {
           </label>
 
           <label className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}>
-            <span>기술 스택 (쉼표로 구분)</span>
-            <input
-              className="form-input"
-              value={techStackText}
-              onChange={(event) => {
-                const value = event.target.value;
-                setTechStackText(value);
-                syncDraft({ ...draft, techStack: parseCsv(value) });
-              }}
+            <span>기술 스택</span>
+            <TagInput
+              values={draft.techStack}
+              onChange={(values) => syncDraft({ ...draft, techStack: values })}
+              placeholder="입력 후 Enter로 추가"
               disabled={isBusy}
             />
+            <span className="field-help">짧은 항목은 칩으로 나눠 두면 보기 쉽고 수정도 빨라요.</span>
           </label>
 
           <label className="field field-full">
-            <span>성과 (쉼표로 구분)</span>
-            <input
-              className="form-input"
+            <span>성과</span>
+            <AutoGrowTextarea
+              className="list-textarea"
               value={achievementsText}
               onChange={(event) => {
                 const value = event.target.value;
                 setAchievementsText(value);
-                syncDraft({ ...draft, achievements: parseCsv(value) });
+                syncDraft({ ...draft, achievements: parseListText(value) });
               }}
+              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 결제 전환율 18% 개선"}
               disabled={isBusy}
             />
+            <ListPreview items={draft.achievements} label="지금 들어간 성과" />
+            <span className="field-help">문장형 항목은 한 줄씩 나누면 검토가 훨씬 쉬워집니다.</span>
           </label>
 
           <label className="field field-full">
-            <span>강점 (쉼표로 구분)</span>
-            <input
-              className="form-input"
+            <span>강점</span>
+            <AutoGrowTextarea
+              className="list-textarea"
               value={strengthsText}
               onChange={(event) => {
                 const value = event.target.value;
                 setStrengthsText(value);
-                syncDraft({ ...draft, strengths: parseCsv(value) });
+                syncDraft({ ...draft, strengths: parseListText(value) });
               }}
+              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 복잡한 요구사항을 구조화해 정리하는 편"}
               disabled={isBusy}
             />
+            <ListPreview items={draft.strengths} label="지금 들어간 강점" />
+            <span className="field-help">예전처럼 쉼표로 붙여 넣어도 읽을 수 있지만, 줄바꿈 입력이 더 안정적입니다.</span>
           </label>
         </div>
 
@@ -567,11 +563,11 @@ export default function ResumePage() {
                   />
                 </label>
                 <label className="field">
-                  <span>기술 스택 (쉼표로 구분)</span>
-                  <input
-                    className="form-input"
-                    value={stringifyCsv(item.techStack)}
-                    onChange={(event) => updateProject(index, "techStack", event.target.value)}
+                  <span>기술 스택</span>
+                  <TagInput
+                    values={item.techStack}
+                    onChange={(values) => updateProjectTechStack(index, values)}
+                    placeholder="입력 후 Enter로 추가"
                     disabled={isBusy}
                   />
                 </label>

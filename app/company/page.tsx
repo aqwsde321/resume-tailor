@@ -6,8 +6,11 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import { parseListText, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
@@ -41,17 +44,6 @@ interface UrlPreview {
 
 function formatIssueDetails(errorMessage: string): string {
   return errorMessage.length > 180 ? `${errorMessage.slice(0, 180)}...` : errorMessage;
-}
-
-function parseCsv(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
-}
-
-function stringifyCsv(value: string[]): string {
-  return value.join(", ");
 }
 
 function toCompanyDraft(jsonText: string): Company {
@@ -95,7 +87,6 @@ export default function CompanyPage() {
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
   const [requirementsText, setRequirementsText] = useState("");
   const [preferredSkillsText, setPreferredSkillsText] = useState("");
-  const [techStackText, setTechStackText] = useState("");
   const normalizedDraftJson = JSON.stringify(draft, null, 2);
   const companyNeedsConfirm =
     state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
@@ -115,9 +106,8 @@ export default function CompanyPage() {
   useEffect(() => {
     const next = toCompanyDraft(state.companyJsonText);
     setDraft(next);
-    setRequirementsText(stringifyCsv(next.requirements));
-    setPreferredSkillsText(stringifyCsv(next.preferredSkills));
-    setTechStackText(stringifyCsv(next.techStack));
+    setRequirementsText(stringifyLineList(next.requirements));
+    setPreferredSkillsText(stringifyLineList(next.preferredSkills));
   }, [state.companyJsonText]);
 
   const setCompanyText = (value: string) => {
@@ -537,45 +527,48 @@ export default function CompanyPage() {
           <label
             className={`field field-full ${draft.requirements.length === 0 ? "field-error" : ""}`}
           >
-            <span>필수 조건 (쉼표로 구분)</span>
-            <input
-              className="form-input"
+            <span>필수 조건</span>
+            <AutoGrowTextarea
+              className="list-textarea"
               value={requirementsText}
               onChange={(event) => {
                 const value = event.target.value;
                 setRequirementsText(value);
-                syncDraft({ ...draft, requirements: parseCsv(value) });
+                syncDraft({ ...draft, requirements: parseListText(value) });
               }}
+              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) Java 기반 서버 개발 경험"}
               disabled={uiBusy || !canEdit}
             />
+            <ListPreview items={draft.requirements} label="지금 들어간 필수 조건" />
+            <span className="field-help">핵심 조건은 줄 단위로 나누면 빠르게 검토할 수 있습니다.</span>
           </label>
 
           <label className="field field-full">
-            <span>우대 조건 (쉼표로 구분)</span>
-            <input
-              className="form-input"
+            <span>우대 조건</span>
+            <AutoGrowTextarea
+              className="list-textarea"
               value={preferredSkillsText}
               onChange={(event) => {
                 const value = event.target.value;
                 setPreferredSkillsText(value);
-                syncDraft({ ...draft, preferredSkills: parseCsv(value) });
+                syncDraft({ ...draft, preferredSkills: parseListText(value) });
               }}
+              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 대용량 트래픽 서비스 경험"}
               disabled={uiBusy || !canEdit}
             />
+            <ListPreview items={draft.preferredSkills} label="지금 들어간 우대 조건" />
+            <span className="field-help">우대 조건도 문장 단위로 나누면 놓치는 항목이 줄어듭니다.</span>
           </label>
 
           <label className="field field-full">
-            <span>기술 스택 (쉼표로 구분)</span>
-            <input
-              className="form-input"
-              value={techStackText}
-              onChange={(event) => {
-                const value = event.target.value;
-                setTechStackText(value);
-                syncDraft({ ...draft, techStack: parseCsv(value) });
-              }}
+            <span>기술 스택</span>
+            <TagInput
+              values={draft.techStack}
+              onChange={(values) => syncDraft({ ...draft, techStack: values })}
+              placeholder="입력 후 Enter로 추가"
               disabled={uiBusy || !canEdit}
             />
+            <span className="field-help">짧은 스택은 칩으로 정리해 두면 공고 비교가 쉬워집니다.</span>
           </label>
         </div>
 
