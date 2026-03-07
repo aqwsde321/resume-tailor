@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
@@ -70,6 +71,7 @@ export default function CompanyPage() {
 
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
+  const isCompanyWorking = state.currentTask === "company";
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
   const [requirementsText, setRequirementsText] = useState("");
@@ -230,7 +232,7 @@ export default function CompanyPage() {
         </section>
       )}
 
-      <section className="card card-accent">
+      <section className={`card card-accent ${isCompanyWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">입력</p>
@@ -241,6 +243,13 @@ export default function CompanyPage() {
         <p className="card-copy">
           채용 공고를 붙여넣으면 회사명, 역할, 조건을 정리해 줍니다.
         </p>
+
+        {isCompanyWorking && (
+          <p className="processing-banner">
+            <span className="spinner" />
+            공고 내용을 읽고 회사 기준 초안을 만들고 있어요.
+          </p>
+        )}
 
         <div className="tabs">
           <button
@@ -282,18 +291,21 @@ export default function CompanyPage() {
             <strong>먼저 초안을 만들어요</strong>
             <span>입력한 공고를 읽고 회사명, 포지션, 조건을 정리합니다.</span>
           </div>
-          <button
-            type="button"
-            className="primary"
-            onClick={handleAnalyze}
-            disabled={isBusy || !canEdit}
-          >
-            {state.currentTask === "company" ? "정리 중..." : "내용 정리"}
-          </button>
+          <div className="action-controls">
+            <ReasoningInline disabled={isBusy || !canEdit} />
+            <button
+              type="button"
+              className="primary"
+              onClick={handleAnalyze}
+              disabled={isBusy || !canEdit}
+            >
+              {state.currentTask === "company" ? "정리 중..." : "내용 정리"}
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="card card-review">
+      <section className={`card card-review ${isCompanyWorking ? "card-processing review" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">확인</p>
@@ -311,6 +323,13 @@ export default function CompanyPage() {
         <p className="card-copy">
           자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
         </p>
+
+        {isCompanyWorking && (
+          <p className="processing-banner review">
+            <span className="spinner" />
+            정리 결과를 반영하는 중이에요. 완료되면 바로 아래에서 확인할 수 있습니다.
+          </p>
+        )}
 
         <div className="form-grid two">
           <label className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}>
@@ -398,10 +417,6 @@ export default function CompanyPage() {
           </label>
         </div>
 
-        {hasMissingCompanyRequired && (
-          <p className="required-help">먼저 채워 주세요: {missingCompanyRequired.join(", ")}</p>
-        )}
-
         <div className="action-panel review">
           <div className="action-copy">
             <strong>확인했으면 저장해요</strong>
@@ -410,6 +425,9 @@ export default function CompanyPage() {
                 ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
                 : "필수 조건을 채우면 소개글 단계로 넘어갈 수 있어요."}
             </span>
+            {hasMissingCompanyRequired && (
+              <p className="action-note warn">저장 전 확인: {missingCompanyRequired.join(", ")}</p>
+            )}
           </div>
           <div className="action-row">
             <button

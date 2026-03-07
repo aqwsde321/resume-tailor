@@ -2,7 +2,7 @@
 
 ## 1) 목적
 
-`generate-intro` 결과(`oneLineIntro`, `shortIntro`)의 일관성과 신뢰도를 높이기 위한 기준 문서.
+`generate-intro` 결과(`oneLineIntro`, `shortIntro`, `longIntro`)의 일관성과 신뢰도를 높이기 위한 기준 문서.
 
 ## 2) 품질 원칙
 
@@ -13,8 +13,9 @@
 - `company.json.requirements`와 `resume.json.techStack/experience`의 교집합을 우선 반영한다.
 
 3. 간결성
-- `oneLineIntro`: 30~40자 권장
-- `shortIntro`: 3~5문장 권장
+- `oneLineIntro`: 25~45자 권장
+- `shortIntro`: 120~220자, 2~4문장 권장
+- `longIntro`: 450~700자, 5~8문장 권장
 
 4. 톤
 - 전문적, 담백한 톤
@@ -30,6 +31,13 @@
 2. 핵심 프로젝트/성과 연결
 3. 요구사항-경험 매핑 문장
 4. (선택) 입사 후 기여 의지
+
+`longIntro`
+1. 직무/연차/핵심 강점 요약
+2. 대표 프로젝트와 성과 설명
+3. 협업 방식 또는 문제 해결 경험 연결
+4. 공고 요구사항과 맞닿는 근거 구체화
+5. (선택) 입사 후 기여 방향
 
 ## 4) 금지 규칙
 

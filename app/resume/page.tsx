@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
@@ -88,6 +89,7 @@ export default function ResumePage() {
   } = usePipeline();
 
   const isBusy = state.currentTask !== null;
+  const isResumeWorking = state.currentTask === "resume";
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
   const [techStackText, setTechStackText] = useState("");
@@ -98,9 +100,6 @@ export default function ResumePage() {
     state.resumeJsonText.trim().length > 0 && state.resumeConfirmedJson !== normalizedDraftJson;
 
   const missingResumeRequired: string[] = [];
-  if (!draft.name.trim()) {
-    missingResumeRequired.push("이름");
-  }
   if (!draft.desiredPosition.trim()) {
     missingResumeRequired.push("희망 직무");
   }
@@ -272,7 +271,7 @@ export default function ResumePage() {
       title="이력서 정리"
       description="이력서 내용을 읽고, 필요한 정보만 정리해 저장합니다."
     >
-      <section className="card card-accent">
+      <section className={`card card-accent ${isResumeWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">입력</p>
@@ -283,6 +282,13 @@ export default function ResumePage() {
         <p className="card-copy">
           파일을 올리거나 내용을 붙여넣으면 바로 정리해 줍니다.
         </p>
+
+        {isResumeWorking && (
+          <p className="processing-banner">
+            <span className="spinner" />
+            이력서 내용을 읽고 항목 초안을 만들고 있어요.
+          </p>
+        )}
 
         <div className="tabs">
           <button
@@ -324,13 +330,16 @@ export default function ResumePage() {
             <strong>먼저 초안을 만들어요</strong>
             <span>입력한 내용을 읽고 아래 폼을 채워 줍니다.</span>
           </div>
-          <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
-            {state.currentTask === "resume" ? "정리 중..." : "내용 정리"}
-          </button>
+          <div className="action-controls">
+            <ReasoningInline disabled={isBusy} />
+            <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
+              {state.currentTask === "resume" ? "정리 중..." : "내용 정리"}
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="card card-review">
+      <section className={`card card-review ${isResumeWorking ? "card-processing review" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">확인</p>
@@ -349,17 +358,14 @@ export default function ResumePage() {
           자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
         </p>
 
-        <div className="form-grid two">
-          <label className={`field ${!draft.name.trim() ? "field-error" : ""}`}>
-            <span>이름</span>
-            <input
-              className="form-input"
-              value={draft.name}
-              onChange={(event) => syncDraft({ ...draft, name: event.target.value })}
-              disabled={isBusy}
-            />
-          </label>
+        {isResumeWorking && (
+          <p className="processing-banner review">
+            <span className="spinner" />
+            정리 결과를 반영하는 중이에요. 완료되면 바로 아래에서 확인할 수 있습니다.
+          </p>
+        )}
 
+        <div className="form-grid two">
           <label className={`field ${!draft.desiredPosition.trim() ? "field-error" : ""}`}>
             <span>희망 직무</span>
             <input
@@ -440,10 +446,6 @@ export default function ResumePage() {
             />
           </label>
         </div>
-
-        {hasMissingResumeRequired && (
-          <p className="required-help">먼저 채워 주세요: {missingResumeRequired.join(", ")}</p>
-        )}
 
         <div className="array-section">
           <div className="array-head">
@@ -556,7 +558,7 @@ export default function ResumePage() {
 
               <div className="form-grid two">
                 <label className="field">
-                  <span>이름</span>
+                  <span>프로젝트 이름</span>
                   <input
                     className="form-input"
                     value={item.name}
@@ -594,6 +596,9 @@ export default function ResumePage() {
                 ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
                 : "필수 항목을 채우면 다음 단계로 넘어갈 수 있어요."}
             </span>
+            {hasMissingResumeRequired && (
+              <p className="action-note warn">저장 전 확인: {missingResumeRequired.join(", ")}</p>
+            )}
           </div>
           <div className="action-row">
             <button

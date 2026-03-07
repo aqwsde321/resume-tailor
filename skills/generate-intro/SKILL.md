@@ -7,7 +7,7 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 
 ## 목적
 `output/resume.json`과 `output/company.json`을 읽어
-회사 맞춤 한줄 소개(oneLineIntro), 자기소개(shortIntro), 지원 근거(fitReasons, matchedSkills, gapNotes)를 생성하고
+회사 맞춤 한줄 소개(oneLineIntro), 짧은 소개(shortIntro), 긴 소개(longIntro), 지원 근거(fitReasons, matchedSkills, gapNotes)를 생성하고
 `output/intro.json`으로 저장한다.
 
 ---
@@ -37,12 +37,18 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 다만 힌트와 원본 JSON이 충돌하면 원본 JSON만 신뢰한다.
 
 **가이드라인:**
-- `oneLineIntro`: 30~40자, 지원 직무와 핵심 강점 중심
-- `shortIntro`: 3~5문장 한국어
+- `oneLineIntro`: 25~45자, 지원 직무와 핵심 강점 중심
+- `shortIntro`: 120~220자, 2~4문장 한국어
   - 1문장: 직무·경력 연차 요약
   - 2문장: 핵심 프로젝트·성과 연결
-  - 3문장: `company.json`의 requirements와 `resume.json`의 techStack 교집합 또는 `[분석 힌트]`의 근거를 자연스럽게 포함
+  - 3문장(선택): `company.json`의 requirements와 `resume.json`의 techStack 교집합 또는 `[분석 힌트]`의 근거를 자연스럽게 포함
   - 4문장(선택): 기여 기대 또는 마무리
+- `longIntro`: 450~700자, 5~8문장 한국어
+  - 첫 1~2문장: 직무, 경력 연차, 핵심 강점 요약
+  - 중간 2~4문장: 대표 프로젝트, 성과, 협업 방식, 문제 해결 경험 연결
+  - 후반 1~2문장: `company.json`의 requirements/preferredSkills와 맞닿는 근거를 구체적으로 설명
+  - 마지막 1문장(선택): 입사 후 기여 방향 또는 마무리
+  - `shortIntro`를 단순히 늘이지 말고, 근거와 맥락을 추가해 정보량 차이가 분명해야 한다
 - `fitReasons`: 2~4개 문자열 배열
   - 왜 이 이력서가 공고와 맞는지 구체적 근거를 문장으로 작성
   - 반드시 `resume.json`과 `company.json`에 모두 등장하는 사실만 사용
@@ -66,6 +72,7 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 {
   "oneLineIntro": "",
   "shortIntro": "",
+  "longIntro": "",
   "fitReasons": [],
   "matchedSkills": [],
   "gapNotes": []

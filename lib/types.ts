@@ -52,6 +52,7 @@ export interface Company {
 export interface Intro {
   oneLineIntro: string;
   shortIntro: string;
+  longIntro: string;
   fitReasons: string[];
   matchedSkills: string[];
   gapNotes: string[];

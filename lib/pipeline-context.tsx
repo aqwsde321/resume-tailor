@@ -86,6 +86,12 @@ function normalizeIntro(raw: unknown): Intro | null {
   return {
     oneLineIntro: typeof value.oneLineIntro === "string" ? value.oneLineIntro : "",
     shortIntro: typeof value.shortIntro === "string" ? value.shortIntro : "",
+    longIntro:
+      typeof value.longIntro === "string"
+        ? value.longIntro
+        : typeof value.shortIntro === "string"
+          ? value.shortIntro
+          : "",
     fitReasons: normalizeStringArray(value.fitReasons),
     matchedSkills: normalizeStringArray(value.matchedSkills),
     gapNotes: normalizeStringArray(value.gapNotes)

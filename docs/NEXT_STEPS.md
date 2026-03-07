@@ -30,6 +30,7 @@
 - 추천 후보:
   - `oneLineIntro`
   - `shortIntro`
+  - `longIntro`
   - `fitReasons[]`
   - `matchedSkills[]`
   - `missingButRelevant[]`

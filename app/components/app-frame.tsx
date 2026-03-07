@@ -4,13 +4,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import {
-  formatReasoningEffortValue,
-  isModelReasoningEffort,
-  MODEL_REASONING_EFFORT_LABELS,
-  MODEL_REASONING_EFFORT_VALUES
-} from "@/lib/agent-settings";
 import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import type { PipelineLog } from "@/lib/types";
 
 type StepKey = "resume" | "company" | "result";
 type StepRoute = "/resume" | "/company" | "/result";
@@ -43,6 +38,28 @@ const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
   intro: "소개글 만들기"
 };
 
+const PHASE_LABEL: Record<string, string> = {
+  start: "준비",
+  config: "설정",
+  thread: "세션",
+  turn: "분석",
+  reasoning: "해석",
+  command: "명령",
+  mcp: "도구",
+  search: "검색",
+  plan: "계획",
+  patch: "산출물",
+  response: "응답",
+  error: "오류",
+  unknown: "기타"
+};
+
+const LEVEL_LABEL: Record<PipelineLog["level"], string> = {
+  info: "진행",
+  success: "완료",
+  error: "오류"
+};
+
 interface AppFrameProps {
   step: StepKey;
   title: string;
@@ -51,7 +68,7 @@ interface AppFrameProps {
 }
 
 export function AppFrame({ step, title, description, children }: AppFrameProps) {
-  const { hydrated, state, patch, clearLogs } = usePipeline();
+  const { hydrated, state } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
 
@@ -74,7 +91,6 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
   const stepMeta = STEP_META[step];
-  const selectedReasoningLabel = formatReasoningEffortValue(state.agentSettings.modelReasoningEffort);
 
   const steps = useMemo(() => {
     const stepStatusLabel = (key: StepKey, status: StepStatus): string => {
@@ -141,8 +157,25 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   }, [hasResume, hasCompany, introFresh, step]);
 
   const logs = useMemo(() => [...state.logs].slice(-100).reverse(), [state.logs]);
-  const visibleLogs = logExpanded ? logs : logs.slice(0, 5);
-  const hiddenLogCount = logs.length - visibleLogs.length;
+  const liveLogs = logs.slice(0, 6);
+  const latestLog = logs[0] ?? null;
+
+  const formatLogTime = (value: string) =>
+    new Date(value).toLocaleTimeString("ko-KR", {
+      hour12: false
+    });
+
+  const renderLogItem = (log: PipelineLog) => (
+    <li key={log.id} className={`log-item ${log.level}`}>
+      <div className="log-meta">
+        <span className="log-badge task">{TASK_LABEL[log.task]}</span>
+        <span className="log-badge phase">{PHASE_LABEL[log.phase] ?? PHASE_LABEL.unknown}</span>
+        <span className={`log-badge level ${log.level}`}>{LEVEL_LABEL[log.level]}</span>
+        <span className="log-time">{formatLogTime(log.at)}</span>
+      </div>
+      <p>{log.message}</p>
+    </li>
+  );
 
   if (!hydrated) {
     return (
@@ -162,6 +195,27 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
     <main className="page">
       <div className="backdrop" />
       <div className="container">
+        {state.currentTask && (
+          <section className="live-log-modal" aria-live="polite" role="status">
+            <div className="live-log-head">
+              <div>
+                <p className="card-kicker">실행 중</p>
+                <h2>{TASK_LABEL[state.currentTask]}</h2>
+                <p className="live-log-copy">분석 단계를 순서대로 진행하고 있습니다.</p>
+              </div>
+              <span className="live-log-timer">{elapsedSeconds}초</span>
+            </div>
+
+            {liveLogs.length > 0 ? (
+              <ul className="log-list compact">
+                {liveLogs.map((log) => renderLogItem(log))}
+              </ul>
+            ) : (
+              <p className="log-empty">실행 준비를 마치고 있어요.</p>
+            )}
+          </section>
+        )}
+
         <header className="hero">
           <p className="eyebrow">ResumeMake</p>
           <h1>{title}</h1>
@@ -202,96 +256,38 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           )}
         </section>
 
-        <section className="support-shell">
-          <section className="agent-config-panel">
-            <div>
-              <p className="card-kicker">설정</p>
-              <h2>생각 깊이</h2>
-              <p className="agent-config-copy">
-                기본은 {selectedReasoningLabel}이에요. 필요할 때만 바꿔 주세요.
-              </p>
-            </div>
-
-            <div className="agent-config-grid">
-              <label className="field">
-                <span>생각 깊이</span>
-                <select
-                  className="form-select"
-                  value={state.agentSettings.modelReasoningEffort}
-                  onChange={(event) =>
-                    patch((prev) => ({
-                      ...prev,
-                      agentSettings: {
-                        ...prev.agentSettings,
-                        modelReasoningEffort: isModelReasoningEffort(event.target.value)
-                          ? event.target.value
-                          : ""
-                      }
-                    }))
-                  }
-                  disabled={Boolean(state.currentTask)}
-                >
-                  {MODEL_REASONING_EFFORT_VALUES.map((item) => (
-                    <option key={item} value={item}>
-                      {MODEL_REASONING_EFFORT_LABELS[item]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
-        </section>
+        {state.error && <p className="status error">{state.error}</p>}
+        {state.message && <p className="status success">{state.message}</p>}
 
         {children}
 
-        <section className="card">
-          <div className="card-head">
-            <h2>작업 기록</h2>
-            <div className="log-actions">
+        {logs.length > 0 && !state.currentTask && (
+          <section className={`card log-drawer ${logExpanded ? "open" : ""}`}>
+            <div className="card-head">
+              <div>
+                <p className="card-kicker">기록</p>
+                <h2>지난 작업 기록</h2>
+              </div>
               <button
                 type="button"
                 className="secondary"
                 onClick={() => setLogExpanded((prev) => !prev)}
-                disabled={logs.length === 0}
               >
-                {logExpanded ? "접기" : "더 보기"}
-              </button>
-              <button type="button" className="secondary" onClick={clearLogs}>
-                비우기
+                {logExpanded ? "접기" : "기록 보기"}
               </button>
             </div>
-          </div>
 
-          {logs.length === 0 ? (
-            <p className="log-empty">아직 기록이 없어요.</p>
-          ) : (
-            <>
-              {!logExpanded && hiddenLogCount > 0 && (
-                <p className="muted-help">최근 5개만 보여주고 있어요 ({hiddenLogCount}개 더 있음)</p>
-              )}
-              <ul className="log-list">
-                {visibleLogs.map((log) => {
-                  const at = new Date(log.at).toLocaleTimeString("ko-KR", {
-                    hour12: false
-                  });
-
-                  return (
-                    <li key={log.id} className={`log-item ${log.level}`}>
-                      <div className="log-meta">
-                        <span>{at}</span>
-                        <span>{TASK_LABEL[log.task]}</span>
-                      </div>
-                      <p>{log.message}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </section>
-
-        {state.error && <p className="status error">{state.error}</p>}
-        {state.message && <p className="status success">{state.message}</p>}
+            {!logExpanded && latestLog ? (
+              <p className="log-summary">
+                <strong>{TASK_LABEL[latestLog.task]}</strong>
+                <span>{formatLogTime(latestLog.at)}</span>
+                <span>{latestLog.message}</span>
+              </p>
+            ) : (
+              <ul className="log-list">{logs.map((log) => renderLogItem(log))}</ul>
+            )}
+          </section>
+        )}
       </div>
     </main>
   );

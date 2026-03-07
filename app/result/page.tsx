@@ -2,9 +2,10 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
+import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { buildMatchInsights } from "@/lib/intro-insights";
 import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
@@ -48,6 +49,7 @@ export default function ResultPage() {
   const isBusy = state.currentTask !== null;
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
   const introFresh = isIntroFresh(state);
+  const isIntroWorking = state.currentTask === "intro";
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -98,6 +100,55 @@ export default function ResultPage() {
         : (matchInsights?.keywords ?? [])
     };
   }, [introInsights, matchInsights]);
+  const introSections = useMemo(
+    () => [
+      {
+        key: "oneLineIntro" as const,
+        title: "한 줄 소개",
+        value: state.intro?.oneLineIntro ?? "",
+        emptyText: "아직 만든 소개글이 없어요."
+      },
+      {
+        key: "shortIntro" as const,
+        title: "짧은 소개",
+        value: state.intro?.shortIntro ?? "",
+        emptyText: "아직 만든 소개글이 없어요."
+      },
+      {
+        key: "longIntro" as const,
+        title: "긴 소개",
+        value: state.intro?.longIntro ?? "",
+        emptyText: "아직 만든 소개글이 없어요."
+      }
+    ],
+    [state.intro]
+  );
+  const previousIntroSections = useMemo(
+    () => [
+      {
+        key: "oneLineIntro" as const,
+        previousTitle: "이전 한 줄 소개",
+        currentTitle: "지금 한 줄 소개",
+        previousValue: state.previousIntro?.oneLineIntro ?? "",
+        currentValue: state.intro?.oneLineIntro ?? ""
+      },
+      {
+        key: "shortIntro" as const,
+        previousTitle: "이전 짧은 소개",
+        currentTitle: "지금 짧은 소개",
+        previousValue: state.previousIntro?.shortIntro ?? "",
+        currentValue: state.intro?.shortIntro ?? ""
+      },
+      {
+        key: "longIntro" as const,
+        previousTitle: "이전 긴 소개",
+        currentTitle: "지금 긴 소개",
+        previousValue: state.previousIntro?.longIntro ?? state.previousIntro?.shortIntro ?? "",
+        currentValue: state.intro?.longIntro ?? state.intro?.shortIntro ?? ""
+      }
+    ],
+    [state.previousIntro, state.intro]
+  );
 
   const handleGenerate = async () => {
     clearStatus();
@@ -197,7 +248,7 @@ export default function ResultPage() {
         </section>
       )}
 
-      <section className="card card-accent">
+      <section className={`card card-accent ${isIntroWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">만들기</p>
@@ -206,31 +257,37 @@ export default function ResultPage() {
         </div>
 
         <p className="card-copy">
-          저장한 이력서와 공고를 바탕으로 바로 다듬어 쓸 초안을 만듭니다.
+          저장한 이력서와 공고로 한 줄 소개, 짧은 소개, 긴 소개를 한 번에 만듭니다.
         </p>
+
+        {isIntroWorking && (
+          <p className="processing-banner">
+            <span className="spinner" />
+            근거를 묶고 소개글 세 가지 버전을 만드는 중이에요.
+          </p>
+        )}
 
         <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
-          {introFresh ? "지금 결과가 최신이에요." : "내용이 바뀌어 다시 만들어야 해요."}
+          {introFresh
+            ? "지금 결과가 최신이에요."
+            : "내용이 바뀌었어요. 수정이 필요하면 위쪽 공고 단계로 이동한 뒤 다시 만들면 됩니다."}
         </p>
-
-        <div className="action-row">
-          <Link href={"/company" as Route} className="nav-btn">
-            공고 수정하기
-          </Link>
-        </div>
 
         <div className="action-panel">
           <div className="action-copy">
             <strong>{introFresh ? "필요하면 다시 만들어요" : "소개글을 만들어요"}</strong>
             <span>
               {canGenerate
-                ? "저장한 이력서와 공고를 바탕으로 바로 초안을 만듭니다."
+                ? "공고를 바꾸고 싶다면 위쪽 단계 버튼에서 공고를 다시 열 수 있어요."
                 : "이력서와 공고를 저장하면 버튼이 활성화돼요."}
             </span>
           </div>
-          <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
-            {state.currentTask === "intro" ? "만드는 중..." : introFresh ? "다시 만들기" : "소개글 만들기"}
-          </button>
+          <div className="action-controls">
+            <ReasoningInline disabled={isBusy || !canGenerate} />
+            <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
+              {state.currentTask === "intro" ? "만드는 중..." : introFresh ? "다시 만들기" : "소개글 만들기"}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -284,40 +341,27 @@ export default function ResultPage() {
             <h2>복사 전에 한 번만 읽어 보세요</h2>
           </div>
           <p className="card-copy">
-            짧은 소개와 긴 소개를 순서대로 볼 수 있게 정리했어요.
+            한 줄 소개, 짧은 소개, 긴 소개를 차례로 볼 수 있게 정리했어요.
           </p>
         </div>
 
         <div className="result-card">
-          <article className="result-block">
-            <div className="result-head">
-              <h3>한 줄 소개</h3>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void copyText(state.intro?.oneLineIntro ?? "")}
-                disabled={isBusy || !state.intro}
-              >
-                복사
-              </button>
-            </div>
-            <p>{state.intro?.oneLineIntro ?? "아직 만든 소개글이 없어요."}</p>
-          </article>
-
-          <article className="result-block">
-            <div className="result-head">
-              <h3>짧은 소개</h3>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void copyText(state.intro?.shortIntro ?? "")}
-                disabled={isBusy || !state.intro}
-              >
-                복사
-              </button>
-            </div>
-            <p>{state.intro?.shortIntro ?? "아직 만든 소개글이 없어요."}</p>
-          </article>
+          {introSections.map((section) => (
+            <article key={section.key} className="result-block">
+              <div className="result-head">
+                <h3>{section.title}</h3>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => void copyText(section.value)}
+                  disabled={isBusy || !state.intro}
+                >
+                  복사
+                </button>
+              </div>
+              <p>{section.value || section.emptyText}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -328,33 +372,22 @@ export default function ResultPage() {
           </div>
 
           <div className="compare-grid">
-            <article className="result-block compare-old">
-              <div className="result-head">
-                <h3>이전 한 줄 소개</h3>
-              </div>
-              <p>{state.previousIntro.oneLineIntro}</p>
-            </article>
-
-            <article className="result-block compare-new">
-              <div className="result-head">
-                <h3>지금 한 줄 소개</h3>
-              </div>
-              <p>{state.intro.oneLineIntro}</p>
-            </article>
-
-            <article className="result-block compare-old">
-              <div className="result-head">
-                <h3>이전 짧은 소개</h3>
-              </div>
-              <p>{state.previousIntro.shortIntro}</p>
-            </article>
-
-            <article className="result-block compare-new">
-              <div className="result-head">
-                <h3>지금 짧은 소개</h3>
-              </div>
-              <p>{state.intro.shortIntro}</p>
-            </article>
+            {previousIntroSections.map((section) => (
+              <Fragment key={section.key}>
+                <article className="result-block compare-old">
+                  <div className="result-head">
+                    <h3>{section.previousTitle}</h3>
+                  </div>
+                  <p>{section.previousValue}</p>
+                </article>
+                <article className="result-block compare-new">
+                  <div className="result-head">
+                    <h3>{section.currentTitle}</h3>
+                  </div>
+                  <p>{section.currentValue}</p>
+                </article>
+              </Fragment>
+            ))}
           </div>
         </section>
       )}

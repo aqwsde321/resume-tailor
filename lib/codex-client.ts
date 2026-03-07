@@ -7,6 +7,12 @@ import type { AgentRunOptions, SkillName, StreamLogPayload } from "@/lib/types";
 
 type JsonSchema = Record<string, unknown>;
 
+const SKILL_LABEL: Record<SkillName, string> = {
+  "resume-to-json": "이력서 정리",
+  "company-to-json": "공고 정리",
+  "generate-intro": "소개글 만들기"
+};
+
 let codex: Codex | null = null;
 
 function getCodexClient(): Codex {
@@ -115,61 +121,60 @@ function toItemLog(item: ThreadItem, lifecycle: "started" | "completed"): Stream
         phase: "reasoning",
         message:
           lifecycle === "completed"
-            ? `분석 요약: ${truncate(text)}`
-            : "모델이 분석을 시작했습니다."
+            ? `해석 요약: ${truncate(text)}`
+            : "입력 내용을 해석하고 있습니다."
       };
     }
     case "command_execution": {
-      const statusText =
-        lifecycle === "completed"
-          ? ` (exit: ${item.exit_code ?? "?"}, status: ${item.status})`
-          : "";
       return {
         level: item.status === "failed" ? "error" : "info",
         phase: "command",
-        message: `명령 실행: ${item.command}${statusText}`
+        message:
+          lifecycle === "completed"
+            ? `보조 명령 실행 완료 (${item.status}, exit ${item.exit_code ?? "?"})`
+            : "보조 명령을 실행하고 있습니다."
       };
     }
     case "mcp_tool_call": {
       return {
         level: item.status === "failed" ? "error" : "info",
         phase: "mcp",
-        message: `MCP 호출: ${item.server}.${item.tool} (${item.status})`
+        message: `도구 호출 ${item.status === "completed" ? "완료" : "진행"}: ${item.server}.${item.tool}`
       };
     }
     case "web_search": {
       return {
         level: "info",
         phase: "search",
-        message: `검색: ${truncate(normalizeText(item.query), 80)}`
+        message: `참조 검색: ${truncate(normalizeText(item.query), 80)}`
       };
     }
     case "todo_list": {
       return {
         level: "info",
         phase: "plan",
-        message: `작업 계획 업데이트 (${item.items.length}개 단계)`
+        message: `작업 계획 정리 (${item.items.length}개 단계)`
       };
     }
     case "file_change": {
       return {
         level: item.status === "failed" ? "error" : "info",
         phase: "patch",
-        message: `파일 변경 ${item.changes.length}건 (${item.status})`
+        message: `중간 산출물 점검 ${item.changes.length}건 (${item.status})`
       };
     }
     case "error": {
       return {
         level: "error",
         phase: "error",
-        message: item.message
+        message: `실행 오류: ${item.message}`
       };
     }
     case "agent_message": {
       return {
         level: lifecycle === "completed" ? "success" : "info",
         phase: "response",
-        message: lifecycle === "completed" ? "최종 응답 생성 완료" : "최종 응답 작성 중"
+        message: lifecycle === "completed" ? "결과 문장 정리 완료" : "결과 문장을 정리하고 있습니다."
       };
     }
     default: {
@@ -233,12 +238,12 @@ export async function runSkillJsonStream<T>(params: {
       emitLog(params.onLog, {
         level: "info",
         phase: "start",
-        message: `${params.skillName} 실행 시작`
+        message: `${SKILL_LABEL[params.skillName]} 준비를 시작합니다.`
       });
       emitLog(params.onLog, {
         level: "info",
         phase: "config",
-        message: `설정: 생각 깊이 ${formatReasoningEffortValue(params.modelReasoningEffort ?? "medium")}`
+        message: `실행 설정 확인 · 생각 깊이 ${formatReasoningEffortValue(params.modelReasoningEffort ?? "medium")}`
       });
 
       const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {
@@ -254,7 +259,7 @@ export async function runSkillJsonStream<T>(params: {
             emitLog(params.onLog, {
               level: "info",
               phase: "thread",
-              message: `스레드 시작: ${event.thread_id}`
+              message: `실행 세션 연결 완료`
             });
             break;
           }
@@ -262,7 +267,7 @@ export async function runSkillJsonStream<T>(params: {
             emitLog(params.onLog, {
               level: "info",
               phase: "turn",
-              message: "모델 분석 시작"
+              message: "분석 단계를 시작합니다."
             });
             break;
           }
@@ -275,7 +280,7 @@ export async function runSkillJsonStream<T>(params: {
               emitLog(params.onLog, {
                 level: "info",
                 phase: "command",
-                message: `명령 진행중: ${event.item.command}`
+                message: "보조 명령을 계속 실행하고 있습니다."
               });
             }
             break;
@@ -291,7 +296,7 @@ export async function runSkillJsonStream<T>(params: {
             emitLog(params.onLog, {
               level: "success",
               phase: "turn",
-              message: `분석 완료 (input: ${event.usage.input_tokens}, output: ${event.usage.output_tokens})`
+              message: `분석 완료 · 입력 ${event.usage.input_tokens} / 출력 ${event.usage.output_tokens} 토큰`
             });
             break;
           }
@@ -300,7 +305,7 @@ export async function runSkillJsonStream<T>(params: {
             emitLog(params.onLog, {
               level: "error",
               phase: "turn",
-              message: `분석 실패: ${event.error.message}`
+              message: `분석 단계 실패: ${event.error.message}`
             });
             break;
           }
@@ -309,7 +314,7 @@ export async function runSkillJsonStream<T>(params: {
             emitLog(params.onLog, {
               level: "error",
               phase: "error",
-              message: event.message
+              message: `실행 중 오류: ${event.message}`
             });
             break;
           }

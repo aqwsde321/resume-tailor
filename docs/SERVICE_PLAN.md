@@ -69,7 +69,7 @@ STEP 2 `/company`:
 
 STEP 3 `/result`:
 - STEP 1/2 확정 전 생성 제한
-- `oneLineIntro`, `shortIntro` 생성/출력
+- `oneLineIntro`, `shortIntro`, `longIntro` 생성/출력
 - 복사 버튼
 - 재생성 버튼
 - 공고 수정 페이지로 이동 버튼
@@ -142,6 +142,7 @@ SSE 이벤트:
 `Intro`:
 - `oneLineIntro`
 - `shortIntro`
+- `longIntro`
 
 ## 9. 상태 전이 규칙(중요)
 

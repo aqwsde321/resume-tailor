@@ -401,6 +401,10 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     JSON.stringify(guidance, null, 2),
     "",
     "[출력 제약]",
+    "- oneLineIntro는 25~45자 안팎으로 작성합니다.",
+    "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
+    "- longIntro는 450~700자, 5~8문장으로 작성합니다.",
+    "- longIntro는 shortIntro보다 정보량이 분명히 많아야 하며, 문장을 그대로 반복하지 않습니다.",
     "- fitReasons에는 requirementMatches 또는 preferredMatches에 있는 근거를 우선 사용합니다.",
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
     "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다."
@@ -436,6 +440,7 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
   return {
     oneLineIntro: intro.oneLineIntro.trim(),
     shortIntro: intro.shortIntro.trim(),
+    longIntro: intro.longIntro.trim() || intro.shortIntro.trim(),
     fitReasons: filteredFitReasons.length > 0 ? filteredFitReasons : rawFitReasons,
     matchedSkills:
       canonicalMatchedSkills.length > 0
