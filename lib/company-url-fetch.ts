@@ -176,6 +176,10 @@ function isSaraminRelayUrl(url: URL): boolean {
   return url.hostname.includes("saramin.co.kr") && url.pathname === "/zf_user/jobs/relay/view";
 }
 
+function isJobkoreaGiReadUrl(url: URL): boolean {
+  return url.hostname.includes("jobkorea.co.kr") && /^\/Recruit\/GI_Read\/\d+/.test(url.pathname);
+}
+
 function isSaraminNotFoundHtml(html: string): boolean {
   return html.includes("요청하신 페이지를 찾을 수 없습니다.");
 }
@@ -512,6 +516,153 @@ async function fetchSaraminRelayCandidate(
   const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageCandidate, "ocr", 280);
 
   return pickBestCandidate([mergedDetailCandidate, detailImageCandidate, detailCandidate, ajaxCandidate]);
+}
+
+function trimTextBetweenMarkers(
+  text: string,
+  {
+    startMarker,
+    endMarkers
+  }: {
+    startMarker?: string;
+    endMarkers?: string[];
+  }
+) {
+  let result = text;
+
+  if (startMarker) {
+    const startIndex = result.indexOf(startMarker);
+    if (startIndex >= 0) {
+      result = result.slice(startIndex);
+    }
+  }
+
+  if (endMarkers && endMarkers.length > 0) {
+    const endIndexes = endMarkers
+      .map((marker) => result.indexOf(marker))
+      .filter((index) => index >= 0);
+
+    if (endIndexes.length > 0) {
+      result = result.slice(0, Math.min(...endIndexes));
+    }
+  }
+
+  return normalizeBlock(result);
+}
+
+function extractJobkoreaSummaryCandidate(pageHtml: string): ExtractedCandidate | null {
+  const $ = load(pageHtml);
+  const title = normalizeLine(
+    $('meta[property="og:title"]').attr("content") ||
+      $("title").first().text() ||
+      $("main").first().find("h1").first().text()
+  );
+  const siteName = normalizeLine(
+    $('meta[property="og:site_name"]').attr("content") ||
+      $('meta[name="application-name"]').attr("content") ||
+      "잡코리아"
+  );
+  const mainText = normalizeBlock($("main").first().text());
+  const summaryText = trimTextBetweenMarkers(mainText, {
+    startMarker: mainText.includes("모집요강") ? "모집요강" : undefined,
+    endMarkers: [
+      "이 기업의 취업 전략",
+      "로그인하고 비슷한 조건의 AI추천공고",
+      "관련 태그",
+      "본 채용정보는 잡코리아의 동의없이",
+      "TOP",
+      "궁금해요"
+    ]
+  });
+
+  if (!summaryText) {
+    return null;
+  }
+
+  return {
+    title,
+    siteName,
+    text: summaryText,
+    source: "html",
+    score: scoreTextQuality(summaryText, title) + 980
+  };
+}
+
+async function fetchJobkoreaGiReadCandidate(
+  pageUrl: URL,
+  pageHtml: string,
+  cookieHeader: string
+): Promise<ExtractedCandidate | null> {
+  const jobId = pageUrl.pathname.match(/\/Recruit\/GI_Read\/(\d+)/)?.[1];
+  if (!jobId) {
+    return null;
+  }
+
+  const summaryCandidate = extractJobkoreaSummaryCandidate(pageHtml);
+  const detailUrl = new URL("/Recruit/GI_Read_Comt_Ifrm", pageUrl);
+
+  for (const [key, value] of pageUrl.searchParams.entries()) {
+    detailUrl.searchParams.set(key, value);
+  }
+  detailUrl.searchParams.set("Gno", jobId);
+
+  const detailResponse = await fetch(detailUrl, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      Referer: pageUrl.toString(),
+      ...(cookieHeader ? { Cookie: cookieHeader } : {})
+    }
+  });
+
+  if (!detailResponse.ok) {
+    return summaryCandidate;
+  }
+
+  const detailHtml = await detailResponse.text();
+  if (!detailHtml.trim()) {
+    return summaryCandidate;
+  }
+
+  const extractedDetail = extractTextFromHtml(detailHtml, detailUrl, "html");
+  const detailText = trimTextBetweenMarkers(extractedDetail.text, {
+    endMarkers: ["본 공고는 수시 채용으로 채용 완료 시 조기 마감될 수 있습니다."]
+  });
+  const detailCandidate =
+    detailText.length > 0
+      ? {
+          title: summaryCandidate?.title || extractedDetail.title,
+          siteName: summaryCandidate?.siteName || extractedDetail.siteName || "잡코리아",
+          text: detailText,
+          source: "html" as const,
+          score: scoreTextQuality(detailText, summaryCandidate?.title || extractedDetail.title) + 1420
+        }
+      : null;
+
+  const detailImageCandidate = isStrongCandidate(detailCandidate)
+    ? null
+    : await extractImageOcrCandidateFromHtml(
+        detailHtml,
+        detailUrl,
+        ["main", "body"],
+        summaryCandidate?.title || extractedDetail.title,
+        summaryCandidate?.siteName || extractedDetail.siteName || "잡코리아",
+        {
+          cookieHeader,
+          refererUrl: pageUrl.toString()
+        },
+        1360
+      );
+
+  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageCandidate, "ocr", 260);
+  const mergedCandidate = mergeCandidates(mergedDetailCandidate, summaryCandidate, "html", 220);
+
+  return pickBestCandidate([
+    mergedCandidate,
+    mergedDetailCandidate,
+    detailImageCandidate,
+    detailCandidate,
+    summaryCandidate
+  ]);
 }
 
 function isPrivateIpv4(value: string): boolean {
@@ -1085,7 +1236,7 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
 
     await page.route("**/*", async (route) => {
       const resourceType = route.request().resourceType();
-      if (resourceType === "image" || resourceType === "font" || resourceType === "media") {
+      if (resourceType === "font" || resourceType === "media") {
         await route.abort();
         return;
       }
@@ -1262,6 +1413,14 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
 
       if (isUsableCandidate(saraminCandidate)) {
         return toFetchedCompanyPage(saraminCandidate, resolvedUrl, resolved.hostname);
+      }
+    }
+
+    if (isJobkoreaGiReadUrl(resolved)) {
+      const jobkoreaCandidate = await fetchJobkoreaGiReadCandidate(resolved, body, cookieHeader);
+
+      if (isUsableCandidate(jobkoreaCandidate)) {
+        return toFetchedCompanyPage(jobkoreaCandidate, resolvedUrl, resolved.hostname);
       }
     }
 

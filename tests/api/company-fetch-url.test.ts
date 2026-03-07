@@ -470,6 +470,91 @@ describe("POST /api/company/fetch-url", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
+  it("잡코리아 GI_Read 공고는 상세 iframe 본문을 우선 읽고 추천공고를 제외한다", async () => {
+    const baseHtml = `
+      <html>
+        <head>
+          <meta property="og:title" content="엔에이치엔케이씨피㈜ 채용 - [NHN KCP] Java 백엔드 웹개발 담당 | 잡코리아" />
+          <meta property="og:site_name" content="잡코리아" />
+          <title>엔에이치엔케이씨피㈜ 채용 - [NHN KCP] Java 백엔드 웹개발 담당 | 잡코리아</title>
+        </head>
+        <body>
+          <main>
+            <div>엔에이치엔케이씨피㈜ [NHN KCP] Java 백엔드 웹개발 담당</div>
+            <div>모집요강 모집분야 Java 웹프로그래머 모집인원 1명 지원자격 경력 경력(3년이상) 학력 초대졸이상</div>
+            <div>로그인하고 비슷한 조건의 AI추천공고를 확인해 보세요! 다른 회사 공고 A 다른 회사 공고 B</div>
+          </main>
+        </body>
+      </html>
+    `;
+
+    const detailHtml = `
+      <html>
+        <body>
+          <main>
+            <h1>[NHN KCP] Java 백엔드 웹개발 담당</h1>
+            <p>우리 팀을 소개합니다.</p>
+            <p>온·오프라인 결제 데이터 서비스 플랫폼을 제공합니다.</p>
+            <p>주요 업무</p>
+            <p>PG/VAN 백엔드 시스템 개발</p>
+            <p>자격 요건</p>
+            <p>Java 기반 서버 개발 역량 보유</p>
+            <p>우대 사항</p>
+            <p>React 또는 Vue.js 기반 프론트엔드 개발 역량 보유자</p>
+            <p>본 공고는 수시 채용으로 채용 완료 시 조기 마감될 수 있습니다.</p>
+          </main>
+        </body>
+      </html>
+    `;
+
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/Recruit/GI_Read/48559708")) {
+        return new Response(baseHtml, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        });
+      }
+
+      if (url.includes("/Recruit/GI_Read_Comt_Ifrm") && url.includes("Gno=48559708")) {
+        return new Response(detailHtml, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.jobkorea.co.kr/Recruit/GI_Read/48559708?Oem_Code=C1&logpath=1&stext=java&listno=3&sc=630"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("엔에이치엔케이씨피㈜");
+    expect(body.data.jobTitleHint).toBe("[NHN KCP] Java 백엔드 웹개발 담당");
+    expect(body.data.text).toContain("PG/VAN 백엔드 시스템 개발");
+    expect(body.data.text).toContain("Java 기반 서버 개발 역량 보유");
+    expect(body.data.text).not.toContain("AI추천공고");
+    expect(body.data.text).not.toContain("다른 회사 공고");
+    expect(launchMock).not.toHaveBeenCalled();
+  });
+
   it("내부 주소는 차단한다", async () => {
     const request = new Request("http://localhost/api/company/fetch-url", {
       method: "POST",

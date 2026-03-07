@@ -5,3 +5,4 @@
 - [릴리즈 노트](./RELEASE_NOTES.md)
 - [운영 런북](./OPS_RUNBOOK.md)
 - [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md)
+- [채용공고 불러오기 가이드](./COMPANY_FETCH_GUIDE.md)

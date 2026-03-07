@@ -7,7 +7,7 @@
 ## 1. 서비스 정의
 
 정의:
-`Next.js` 기반 로컬 웹앱. 이력서/채용공고를 텍스트 입력 또는 txt 업로드로 받아, `@openai/codex-sdk + SKILL.md` 파이프라인으로 구조화 JSON을 생성하고, 회사 맞춤 자기소개를 웹 화면에서 확인/수정할 수 있다.
+`Next.js` 기반 로컬 웹앱. 이력서/채용공고를 텍스트 입력, txt 업로드, URL 불러오기로 받아, `@openai/codex-sdk + SKILL.md` 파이프라인으로 구조화 JSON을 생성하고, 회사 맞춤 자기소개를 웹 화면에서 확인/수정할 수 있다.
 
 핵심 가치:
 - 이력서와 공고의 핵심 정보를 빠르게 구조화한다.
@@ -34,6 +34,7 @@ MVP 포함:
 - JSON 확정 상태 관리(`resumeConfirmedJson`, `companyConfirmedJson`)
 - API 6개(일반 3개 + SSE 스트림 3개)
 - txt 업로드 -> textarea 반영
+- 공고 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
 - 작업 중 상태 표시(스피너/경과시간)
 - AI 분석 로그 실시간 표시(SSE)
 - 상단 고정 스텝/상태 셸
@@ -60,7 +61,7 @@ STEP 1 `/resume`:
 
 STEP 2 `/company`:
 - STEP 1 확정 전 진입 제한
-- 채용공고: textarea / txt 업로드 탭 전환
+- 채용공고: textarea / txt 업로드 / URL 불러오기 탭 전환
 - 구조화 결과 생성
 - 한글 폼 기반 인라인 수정
 - 필수 항목(`회사명`, `채용 직무`, `필수 요구사항`) 강조 표시
@@ -107,11 +108,19 @@ STEP 3 `/result`:
 4. 결과(`result`) 수신 후 내부 JSON/자기소개 갱신
 5. 확정 상태와 stale 상태를 기반으로 단계 가드
 
+공고 URL 보조 흐름:
+1. `/company`에서 URL 입력
+2. `POST /api/company/fetch-url`
+3. 서버가 정적 HTML, 숨겨진 JSON, 사이트 전용 상세 경로, 브라우저 렌더링, OCR fallback 순서로 본문 추출
+4. 추출된 텍스트를 textarea에 채움
+5. 이후 `POST /api/company` 또는 `/api/company/stream`으로 동일 분석 플로우 진행
+
 ## 7. API 명세(현재 기준)
 
 일반 API:
 - `POST /api/resume` -> `Resume`
 - `POST /api/company` -> `Company`
+- `POST /api/company/fetch-url` -> `FetchedCompanyPage`
 - `POST /api/intro` -> `Intro`
 
 스트림 API(SSE):

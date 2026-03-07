@@ -56,6 +56,9 @@ npm run build
 3. 플로우 점검
 - `/resume`에서 resume 분석/확정
 - `/company`에서 company 분석/확정
+  - 붙여넣기 입력 확인
+  - `txt` 업로드 확인
+  - URL 불러오기 확인
 - `/result`에서 intro 생성
 - 로그 패널에 `log -> result -> done` 이벤트가 보이는지 확인
 
@@ -103,6 +106,27 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 # 기존 dev 프로세스 종료 후 재실행
 ```
 
+### E. `URL 불러오기`가 현재 공고 대신 주변 문구를 읽는다
+원인:
+- 사이트가 상세 본문을 iframe, ajax, 숨겨진 JSON으로 별도 로드
+- 추천공고/푸터 문구가 generic selector에 섞임
+
+조치:
+- 먼저 최신 코드인지 확인
+- [채용공고 불러오기 가이드](/Users/jino/study/project/resumeMake/docs/COMPANY_FETCH_GUIDE.md)에서 사이트별 처리 방식을 확인
+- 실제 추출 결과에 `추천공고`, `취업 전략`, footer 문구가 섞였는지 확인
+- 같은 URL을 `/company`의 `URL 불러오기`로 다시 실행해 본문이 textarea에 어떻게 들어오는지 확인
+
+### F. 이미지 기반 상세 공고가 약하게 읽힌다
+원인:
+- 상세 본문이 이미지이거나 OCR 품질이 낮음
+- 현재 OCR fallback은 macOS Vision 기준
+
+조치:
+- macOS 로컬 실행인지 확인
+- 가능하면 공고 본문을 직접 붙여넣어 비교
+- 이미지가 너무 흐리거나 작은 경우 붙여넣기 또는 `txt` 입력으로 우회
+
 ## 7) SSE 로그 점검 팁
 
 resume 스트림 확인:
@@ -126,3 +150,4 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
 
 현재 문서 범위는 로컬 MVP다.
 - 서버리스/원격 배포 시 Codex 인증/세션 정책을 별도로 재설계해야 한다.
+- 공고 이미지 OCR fallback도 현재는 macOS 로컬 실행 기준이다.
