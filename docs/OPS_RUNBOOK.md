@@ -60,7 +60,8 @@ npm run build
   - `txt` 업로드 확인
   - URL 불러오기 확인
 - `/result`에서 intro 생성
-- 로그 패널에 `log -> result -> done` 이벤트가 보이는지 확인
+- 작업 중 중앙 모달이 뜨고 뒤 화면이 눌리는지 확인
+- 완료 후 하단 작업 기록 패널에 `log -> result -> done` 흐름이 남는지 확인
 
 ## 6) 장애 대응 가이드
 

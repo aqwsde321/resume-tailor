@@ -7,7 +7,7 @@
 - 채용공고 불러오기 가이드 문서 추가: [COMPANY_FETCH_GUIDE.md](/Users/jino/study/project/resumeMake/docs/COMPANY_FETCH_GUIDE.md)
 - 상세 본문이 이미지인 공고를 위한 macOS Vision OCR fallback 추가
 - 채용공고 정규화 회귀 테스트 11개와 소개글 stale 이유 헬퍼 테스트 추가
-- 소개글 생성 전에 필수/우대 요건과 이력서 근거를 묶는 `[작성 앵커]` 추가
+- 소개글 생성 전에 필수/우대 요건과 이력서 근거를 묶는 내부 `작성 앵커` 계산과 결과 화면의 `공고와 연결한 내 경험` 섹션 추가
 - Wanted / Jumpit URL 추출 결과를 반영한 company route golden case 추가
 - stale 흐름 E2E 추가: 이력서 수정 시 회사/결과 무효화, 공고 수정 시 소개글 재생성 필요
 - 중앙 진행 모달과 하단 기록 패널의 SSE 로그 표시 스모크 테스트 추가
@@ -22,6 +22,7 @@
 - 소개글 기준 정보(`introSource`)를 유지해 수정 후에도 stale 이유가 계속 보이도록 조정
 - `shortIntro`와 `longIntro`가 공고 요건과 프로젝트/성과 근거를 더 직접 연결하도록 프롬프트와 후처리를 강화
 - `저장 전 확인`의 누락 항목을 누르면 해당 입력 위치로 스크롤 및 포커스 이동하도록 개선
+- 작업 중 상태는 중앙 모달만 대표로 보이고, 스티키/카드 내부의 중복 진행 알림은 제거하도록 정리
 
 ### Verified
 - `npm run lint`
