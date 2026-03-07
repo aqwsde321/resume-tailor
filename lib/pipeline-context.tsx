@@ -10,7 +10,16 @@ import {
   type ReactNode
 } from "react";
 
-import type { Company, InputMode, Intro, PipelineLog, StreamLogPayload, TaskKind } from "@/lib/types";
+import { normalizeAgentSettings } from "@/lib/agent-settings";
+import type {
+  AgentSettings,
+  Company,
+  InputMode,
+  Intro,
+  PipelineLog,
+  StreamLogPayload,
+  TaskKind
+} from "@/lib/types";
 
 const STORAGE_KEY = "resume-make.pipeline.v2";
 const MAX_LOG_COUNT = 300;
@@ -21,6 +30,7 @@ interface IntroSource {
 }
 
 export interface PipelineState {
+  agentSettings: AgentSettings;
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
@@ -40,6 +50,10 @@ export interface PipelineState {
 }
 
 const initialState: PipelineState = {
+  agentSettings: {
+    model: "",
+    modelReasoningEffort: "medium"
+  },
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
@@ -88,6 +102,7 @@ function normalizeState(raw: unknown): PipelineState {
   return {
     ...initialState,
     ...value,
+    agentSettings: normalizeAgentSettings(value.agentSettings),
     intro: normalizeIntro(value.intro),
     previousIntro: normalizeIntro(value.previousIntro),
     logs: Array.isArray(value.logs)

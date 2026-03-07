@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { toAgentRunOptions } from "@/lib/agent-settings";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
@@ -108,8 +109,6 @@ export default function ResumePage() {
   }
 
   const hasMissingResumeRequired = missingResumeRequired.length > 0;
-  const resumeTextCount = state.resumeText.trim().length;
-
   useEffect(() => {
     const next = toResumeDraft(state.resumeJsonText);
     setDraft(next);
@@ -208,7 +207,10 @@ export default function ResumePage() {
     try {
       const resume = await postSseJson<Resume>(
         "/api/resume/stream",
-        { text: state.resumeText },
+        {
+          text: state.resumeText,
+          agent: toAgentRunOptions(state.agentSettings)
+        },
         {
           onLog: (payload) => addLog("resume", payload)
         }
@@ -286,21 +288,6 @@ export default function ResumePage() {
           정리할 수 있습니다.
         </p>
 
-        <div className="mini-grid">
-          <div className="mini-stat">
-            <span>입력 방식</span>
-            <strong>{state.resumeInputMode === "text" ? "텍스트 직접 입력" : "txt 업로드"}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>원문 길이</span>
-            <strong>{resumeTextCount > 0 ? `${resumeTextCount.toLocaleString()}자` : "비어 있음"}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>다음 액션</span>
-            <strong>{state.resumeJsonText.trim() ? "폼 검토 및 확정" : "먼저 분석 실행"}</strong>
-          </div>
-        </div>
-
         <div className="tabs">
           <button
             type="button"
@@ -356,25 +343,6 @@ export default function ResumePage() {
           분석 결과는 JSON이 아닌 한글 폼으로 다듬습니다. 필수 항목을 채우고 하단에서 이력서를 확정하면
           STEP 2가 열립니다.
         </p>
-
-        <div className="mini-grid compact">
-          <div className={`mini-stat ${hasMissingResumeRequired ? "warn" : "ok"}`}>
-            <span>필수 항목</span>
-            <strong>
-              {hasMissingResumeRequired
-                ? `${missingResumeRequired.length}개 보완 필요`
-                : "입력 완료"}
-            </strong>
-          </div>
-          <div className={`mini-stat ${resumeNeedsConfirm ? "warn" : "ok"}`}>
-            <span>확정 상태</span>
-            <strong>{resumeNeedsConfirm ? "확정 전 수정됨" : state.resumeConfirmedJson ? "확정 완료" : "분석 전"}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>구조화 데이터</span>
-            <strong>{state.resumeJsonText.trim() ? "생성됨" : "아직 없음"}</strong>
-          </div>
-        </div>
 
         <div className="form-grid two">
           <label className={`field ${!draft.name.trim() ? "field-error" : ""}`}>

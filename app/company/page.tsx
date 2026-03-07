@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
+import { toAgentRunOptions } from "@/lib/agent-settings";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
@@ -90,8 +91,6 @@ export default function CompanyPage() {
   }
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
-  const companyTextCount = state.companyText.trim().length;
-
   useEffect(() => {
     const next = toCompanyDraft(state.companyJsonText);
     setDraft(next);
@@ -159,7 +158,10 @@ export default function CompanyPage() {
     try {
       const company = await postSseJson<Company>(
         "/api/company/stream",
-        { text: state.companyText },
+        {
+          text: state.companyText,
+          agent: toAgentRunOptions(state.agentSettings)
+        },
         {
           onLog: (payload) => addLog("company", payload)
         }
@@ -248,21 +250,6 @@ export default function CompanyPage() {
           완료돼야 활성화됩니다.
         </p>
 
-        <div className="mini-grid">
-          <div className="mini-stat">
-            <span>입력 방식</span>
-            <strong>{state.companyInputMode === "text" ? "텍스트 직접 입력" : "txt 업로드"}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>원문 길이</span>
-            <strong>{companyTextCount > 0 ? `${companyTextCount.toLocaleString()}자` : "비어 있음"}</strong>
-          </div>
-          <div className={`mini-stat ${canEdit ? "ok" : "warn"}`}>
-            <span>선행 조건</span>
-            <strong>{canEdit ? "이력서 확정 완료" : "이력서 확정 필요"}</strong>
-          </div>
-        </div>
-
         <div className="tabs">
           <button
             type="button"
@@ -318,27 +305,6 @@ export default function CompanyPage() {
           공고에서 추출된 회사명, 채용 직무, 요구사항을 정리하는 단계입니다. 확정 후에만 STEP 3에서
           자기소개 생성이 열립니다.
         </p>
-
-        <div className="mini-grid compact">
-          <div className={`mini-stat ${hasMissingCompanyRequired ? "warn" : "ok"}`}>
-            <span>필수 항목</span>
-            <strong>
-              {hasMissingCompanyRequired
-                ? `${missingCompanyRequired.length}개 보완 필요`
-                : "입력 완료"}
-            </strong>
-          </div>
-          <div className={`mini-stat ${companyNeedsConfirm ? "warn" : "ok"}`}>
-            <span>확정 상태</span>
-            <strong>
-              {companyNeedsConfirm ? "확정 전 수정됨" : state.companyConfirmedJson ? "확정 완료" : "분석 전"}
-            </strong>
-          </div>
-          <div className="mini-stat">
-            <span>결과 영향</span>
-            <strong>{state.companyConfirmedJson ? "결과 생성 가능" : "확정 후 생성 가능"}</strong>
-          </div>
-        </div>
 
         <div className="form-grid two">
           <label className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}>

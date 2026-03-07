@@ -2,6 +2,17 @@ export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro";
 export type InputMode = "text" | "file";
 export type TaskKind = "resume" | "company" | "intro";
 export type LogLevel = "info" | "success" | "error";
+export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+
+export interface AgentSettings {
+  model: string;
+  modelReasoningEffort: ModelReasoningEffort | "";
+}
+
+export interface AgentRunOptions {
+  model?: string;
+  modelReasoningEffort?: ModelReasoningEffort;
+}
 
 export interface ResumeExperienceItem {
   company: string;

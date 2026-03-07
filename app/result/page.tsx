@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
+import { toAgentRunOptions } from "@/lib/agent-settings";
 import { buildMatchInsights } from "@/lib/intro-insights";
 import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
@@ -134,14 +135,15 @@ export default function ResultPage() {
 
     try {
       const intro = await postSseJson<Intro>(
-        "/api/intro/stream",
-        {
-          resume: resume.data,
-          company: company.data
-        },
-        {
-          onLog: (payload) => addLog("intro", payload)
-        }
+          "/api/intro/stream",
+          {
+            resume: resume.data,
+            company: company.data,
+            agent: toAgentRunOptions(state.agentSettings)
+          },
+          {
+            onLog: (payload) => addLog("intro", payload)
+          }
       );
 
       patch((prev) => ({
@@ -210,21 +212,6 @@ export default function ResultPage() {
           흐름을 기준으로 설계되어 있습니다.
         </p>
 
-        <div className="mini-grid">
-          <div className={`mini-stat ${canGenerate ? "ok" : "warn"}`}>
-            <span>생성 준비</span>
-            <strong>{canGenerate ? "실행 가능" : "선행 단계 필요"}</strong>
-          </div>
-          <div className={`mini-stat ${introFresh ? "ok" : "warn"}`}>
-            <span>결과 상태</span>
-            <strong>{introFresh ? "최신 유지" : state.intro ? "재생성 필요" : "아직 생성 전"}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>비교 데이터</span>
-            <strong>{state.previousIntro ? "직전 결과 보유" : "첫 결과 생성 전"}</strong>
-          </div>
-        </div>
-
         <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
           {introFresh ? "현재 결과는 최신입니다." : "확정 정보가 변경되어 재생성이 필요합니다."}
         </p>
@@ -279,36 +266,48 @@ export default function ResultPage() {
         </section>
       )}
 
-      <section className="card result-card">
-        <article className="result-block">
-          <div className="result-head">
-            <h3>한 줄 소개</h3>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => void copyText(state.intro?.oneLineIntro ?? "", "한 줄 소개")}
-              disabled={isBusy || !state.intro}
-            >
-              복사
-            </button>
+      <section className="card result-output-shell">
+        <div className="result-output-head">
+          <div>
+            <p className="card-kicker">생성 결과</p>
+            <h2>복사하기 전에 문장을 빠르게 검토하세요</h2>
           </div>
-          <p>{state.intro?.oneLineIntro ?? "아직 생성되지 않았습니다."}</p>
-        </article>
+          <p className="card-copy">
+            한 줄 소개와 짧은 자기소개를 세로로 배치해 문장 흐름을 바로 비교할 수 있게 정리했습니다.
+          </p>
+        </div>
 
-        <article className="result-block">
-          <div className="result-head">
-            <h3>짧은 자기소개</h3>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => void copyText(state.intro?.shortIntro ?? "", "짧은 자기소개")}
-              disabled={isBusy || !state.intro}
-            >
-              복사
-            </button>
-          </div>
-          <p>{state.intro?.shortIntro ?? "아직 생성되지 않았습니다."}</p>
-        </article>
+        <div className="result-card">
+          <article className="result-block">
+            <div className="result-head">
+              <h3>한 줄 소개</h3>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => void copyText(state.intro?.oneLineIntro ?? "", "한 줄 소개")}
+                disabled={isBusy || !state.intro}
+              >
+                복사
+              </button>
+            </div>
+            <p>{state.intro?.oneLineIntro ?? "아직 생성되지 않았습니다."}</p>
+          </article>
+
+          <article className="result-block">
+            <div className="result-head">
+              <h3>짧은 자기소개</h3>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => void copyText(state.intro?.shortIntro ?? "", "짧은 자기소개")}
+                disabled={isBusy || !state.intro}
+              >
+                복사
+              </button>
+            </div>
+            <p>{state.intro?.shortIntro ?? "아직 생성되지 않았습니다."}</p>
+          </article>
+        </div>
       </section>
 
       {state.previousIntro && state.intro && (

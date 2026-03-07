@@ -3,13 +3,14 @@ import { z } from "zod";
 
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
-import { CompanySchema, companyOutputSchema } from "@/lib/schemas";
+import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
 import type { ApiSuccess, Company } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const RequestSchema = z.object({
-  text: z.string().trim().min(1, "채용공고 텍스트를 입력해주세요.")
+  text: z.string().trim().min(1, "채용공고 텍스트를 입력해주세요."),
+  agent: AgentRunOptionsSchema.optional()
 });
 
 export async function POST(request: Request) {
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     const generated = await runSkillJson<unknown>({
       skillName: "company-to-json",
       inputText: `input/company.txt 내용:\n${body.text}`,
-      outputSchema: companyOutputSchema
+      outputSchema: companyOutputSchema,
+      ...body.agent
     });
 
     const validated = CompanySchema.parse(generated);

@@ -70,6 +70,38 @@ describe("POST /api/intro", () => {
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("\"matchedSkills\": [");
   });
 
+  it("agent 설정이 있으면 intro 생성에도 전달한다", async () => {
+    const mockedRunSkillJson = vi.mocked(runSkillJson);
+    mockedRunSkillJson.mockResolvedValue({
+      oneLineIntro: "백엔드 개발자",
+      shortIntro: "실무 경험이 있습니다.",
+      fitReasons: [],
+      matchedSkills: ["TypeScript"],
+      gapNotes: []
+    });
+
+    const request = new Request("http://localhost/api/intro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumePayload,
+        company: companyPayload,
+        agent: {
+          model: "gpt-5.3-codex",
+          modelReasoningEffort: "medium"
+        }
+      })
+    });
+
+    await POST(request);
+
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]).toMatchObject({
+      skillName: "generate-intro",
+      model: "gpt-5.3-codex",
+      modelReasoningEffort: "medium"
+    });
+  });
+
   it("이전 형식 응답이면 분석 힌트를 기준으로 기본 기술을 보정한다", async () => {
     const mockedRunSkillJson = vi.mocked(runSkillJson);
     mockedRunSkillJson.mockResolvedValue({

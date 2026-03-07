@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 const StringArraySchema = z.array(z.string()).default([]);
+export const ModelReasoningEffortSchema = z.enum(["minimal", "low", "medium", "high", "xhigh"]);
+export const AgentRunOptionsSchema = z
+  .object({
+    model: z.string().trim().min(1).max(120).optional(),
+    modelReasoningEffort: ModelReasoningEffortSchema.optional()
+  })
+  .strict();
 
 const ResumeExperienceItemSchema = z
   .object({

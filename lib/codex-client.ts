@@ -2,7 +2,7 @@ import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
 import { HttpError } from "@/lib/http";
 import { readSkillMarkdown } from "@/lib/skills";
-import type { SkillName, StreamLogPayload } from "@/lib/types";
+import type { AgentRunOptions, SkillName, StreamLogPayload } from "@/lib/types";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -17,8 +17,12 @@ function getCodexClient(): Codex {
   return codex;
 }
 
-function startThread() {
+function startThread(options?: AgentRunOptions) {
   return getCodexClient().startThread({
+    ...(options?.model ? { model: options.model } : {}),
+    ...(options?.modelReasoningEffort
+      ? { modelReasoningEffort: options.modelReasoningEffort }
+      : {}),
     workingDirectory: process.cwd(),
     skipGitRepoCheck: true,
     approvalPolicy: "never"
@@ -188,11 +192,16 @@ export async function runSkillJson<T>(params: {
   skillName: SkillName;
   inputText: string;
   outputSchema: JsonSchema;
+  model?: string;
+  modelReasoningEffort?: AgentRunOptions["modelReasoningEffort"];
 }): Promise<T> {
   return enqueue(async () => {
     try {
       const skillMarkdown = await readSkillMarkdown(params.skillName);
-      const thread = startThread();
+      const thread = startThread({
+        model: params.model,
+        modelReasoningEffort: params.modelReasoningEffort
+      });
 
       const turn = await thread.run(buildPrompt(skillMarkdown, params.inputText), {
         outputSchema: params.outputSchema
@@ -209,16 +218,28 @@ export async function runSkillJsonStream<T>(params: {
   inputText: string;
   outputSchema: JsonSchema;
   onLog?: (payload: StreamLogPayload) => void;
+  model?: string;
+  modelReasoningEffort?: AgentRunOptions["modelReasoningEffort"];
 }): Promise<T> {
   return enqueue(async () => {
     try {
       const skillMarkdown = await readSkillMarkdown(params.skillName);
-      const thread = startThread();
+      const thread = startThread({
+        model: params.model,
+        modelReasoningEffort: params.modelReasoningEffort
+      });
 
       emitLog(params.onLog, {
         level: "info",
         phase: "start",
         message: `${params.skillName} 실행 시작`
+      });
+      emitLog(params.onLog, {
+        level: "info",
+        phase: "config",
+        message: `실행 설정: model=${params.model ?? "config 기본값"}, reasoning=${
+          params.modelReasoningEffort ?? "config 기본값"
+        }`
       });
 
       const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {

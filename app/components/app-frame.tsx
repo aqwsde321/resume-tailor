@@ -4,6 +4,12 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import {
+  formatReasoningEffortValue,
+  isModelReasoningEffort,
+  MODEL_REASONING_EFFORT_LABELS,
+  MODEL_REASONING_EFFORT_VALUES
+} from "@/lib/agent-settings";
 import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 
 type StepKey = "resume" | "company" | "result";
@@ -49,7 +55,7 @@ interface AppFrameProps {
 }
 
 export function AppFrame({ step, title, description, children }: AppFrameProps) {
-  const { hydrated, state, clearLogs } = usePipeline();
+  const { hydrated, state, patch, clearLogs } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
 
@@ -71,8 +77,8 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const introFresh = isIntroFresh(state);
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
-  const completedStepCount = [hasResume, hasCompany, introFresh].filter(Boolean).length;
   const stepMeta = STEP_META[step];
+  const selectedReasoningLabel = formatReasoningEffortValue(state.agentSettings.modelReasoningEffort);
 
   const steps = useMemo(() => {
     const stepStatusLabel = (status: StepStatus): string => {
@@ -113,7 +119,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
     return [
       {
         key: "resume" as const,
-        label: "STEP 1 이력서",
+        label: "1. 이력서",
         href: "/resume" as StepRoute,
         enabled: true,
         status: resumeStatus,
@@ -121,7 +127,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       },
       {
         key: "company" as const,
-        label: "STEP 2 채용공고",
+        label: "2. 채용공고",
         href: "/company" as StepRoute,
         enabled: companyStatus !== "locked",
         status: companyStatus,
@@ -129,7 +135,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       },
       {
         key: "result" as const,
-        label: "STEP 3 결과",
+        label: "3. 결과",
         href: "/result" as StepRoute,
         enabled: resultStatus !== "locked",
         status: resultStatus,
@@ -160,81 +166,36 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
     <main className="page">
       <div className="backdrop" />
       <div className="container">
-        <header className="hero-grid">
-          <div className="hero">
-            <p className="eyebrow">ResumeMake Local MVP</p>
-            <h1>{title}</h1>
-            <p>{description}</p>
-          </div>
-
-          <aside className="hero-panel">
-            <p className="eyebrow">{stepMeta.eyebrow}</p>
-            <h2>{stepMeta.objective}</h2>
-            <p>{stepMeta.detail}</p>
-
-            <div className="hero-metrics">
-              <div className="hero-metric">
-                <span>진행도</span>
-                <strong>{completedStepCount}/3 단계</strong>
-              </div>
-              <div className="hero-metric">
-                <span>로그</span>
-                <strong>{state.logs.length}개</strong>
-              </div>
-              <div className="hero-metric">
-                <span>상태</span>
-                <strong>{state.currentTask ? "작업 중" : "대기 중"}</strong>
-              </div>
-            </div>
-          </aside>
+        <header className="hero">
+          <p className="eyebrow">ResumeMake Local MVP</p>
+          <h1>{title}</h1>
+          <p>{description}</p>
+          <p className="hero-note">
+            <strong>{stepMeta.eyebrow}</strong> {stepMeta.detail}
+          </p>
         </header>
 
         <section className="sticky-shell">
-          <div className="sticky-topline">
-            <ol className="steps">
-              {steps.map((item) => (
-                <li
-                  key={item.key}
-                  className={`step-item ${step === item.key ? "active" : ""} ${item.status}`}
-                >
-                  {item.enabled ? (
-                    <Link href={item.href as Route} className="step-link step-content">
-                      <span>{item.label}</span>
-                      <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                    </Link>
-                  ) : (
-                    <span className="step-link step-content disabled">
-                      <span>{item.label}</span>
-                      <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-
-            <div className="sticky-summary">
-              <div className="summary-chip">
-                <span>현재 단계</span>
-                <strong>{title.replace(" 분석/확정", "").replace(" 생성", "")}</strong>
-              </div>
-              <div className="summary-chip">
-                <span>현재 작업</span>
-                <strong>{state.currentTask ? TASK_LABEL[state.currentTask] : "없음"}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="badge-row">
-            <span className={`badge ${state.resumeConfirmedJson ? "ok" : "warn"}`}>
-              이력서 {state.resumeConfirmedJson ? "확정" : "미확정"}
-            </span>
-            <span className={`badge ${state.companyConfirmedJson ? "ok" : "warn"}`}>
-              채용공고 {state.companyConfirmedJson ? "확정" : "미확정"}
-            </span>
-            <span className={`badge ${introFresh ? "ok" : "warn"}`}>
-              결과 {introFresh ? "최신" : "재생성 필요"}
-            </span>
-          </div>
+          <ol className="steps">
+            {steps.map((item) => (
+              <li
+                key={item.key}
+                className={`step-item ${step === item.key ? "active" : ""} ${item.status}`}
+              >
+                {item.enabled ? (
+                  <Link href={item.href as Route} className="step-link step-content">
+                    <span>{item.label}</span>
+                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
+                  </Link>
+                ) : (
+                  <span className="step-link step-content disabled">
+                    <span>{item.label}</span>
+                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
 
           {state.currentTask && (
             <section className="busy-banner" aria-live="polite">
@@ -243,6 +204,46 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
               <span>{elapsedSeconds}s 경과</span>
             </section>
           )}
+        </section>
+
+        <section className="support-shell">
+          <section className="agent-config-panel">
+            <div>
+              <p className="card-kicker">실행 설정</p>
+              <h2>이성 수준 선택</h2>
+              <p className="agent-config-copy">
+                기본값은 {selectedReasoningLabel}이며, 필요하면 아래에서만 조정합니다.
+              </p>
+            </div>
+
+            <div className="agent-config-grid">
+              <label className="field">
+                <span>이성 수준</span>
+                <select
+                  className="form-select"
+                  value={state.agentSettings.modelReasoningEffort}
+                  onChange={(event) =>
+                    patch((prev) => ({
+                      ...prev,
+                      agentSettings: {
+                        ...prev.agentSettings,
+                        modelReasoningEffort: isModelReasoningEffort(event.target.value)
+                          ? event.target.value
+                          : ""
+                      }
+                    }))
+                  }
+                  disabled={Boolean(state.currentTask)}
+                >
+                  {MODEL_REASONING_EFFORT_VALUES.map((item) => (
+                    <option key={item} value={item}>
+                      {MODEL_REASONING_EFFORT_LABELS[item]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
         </section>
 
         {children}

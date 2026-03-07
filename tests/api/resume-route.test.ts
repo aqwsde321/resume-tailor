@@ -42,6 +42,41 @@ describe("POST /api/resume", () => {
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("resume-to-json");
   });
 
+  it("모델과 이성 수준을 넘기면 그대로 실행 옵션에 반영한다", async () => {
+    const mockedRunSkillJson = vi.mocked(runSkillJson);
+    mockedRunSkillJson.mockResolvedValue({
+      name: "홍길동",
+      summary: "백엔드 개발자",
+      desiredPosition: "Backend Engineer",
+      careerYears: 3,
+      techStack: ["TypeScript"],
+      experience: [],
+      projects: [],
+      achievements: [],
+      strengths: []
+    });
+
+    const request = new Request("http://localhost/api/resume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "이력서 원문",
+        agent: {
+          model: "gpt-5.4",
+          modelReasoningEffort: "high"
+        }
+      })
+    });
+
+    await POST(request);
+
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]).toMatchObject({
+      skillName: "resume-to-json",
+      model: "gpt-5.4",
+      modelReasoningEffort: "high"
+    });
+  });
+
   it("빈 텍스트면 400을 반환한다", async () => {
     const request = new Request("http://localhost/api/resume", {
       method: "POST",
