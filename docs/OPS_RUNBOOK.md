@@ -28,19 +28,14 @@
 
 ## 4. 일상 점검 체크리스트
 
-1. Codex 실행 및 인증 상태 확인
+### 4.1 공통
 
-```bash
-codex --version
-codex auth login
-```
-
-2. 앱 기본 접속 확인
+1. 앱 기본 접속 확인
 
 - 브라우저에서 `/resume` 진입 확인
 - 단계 이동이 `/resume -> /company -> /result` 흐름으로 동작하는지 확인
 
-3. 핵심 플로우 점검
+2. 핵심 플로우 점검
 
 - `/resume`에서 이력서 분석/확정
 - `/company`에서 공고 분석/확정
@@ -50,10 +45,59 @@ codex auth login
 - 각 단계에 마지막 저장/생성 시각이 표시되는지 확인
 - 작업 중 중앙 모달의 스피너, 단계형 진행 상태, 하단 작업 기록 패널이 정상 표시되는지 확인
 
-4. 품질 점검
+### 4.2 로컬 실행 점검
+
+1. Codex 실행 및 인증 상태 확인
+
+```bash
+codex --version
+codex login
+```
+
+2. 품질 점검
 
 - 검증 명령은 [README](../README.md)의 `검증 명령` 섹션을 기준으로 실행합니다.
 - 운영 중 이상이 의심되면 최소 `npm run test`까지는 다시 확인합니다.
+
+### 4.3 Docker 실행 점검
+
+1. 컨테이너 상태 확인
+
+직접 실행한 경우:
+
+```bash
+docker ps --filter name=resume-tailor-app
+docker logs --tail 100 resume-tailor-app
+```
+
+`docker compose`를 쓰는 경우:
+
+```bash
+docker compose ps
+docker compose logs --tail 100 app
+```
+
+2. Codex 로그인 상태 확인
+
+직접 실행한 경우:
+
+```bash
+docker run --rm -it \
+  -v resume-tailor-codex:/root/.codex \
+  qrqr/resume-tailor:latest \
+  codex login status
+```
+
+`docker compose`를 쓰는 경우:
+
+```bash
+docker compose run --rm app codex login status
+```
+
+3. 이상이 의심되면
+
+- 먼저 [README](../README.md) 기준으로 이미지를 다시 pull하고 컨테이너를 재실행합니다.
+- Docker Hub 이미지만 사용하는 사용자는 `npm run test`보다 앱 접속, 핵심 플로우, 로그 확인을 우선합니다.
 
 ## 5. 장애 대응 가이드
 
@@ -66,7 +110,7 @@ codex auth login
 조치:
 
 ```bash
-/Applications/Codex.app/Contents/Resources/codex auth login
+/Applications/Codex.app/Contents/Resources/codex login
 echo 'export PATH="/Applications/Codex.app/Contents/Resources:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 hash -r

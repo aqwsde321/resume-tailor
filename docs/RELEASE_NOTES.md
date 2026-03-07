@@ -12,17 +12,13 @@
 ### Changed
 
 - `docker-compose.yml` 기본 실행 방식을 로컬 build에서 Docker Hub 공개 이미지 pull 기반으로 변경
-- `README`와 운영 런북을 Docker Hub 직접 실행과 `docker compose` 실행을 함께 안내하는 사용자 가이드 기준으로 갱신
-- Docker 실행 예시를 `docker pull`/`docker run` 직접 실행과 저장소 clone 뒤 `docker compose pull` 흐름으로 정리
-- Docker Hub 기본 이미지 경로를 실제 공개 저장소 `qrqr/resume-tailor` 기준으로 정정
-- `README`의 Docker/로컬 실행 안내를 빠른 시작 중심으로 압축해 중복 명령과 반복 설명을 정리
-- `README`에 Docker 실행 시 이미지 기반 URL 공고 OCR fallback 제약이 macOS 로컬 실행 기준임을 명시
-- `README` 상단 미리보기를 실제 앱 기준 3단계 흐름 콜라주로 교체
+- Docker 실행 안내를 `docker pull`/`docker run`, 저장소 clone 후 `docker compose`, 로컬 개발 실행 세 경로로 재정리
+- `README`에 Docker 직접 실행과 `docker compose` 실행 각각의 종료 절차와 volume 정리 절차를 추가
+- `README`의 Docker 직접 실행 예시에서 `종료(stop)`와 `삭제(rm)` 의미를 분리해 명령 설명을 더 정확하게 정리
+- Docker Hub 기본 이미지 경로를 실제 공개 저장소 `qrqr/resume-tailor` 기준으로 정정하고, Docker publish 워크플로를 `linux/amd64`와 `linux/arm64` 멀티아키 이미지 빌드로 확장
 - 프로젝트 표시 이름과 내부 식별자를 `ResumeTailor` / `resume-tailor` 기준으로 정리하고, 기존 localStorage 키를 자동 마이그레이션하도록 조정
 - Docker 이미지 override 환경 변수를 `RESUME_TAILOR_IMAGE` 기준으로 정리하고, 기존 `RESUME_MAKE_IMAGE`는 fallback으로 유지
-- `README`의 Docker 실행 안내를 중요 정보 중심으로 재구성하고, 포트 변경·대체 실행 방식 같은 부가 정보는 접는 섹션으로 정리
-- Docker publish 워크플로를 `linux/amd64`와 `linux/arm64` 멀티아키 이미지 빌드로 확장
-- Docker 실행 시 `APP_PORT`로 런타임 포트를 바꿀 수 있게 조정하고, 미지정 시 기본값 `3000`을 사용하도록 변경
+- `README`, 서비스 기획서, 운영 런북, 로드맵의 API/CI/로그인 명령 설명을 현재 코드와 CLI 기준으로 맞추고, 문서 인덱스 중복을 축소
 
 ## v0.6.0 (2026-03-07)
 
