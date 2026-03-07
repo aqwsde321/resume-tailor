@@ -1,7 +1,7 @@
 # 채용공고 불러오기 가이드
 
-- 문서 버전: v0.1
-- 작성일: 2026-03-07
+- 문서 버전: v0.2
+- 마지막 업데이트: 2026-03-07
 - 기준 범위: 로컬 MVP
 
 ## 1. 목적
@@ -43,8 +43,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 구현 진입점:
 
-- [app/api/company/fetch-url/route.ts](/Users/jino/study/project/resumeMake/app/api/company/fetch-url/route.ts)
-- [lib/company-url-fetch.ts](/Users/jino/study/project/resumeMake/lib/company-url-fetch.ts)
+- [app/api/company/fetch-url/route.ts](../app/api/company/fetch-url/route.ts)
+- [lib/company-url-fetch.ts](../lib/company-url-fetch.ts)
 
 ## 4. 공통 처리 규칙
 
@@ -86,8 +86,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 관련 코드:
 
-- [lib/company-url-fetch.ts](/Users/jino/study/project/resumeMake/lib/company-url-fetch.ts#L183)
-- [lib/company-url-fetch.ts](/Users/jino/study/project/resumeMake/lib/company-url-fetch.ts#L400)
+- [lib/company-url-fetch.ts](../lib/company-url-fetch.ts#L183)
+- [lib/company-url-fetch.ts](../lib/company-url-fetch.ts#L400)
 
 ### 5.2 잡코리아 GI_Read (`jobkorea.co.kr/Recruit/GI_Read/...`)
 
@@ -115,8 +115,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 관련 코드:
 
-- [lib/company-url-fetch.ts](/Users/jino/study/project/resumeMake/lib/company-url-fetch.ts#L553)
-- [lib/company-url-fetch.ts](/Users/jino/study/project/resumeMake/lib/company-url-fetch.ts#L591)
+- [lib/company-url-fetch.ts](../lib/company-url-fetch.ts#L553)
+- [lib/company-url-fetch.ts](../lib/company-url-fetch.ts#L591)
 
 ### 5.3 일반 사이트
 
@@ -156,8 +156,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 구현 위치:
 
-- [lib/company-image-ocr.ts](/Users/jino/study/project/resumeMake/lib/company-image-ocr.ts)
-- [scripts/vision_ocr.swift](/Users/jino/study/project/resumeMake/scripts/vision_ocr.swift)
+- [lib/company-image-ocr.ts](../lib/company-image-ocr.ts)
+- [scripts/vision_ocr.swift](../scripts/vision_ocr.swift)
 
 현재 제약:
 
@@ -188,4 +188,4 @@ URL 추출 변경 시 확인할 것:
 
 관련 테스트:
 
-- [tests/api/company-fetch-url.test.ts](/Users/jino/study/project/resumeMake/tests/api/company-fetch-url.test.ts)
+- [tests/api/company-fetch-url.test.ts](../tests/api/company-fetch-url.test.ts)
