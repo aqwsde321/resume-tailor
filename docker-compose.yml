@@ -1,0 +1,20 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume-make-app
+    environment:
+      CODEX_HOME: /root/.codex
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+    volumes:
+      - codex-home:/root/.codex
+
+volumes:
+  codex-home:

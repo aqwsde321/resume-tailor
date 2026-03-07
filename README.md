@@ -11,9 +11,82 @@
 - [운영 런북](./docs/OPS_RUNBOOK.md)
 - [자기소개 품질 가이드](./docs/INTRO_QUALITY_GUIDE.md)
 
-## 1) 필요한 설치
+## 1) 실행 방법
 
-이 프로젝트를 실행하려면 아래가 먼저 준비되어 있어야 합니다.
+이 프로젝트는 두 가지 방식으로 실행할 수 있습니다.
+
+- Docker 실행: 다른 사용자에게 공유할 때 권장. 로컬에 Node.js나 Codex CLI를 따로 설치하지 않아도 됩니다.
+- 로컬 실행: Node.js와 Codex CLI를 직접 설치해서 실행합니다.
+
+## 2) Docker로 실행
+
+공유받은 사용자가 가장 적은 설치로 실행하려면 Docker 방식을 사용하세요.
+
+필수:
+
+- Docker Desktop 또는 Docker Engine
+- Codex 로그인 가능한 계정
+
+저장소를 받은 뒤 프로젝트 루트에서 아래 순서로 실행합니다.
+
+```bash
+git clone <repo-url>
+cd resumeMake
+docker compose build
+docker compose run --rm app codex auth login
+docker compose up
+```
+
+브라우저에서 [http://localhost:3000](http://localhost:3000) 으로 접속하면 됩니다.
+
+추가 메모:
+
+- `codex auth login`은 컨테이너 안에서 실행되며, 인증 정보는 `codex-home` Docker volume에 저장됩니다.
+- 한 번 로그인한 뒤에는 보통 `docker compose up`만 다시 실행하면 됩니다.
+- 코드 변경 후 이미지를 다시 반영하려면 `docker compose up --build`를 사용하세요.
+- 인증 정보를 포함한 Docker volume까지 지우려면 `docker compose down -v`를 사용합니다.
+
+### Docker 사용 명령 모음
+
+최초 1회 로그인:
+
+```bash
+docker compose run --rm app codex auth login
+```
+
+백그라운드 실행:
+
+```bash
+docker compose up -d
+```
+
+로그 확인:
+
+```bash
+docker compose logs -f app
+```
+
+중지:
+
+```bash
+docker compose down
+```
+
+이미지 다시 빌드 후 실행:
+
+```bash
+docker compose up --build
+```
+
+인증 정보까지 초기화:
+
+```bash
+docker compose down -v
+```
+
+## 3) 로컬 실행에 필요한 설치
+
+Docker를 쓰지 않고 직접 실행하려면 아래가 필요합니다.
 
 - Node.js 20 이상
 - npm
@@ -76,7 +149,7 @@ export PATH="/Applications/Codex.app/Contents/Resources:$PATH"
 codex --version
 ```
 
-## 2) Codex 인증
+## 4) 로컬 Codex 인증
 
 처음 한 번은 Codex 인증이 필요합니다.
 
@@ -90,19 +163,15 @@ codex auth login
 $CODEX_CLI_PATH auth login
 ```
 
-## 3) 프로젝트 설치
-
-저장소를 받은 뒤 프로젝트 루트에서 아래 순서로 실행하세요.
+## 5) 로컬 프로젝트 설치
 
 ```bash
-git clone <repo-url>
-cd resumeMake
 npm install
 ```
 
 의존성 재현성을 더 중시하면 `npm install` 대신 `npm ci`를 사용해도 됩니다.
 
-## 4) 개발 서버 실행
+## 6) 로컬 개발 서버 실행
 
 ```bash
 npm run dev
@@ -117,7 +186,7 @@ export CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
 npm run dev
 ```
 
-## 5) 첫 사용 흐름
+## 7) 첫 사용 흐름
 
 1. `/resume` 에서 이력서 텍스트를 붙여넣고 분석 후 폼을 수정한 뒤 확정합니다.
 2. `/company` 에서 채용공고 텍스트를 붙여넣고 분석 후 폼을 수정한 뒤 확정합니다.
@@ -125,7 +194,7 @@ npm run dev
 
 화면에는 현재 단계, 작업 중 상태, AI 분석 로그, 이전 결과와 현재 결과 비교가 표시됩니다.
 
-## 6) 환경 변수
+## 8) 환경 변수
 
 필수는 아니지만 아래 변수를 알면 실행이 쉬워집니다.
 
@@ -144,7 +213,9 @@ export CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
 export CODEX_SKILLS_DIR="$HOME/.codex/skills"
 ```
 
-## 7) API 구성
+Docker 실행에서는 `CODEX_CLI_PATH`가 필요하지 않습니다. Codex CLI는 컨테이너 안에 포함됩니다.
+
+## 9) API 구성
 
 - `POST /api/resume`: `resume-to-json`
 - `POST /api/resume/stream`: `resume-to-json` + SSE 로그
@@ -155,13 +226,14 @@ export CODEX_SKILLS_DIR="$HOME/.codex/skills"
 
 모든 API route는 `runtime = "nodejs"`로 고정되어 있습니다.
 
-## 8) 주의사항
+## 10) 주의사항
 
 - 현재 MVP는 `txt` 입력만 우선 지원합니다.
 - 로컬 단일 사용자 시나리오를 기준으로 설계되어 있습니다.
 - 서버리스나 원격 배포용 문서는 아직 포함하지 않습니다.
+- Docker 실행도 최초 1회 Codex 인증은 필요합니다.
 
-## 9) 검증 명령
+## 11) 검증 명령
 
 ```bash
 npm run lint
