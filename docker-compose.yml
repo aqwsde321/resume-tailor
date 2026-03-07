@@ -1,16 +1,14 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${RESUME_MAKE_IMAGE:-aqwsde321/resume-tailor:latest}
     container_name: resume-make-app
     environment:
       CODEX_HOME: /root/.codex
       HOSTNAME: 0.0.0.0
       NODE_ENV: production
-      PORT: "3000"
+      PORT: "${APP_PORT:-3000}"
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     stdin_open: true
     tty: true
     volumes:

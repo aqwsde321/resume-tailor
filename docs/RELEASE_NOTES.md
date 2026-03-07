@@ -5,6 +5,16 @@
 
 ## Unreleased
 
+### Added
+
+- GitHub Actions Docker publish 워크플로 추가: `main` push 시 검증 후 Docker Hub에 이미지 업로드
+
+### Changed
+
+- `docker-compose.yml` 기본 실행 방식을 로컬 build에서 Docker Hub 공개 이미지 pull 기반으로 변경
+- `README`와 운영 런북을 `docker compose pull` 중심의 사용자 가이드와 Docker Hub publish 설정 기준으로 갱신
+- Docker 실행 시 `APP_PORT`로 런타임 포트를 바꿀 수 있게 조정하고, 미지정 시 기본값 `3000`을 사용하도록 변경
+
 ## v0.6.0 (2026-03-07)
 
 ### Added

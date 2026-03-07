@@ -1,6 +1,6 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.2
+- 문서 버전: v0.3
 - 마지막 업데이트: 2026-03-07
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
@@ -8,6 +8,8 @@
 
 ```text
 resumeMake/
+├─ .github/
+│  └─ workflows/             # main push 시 검증 후 Docker Hub publish
 ├─ app/                      # Next.js App Router 화면과 API route
 │  ├─ api/                   # resume/company/intro 분석 API, SSE route
 │  ├─ resume/                # STEP 1 이력서 입력/확정 화면
@@ -141,6 +143,13 @@ resumeMake/
   - 제품 범위와 규칙 기준
 - `OPS_RUNBOOK.md`
   - 실행과 복구 절차
+
+### `.github/workflows/`
+
+배포 자동화를 담는 GitHub Actions 폴더입니다.
+
+- `docker-publish.yml`
+  - `main` push 시 `lint`, `typecheck`, `test`, `build`를 실행한 뒤 Docker Hub에 이미지 publish
 
 ### `scripts/`
 

@@ -1,6 +1,6 @@
 # 운영 런북
 
-- 문서 버전: v0.3
+- 문서 버전: v0.4
 - 마지막 업데이트: 2026-03-07
 - 기준 범위: 로컬 MVP 운영 및 복구
 
@@ -21,14 +21,21 @@
 최초 1회:
 
 ```bash
-docker compose build
+docker compose pull
 docker compose run --rm app codex login --device-auth
-docker compose up
+docker compose up -d
+```
+
+포트를 바꾸고 싶으면 실행할 때만 아래처럼 지정합니다. 지정하지 않으면 기본값은 `3000`입니다.
+
+```bash
+APP_PORT=3100 docker compose up -d
 ```
 
 일상 운영:
 
 ```bash
+docker compose pull
 docker compose up -d
 docker compose logs -f app
 docker compose down
@@ -36,10 +43,12 @@ docker compose down
 
 메모:
 
+- 일반 사용자 기준으로 `docker compose build`는 필요하지 않습니다.
 - 인증 정보는 `codex-home` volume에 저장됩니다.
 - Docker 로그인 전에 ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`가 켜져 있는지 확인합니다.
-- 코드 변경을 반영하려면 `docker compose up --build`를 사용합니다.
+- 최신 공개 이미지를 반영하려면 `docker compose pull` 후 `docker compose up -d`를 실행합니다.
 - 인증 정보까지 초기화하려면 `docker compose down -v`를 사용합니다.
+- 개발자가 현재 소스를 직접 이미지로 검증하려면 `docker build -t resume-tailor:local .` 후 `RESUME_MAKE_IMAGE=resume-tailor:local docker compose up -d`를 사용합니다.
 
 ### 3.2 로컬 실행
 
@@ -58,7 +67,8 @@ npm run dev
 
 브라우저 접속:
 
-- [http://localhost:3000](http://localhost:3000)
+- 기본: [http://localhost:3000](http://localhost:3000)
+- 포트를 바꿨다면 `http://localhost:<APP_PORT>`
 
 ## 4. 일상 점검 체크리스트
 
@@ -156,7 +166,7 @@ docker compose run --rm app codex login status
 3. 로그인 후 앱을 다시 실행합니다.
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 ### E. `Unable to acquire lock ... .next/dev/lock`
@@ -241,3 +251,30 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
 
 - 서버리스나 원격 배포 시 Codex 인증과 세션 정책을 별도로 재설계해야 합니다.
 - 공고 이미지 OCR fallback도 현재는 macOS 로컬 실행 기준입니다.
+
+## 9. GitHub Actions와 Docker Hub publish
+
+`main` 브랜치에 push되면 `.github/workflows/docker-publish.yml`이 실행됩니다.
+
+동작 순서:
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm run typecheck`
+4. `npm run test`
+5. `npm run build`
+6. Docker Hub에 `latest`, `sha-<commit>` 태그 push
+
+필수 GitHub 설정:
+
+- Repository secret `DOCKERHUB_TOKEN`
+- Repository variable `DOCKER_USERNAME`
+  - 비우면 워크플로 기본값 `aqwsde321` 사용
+- Repository variable `DOCKERHUB_IMAGE`
+  - 비우면 워크플로 기본값 `aqwsde321/resume-tailor` 사용
+
+사용자 배포 흐름:
+
+- 사용자는 저장소를 받은 뒤 `docker compose pull`로 공개 이미지를 받습니다.
+- 최초 1회만 `docker compose run --rm app codex login --device-auth`로 Codex 인증을 합니다.
+- 이후에는 `docker compose up -d`로 실행하고, 업데이트가 필요할 때만 다시 `docker compose pull`을 실행합니다.

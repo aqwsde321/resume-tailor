@@ -104,7 +104,7 @@
 - [x] SSE 로그 표시 스모크 테스트
 - [~] 실패 응답, 빈 응답, 스키마 오류에 대한 API 테스트 추가
 - [~] fixture 기반 golden test 범위 확장
-- [ ] CI에서 `lint`, `typecheck`, `test`, `build` 자동 실행
+- [x] CI에서 `lint`, `typecheck`, `test`, `build` 자동 실행
 
 현재 반영:
 
@@ -112,6 +112,7 @@
 - [x] 스트림 클라이언트에서 빈 결과, 본문 누락, 비JSON 실패 응답 처리 테스트 추가
 - [x] `intro` 매칭 근거 계산에 fixture 기반 golden test 추가
 - [x] `company/fetch-url` route에 도메인별 추출과 보안 차단 테스트 추가
+- [x] GitHub Actions에서 `main` push 시 검증 후 Docker Hub publish 추가
 
 완료 기준:
 

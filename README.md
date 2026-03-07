@@ -24,12 +24,12 @@
 
 이 프로젝트는 두 가지 방식으로 실행할 수 있습니다.
 
-- Docker 실행: 다른 사용자에게 공유할 때 권장. 로컬에 Node.js나 Codex CLI를 따로 설치하지 않아도 됩니다.
+- Docker 실행: 다른 사용자에게 공유할 때 권장. GitHub Actions가 Docker Hub에 올린 이미지를 바로 받아 실행하므로 로컬에 Node.js나 Codex CLI를 따로 설치하지 않아도 됩니다.
 - 로컬 실행: Node.js와 Codex CLI를 직접 설치해서 실행합니다.
 
 ## 2. Docker로 실행
 
-공유받은 사용자가 가장 적은 설치로 실행하려면 Docker 방식을 사용하세요.
+공유받은 사용자가 가장 적은 설치로 실행하려면 Docker 방식을 사용하세요. 기본 설정은 Docker Hub의 공개 이미지 `aqwsde321/resume-tailor:latest`를 바로 받아 실행합니다.
 
 필수:
 
@@ -45,21 +45,38 @@
 
 ```bash
 git clone <repo-url>
-cd resumeMake
-docker compose build
+cd resume-tailor
+docker compose pull
 docker compose run --rm app codex login --device-auth
-docker compose up
+docker compose up -d
 ```
 
 브라우저에서 [http://localhost:3000](http://localhost:3000) 으로 접속하면 됩니다.
 
+포트를 바꾸고 싶으면 실행할 때만 아래처럼 지정하면 됩니다. 지정하지 않으면 기본값은 `3000`입니다.
+
+```bash
+APP_PORT=3100 docker compose up -d
+```
+
+이 경우 접속 주소는 [http://localhost:3100](http://localhost:3100) 입니다.
+
 추가 메모:
 
+- 일반 사용자는 `docker compose build`를 할 필요가 없습니다.
 - `codex login --device-auth`는 컨테이너 안에서 실행되며, 인증 정보는 `codex-home` Docker volume에 저장됩니다.
 - 브라우저에서 `localhost에서 연결을 거부했습니다`가 뜨면, 일반 브라우저 리다이렉트 로그인 대신 장치 코드 로그인을 사용해야 하는 경우가 많습니다.
-- 한 번 로그인한 뒤에는 보통 `docker compose up`만 다시 실행하면 됩니다.
-- 코드 변경 후 이미지를 다시 반영하려면 `docker compose up --build`를 사용하세요.
+- 한 번 로그인한 뒤에는 보통 `docker compose up -d`만 다시 실행하면 됩니다.
+- 최신 이미지를 다시 받으려면 `docker compose pull` 후 `docker compose up -d`를 실행하세요.
 - 인증 정보를 포함한 Docker volume까지 지우려면 `docker compose down -v`를 사용합니다.
+
+다른 이미지 경로를 쓰고 싶으면 실행 전에 `RESUME_MAKE_IMAGE`를 지정하면 됩니다.
+
+```bash
+export RESUME_MAKE_IMAGE=my-dockerhub-id/resume-tailor:latest
+docker compose pull
+docker compose up -d
+```
 
 ### 자주 쓰는 Docker 명령
 
@@ -81,6 +98,25 @@ docker compose run --rm app codex login status
 docker compose up -d
 ```
 
+최신 이미지 받기:
+
+```bash
+docker compose pull
+```
+
+최신 이미지 반영 후 실행:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+다른 포트로 실행:
+
+```bash
+APP_PORT=3100 docker compose up -d
+```
+
 로그 확인:
 
 ```bash
@@ -93,16 +129,19 @@ docker compose logs -f app
 docker compose down
 ```
 
-이미지 다시 빌드 후 실행:
-
-```bash
-docker compose up --build
-```
-
 인증 정보까지 초기화:
 
 ```bash
 docker compose down -v
+```
+
+### 소스를 직접 빌드해 검증할 때
+
+일반 사용자 흐름은 공개 이미지를 바로 쓰는 방식이지만, 개발자가 현재 작업 중인 코드를 직접 이미지로 확인하고 싶으면 아래처럼 실행할 수 있습니다.
+
+```bash
+docker build -t resume-tailor:local .
+RESUME_MAKE_IMAGE=resume-tailor:local docker compose up -d
 ```
 
 ## 3. 로컬 실행 준비
@@ -208,6 +247,7 @@ npm run dev
 
 - `CODEX_CLI_PATH`: `codex` 바이너리가 PATH에 없을 때 직접 경로 지정
 - `CODEX_SKILLS_DIR`: 외부 스킬 디렉터리를 우선 탐색하고 싶을 때 지정
+- `RESUME_MAKE_IMAGE`: Docker 실행 시 사용할 이미지 경로를 바꾸고 싶을 때 지정
 
 기본 스킬 탐색 순서:
 
@@ -250,5 +290,31 @@ npm run typecheck
 npm run test
 npm run build
 ```
+
+## 12. GitHub Actions와 Docker Hub publish
+
+`main` 브랜치에 push되면 `.github/workflows/docker-publish.yml`이 아래 순서로 실행됩니다.
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm run typecheck`
+4. `npm run test`
+5. `npm run build`
+6. Docker Hub에 이미지 push
+
+기본 publish 대상은 `aqwsde321/resume-tailor`이며, Docker Hub에는 아래 태그가 올라갑니다.
+
+- `latest`
+- `sha-<git commit sha>`
+
+처음 설정할 때 필요한 GitHub Actions 값:
+
+- Repository secret `DOCKERHUB_TOKEN`
+- Repository variable `DOCKER_USERNAME`
+  - 기본값은 `aqwsde321`이라 필요하면만 override
+- Repository variable `DOCKERHUB_IMAGE`
+  - 기본값은 `aqwsde321/resume-tailor`이라 필요하면만 override
+
+즉, Docker Hub 저장소와 토큰만 준비하면 사용자는 `docker compose pull`로 공개 이미지를 바로 받아 쓸 수 있습니다.
 
 문제 해결 절차와 운영 체크리스트는 [운영 런북](./docs/OPS_RUNBOOK.md)을 참고하세요.
