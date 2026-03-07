@@ -46,14 +46,30 @@ type EvidenceMatch = {
   evidence: string[];
 };
 
+type WritingAnchor = {
+  type: "requirement" | "preferred";
+  target: string;
+  evidence: string[];
+};
+
 export type IntroGuidance = {
   roleOverlap: string[];
   matchedSkills: string[];
   requirementMatches: EvidenceMatch[];
   preferredMatches: EvidenceMatch[];
+  writingAnchors: WritingAnchor[];
   gapCandidates: string[];
   highlightCandidates: string[];
   keywordCandidates: string[];
+};
+
+const EVIDENCE_PRIORITY: Record<string, number> = {
+  achievement: 6,
+  project: 5,
+  experience: 4,
+  strength: 3,
+  summary: 2,
+  desiredPosition: 1
 };
 
 export type MatchInsights = {
@@ -171,11 +187,12 @@ function findEvidence(entries: EvidenceEntry[], tokens: string[], limit = 2): st
 
       return {
         entry,
-        score: unique(overlap).length
+        score: unique(overlap).length,
+        priority: EVIDENCE_PRIORITY[entry.label] ?? 0
       };
     })
     .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score);
+    .sort((left, right) => right.score - left.score || right.priority - left.priority);
 
   return unique(scored.slice(0, limit).map((item) => formatEvidence(item.entry)));
 }
@@ -273,6 +290,38 @@ function buildEvidenceMatches(
     .filter((item) => item.evidence.length > 0);
 }
 
+function buildWritingAnchors(
+  requirementMatches: EvidenceMatch[],
+  preferredMatches: EvidenceMatch[]
+): WritingAnchor[] {
+  return [
+    ...requirementMatches.map((item) => ({
+      type: "requirement" as const,
+      target: item.target,
+      evidence: item.evidence
+    })),
+    ...preferredMatches.map((item) => ({
+      type: "preferred" as const,
+      target: item.target,
+      evidence: item.evidence
+    }))
+  ].slice(0, 5);
+}
+
+function formatWritingAnchors(writingAnchors: WritingAnchor[]): string[] {
+  if (writingAnchors.length === 0) {
+    return [
+      "- 직접 연결 가능한 필수/우대 근거가 약하면, 이력서 summary와 주요 프로젝트를 기반으로만 과장 없이 작성합니다."
+    ];
+  }
+
+  return writingAnchors.flatMap((item, index) => [
+    `${index + 1}. ${item.type === "requirement" ? "필수 요건" : "우대 조건"}: ${item.target}`,
+    `   - 내 근거: ${item.evidence.join(" / ")}`,
+    `   - 작성 방식: 위 요건을 내 경험·성과·강점 중 하나와 직접 연결해 한 문장 이상에 녹입니다.`
+  ]);
+}
+
 export function buildIntroGuidance(resume: Resume, company: Company): IntroGuidance {
   const resumeKeywords = collectResumeKeywords(resume);
   const resumeTech = collectResumeTech(resume);
@@ -301,6 +350,7 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
     entries,
     company
   ).slice(0, 3);
+  const writingAnchors = buildWritingAnchors(requirementMatches, preferredMatches);
 
   const missingTech = unique(
     company.techStack.filter((skill) => !matchedSkills.includes(skill))
@@ -345,6 +395,7 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
     matchedSkills,
     requirementMatches,
     preferredMatches,
+    writingAnchors,
     gapCandidates: unique([...missingTech, ...missingRequirements, ...missingPreferred]).slice(0, 6),
     highlightCandidates,
     keywordCandidates
@@ -400,11 +451,18 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     "[분석 힌트]",
     JSON.stringify(guidance, null, 2),
     "",
+    "[작성 앵커]",
+    ...formatWritingAnchors(guidance.writingAnchors),
+    "",
     "[출력 제약]",
     "- oneLineIntro는 25~45자 안팎으로 작성합니다.",
     "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
     "- longIntro는 450~700자, 5~8문장으로 작성합니다.",
     "- longIntro는 shortIntro보다 정보량이 분명히 많아야 하며, 문장을 그대로 반복하지 않습니다.",
+    "- shortIntro와 longIntro에는 필수 요건 requirementMatches 상위 항목을 최소 1개 이상 자연스럽게 반영합니다.",
+    "- preferredMatches에 직접 근거가 있으면 shortIntro 또는 longIntro 후반에 우대 조건을 1개 이상 반영합니다.",
+    "- 각 연결은 '공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여' 흐름이 드러나게 작성합니다.",
+    "- 자기소개 문장은 resume.json의 프로젝트, 성과, 강점, 경력 설명을 재료로 삼고 요약 문장만 반복하지 않습니다.",
     "- fitReasons에는 requirementMatches 또는 preferredMatches에 있는 근거를 우선 사용합니다.",
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
     "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다."

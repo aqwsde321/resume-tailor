@@ -2,7 +2,7 @@ import type { Company } from "@/lib/types";
 
 const BULLET_PREFIX = /^[\s>*•·\-–—\d.)]+/;
 const INLINE_LABEL_PREFIX =
-  /^(필수(?:\s*(?:조건|사항))?|자격\s*요건|지원\s*자격|우대(?:\s*(?:조건|사항))?|preferred|requirements?|nice\s*to\s*have|must\s*have|required|tech\s*stack|skills?)\s*[:：-]?\s*/i;
+  /^(필수(?:\s*(?:조건|사항))?|자격\s*요건|지원\s*자격|우대(?:\s*(?:조건|사항))?|preferred|requirements?|nice\s*to\s*have|must\s*have|required|plus|tech\s*stack|skills?)\s*[:：-]?\s*/i;
 const NOISE_PATTERNS = [
   /로그인하고 비슷한 조건의 ai추천공고/i,
   /채용정보에 잘못된 내용이 있을 경우 문의/i,
@@ -11,8 +11,21 @@ const NOISE_PATTERNS = [
   /고객센터/i,
   /즉시 지원/i,
   /홈페이지 지원/i,
+  /지원방법/i,
+  /접수기간/i,
   /상시채용/i,
   /채용 시 마감/i,
+  /전형\s*절차/i,
+  /채용\s*절차/i,
+  /서류전형/i,
+  /최종합격/i,
+  /^근무지/i,
+  /^근무\s*형태/i,
+  /^근무형태/i,
+  /^고용\s*형태/i,
+  /^고용형태/i,
+  /^연봉/i,
+  /^급여/i,
   /마감일은 기업의 사정으로 인해/i,
   /지도보기/i,
   /더보기$/i,
@@ -27,7 +40,14 @@ const JOB_DESCRIPTION_END_MARKERS = [
   "관련 태그",
   "본 채용정보는",
   "마감일은 기업의 사정으로 인해",
-  "불법/허위/과장/오류 신고"
+  "불법/허위/과장/오류 신고",
+  "채용 절차",
+  "전형 절차",
+  "복리후생",
+  "혜택 및 복지",
+  "지원 방법",
+  "접수기간",
+  "근무 조건"
 ];
 
 function normalizeWhitespace(value: string) {

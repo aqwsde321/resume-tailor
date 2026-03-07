@@ -45,9 +45,23 @@ describe("intro insight helpers", () => {
     const input = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture);
 
     expect(input).toContain("[분석 힌트]");
+    expect(input).toContain("[작성 앵커]");
     expect(input).toContain("\"matchedSkills\": [");
     expect(input).toContain("React");
+    expect(input).toContain("필수 요건");
+    expect(input).toContain("공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여");
     expect(input).toContain("[출력 제약]");
+  });
+
+  it("작성 앵커는 요약보다 프로젝트/경력 같은 구체 근거를 우선 사용한다", () => {
+    const guidance = buildIntroGuidance(frontendResumeFixture, frontendCompanyFixture);
+    const reactAnchor = guidance.writingAnchors.find((item) => item.target === "React 기반 서비스 개발 경험");
+
+    expect(reactAnchor).toBeTruthy();
+    expect(reactAnchor?.type).toBe("requirement");
+    expect(
+      reactAnchor?.evidence.some((item) => item.startsWith("프로젝트:") || item.startsWith("경력:"))
+    ).toBe(true);
   });
 
   it("AI 응답의 기술/부족 항목을 분석 힌트 범위로 정규화한다", () => {

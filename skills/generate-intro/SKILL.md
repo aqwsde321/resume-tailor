@@ -36,19 +36,23 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 입력에 `[분석 힌트]` 섹션이 함께 주어지면, 그 안의 `requirementMatches`, `preferredMatches`, `matchedSkills`, `gapCandidates`를 우선 참고한다.
 다만 힌트와 원본 JSON이 충돌하면 원본 JSON만 신뢰한다.
 
+입력에 `[작성 앵커]` 섹션이 함께 주어지면, 각 항목의 `필수 요건/우대 조건 -> 내 근거 -> 작성 방식`을 실제 소개글 문장에 반영한다.
+특히 필수 요건은 소개글 본문에 최소 1개 이상 직접 녹이고, 우대 조건은 직접 근거가 있을 때만 자연스럽게 덧붙인다.
+
 **가이드라인:**
 - `oneLineIntro`: 25~45자, 지원 직무와 핵심 강점 중심
 - `shortIntro`: 120~220자, 2~4문장 한국어
   - 1문장: 직무·경력 연차 요약
-  - 2문장: 핵심 프로젝트·성과 연결
-  - 3문장(선택): `company.json`의 requirements와 `resume.json`의 techStack 교집합 또는 `[분석 힌트]`의 근거를 자연스럽게 포함
+  - 2문장: 공고의 필수 요건 1개와 내 프로젝트·성과·강점을 직접 연결
+  - 3문장(선택): `company.json`의 requirements 또는 preferredSkills와 `[작성 앵커]`의 근거를 자연스럽게 포함
   - 4문장(선택): 기여 기대 또는 마무리
 - `longIntro`: 450~700자, 5~8문장 한국어
   - 첫 1~2문장: 직무, 경력 연차, 핵심 강점 요약
-  - 중간 2~4문장: 대표 프로젝트, 성과, 협업 방식, 문제 해결 경험 연결
-  - 후반 1~2문장: `company.json`의 requirements/preferredSkills와 맞닿는 근거를 구체적으로 설명
+  - 중간 2~4문장: 대표 프로젝트, 성과, 협업 방식, 문제 해결 경험을 공고의 필수 요건과 직접 연결
+  - 후반 1~2문장: `company.json`의 preferredSkills 또는 추가 requirements와 맞닿는 근거를 구체적으로 설명
   - 마지막 1문장(선택): 입사 후 기여 방향 또는 마무리
   - `shortIntro`를 단순히 늘이지 말고, 근거와 맥락을 추가해 정보량 차이가 분명해야 한다
+  - 문장 구조는 가능하면 `공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여` 흐름을 따른다
 - `fitReasons`: 2~4개 문자열 배열
   - 왜 이 이력서가 공고와 맞는지 구체적 근거를 문장으로 작성
   - 반드시 `resume.json`과 `company.json`에 모두 등장하는 사실만 사용

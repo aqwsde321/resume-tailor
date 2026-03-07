@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
@@ -64,6 +64,8 @@ function toCompanyDraft(jsonText: string): Company {
   return EMPTY_COMPANY;
 }
 
+type CompanyRequiredFieldKey = "companyName" | "jobTitle" | "requirements";
+
 export default function CompanyPage() {
   const {
     state,
@@ -80,6 +82,7 @@ export default function CompanyPage() {
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
   const isCompanyWorking = state.currentTask === "company";
+  const requiredFieldRefs = useRef<Partial<Record<CompanyRequiredFieldKey, HTMLElement | null>>>({});
   const [isUrlLoading, setIsUrlLoading] = useState(false);
   const [urlPreview, setUrlPreview] = useState<UrlPreview | null>(null);
   const uiBusy = isBusy || isUrlLoading;
@@ -91,15 +94,41 @@ export default function CompanyPage() {
   const companyNeedsConfirm =
     state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
 
-  const missingCompanyRequired: string[] = [];
+  const focusRequiredField = (key: CompanyRequiredFieldKey) => {
+    const root = requiredFieldRefs.current[key];
+    if (!root) {
+      return;
+    }
+
+    root.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    const target =
+      root.matches("input, textarea")
+        ? root
+        : root.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled])");
+
+    window.setTimeout(() => {
+      target?.focus({ preventScroll: true });
+
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        const caret = target.value.length;
+        target.setSelectionRange(caret, caret);
+      }
+    }, 220);
+  };
+
+  const missingCompanyRequired: Array<{ key: CompanyRequiredFieldKey; label: string }> = [];
   if (!draft.companyName.trim()) {
-    missingCompanyRequired.push("회사명");
+    missingCompanyRequired.push({ key: "companyName", label: "회사명" });
   }
   if (!draft.jobTitle.trim()) {
-    missingCompanyRequired.push("포지션");
+    missingCompanyRequired.push({ key: "jobTitle", label: "포지션" });
   }
   if (draft.requirements.length === 0) {
-    missingCompanyRequired.push("필수 조건");
+    missingCompanyRequired.push({ key: "requirements", label: "필수 조건" });
   }
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
@@ -277,7 +306,8 @@ export default function CompanyPage() {
     clearStatus();
 
     if (hasMissingCompanyRequired) {
-      setError(`먼저 채워 주세요: ${missingCompanyRequired.join(", ")}`);
+      focusRequiredField(missingCompanyRequired[0].key);
+      setError(`먼저 채워 주세요: ${missingCompanyRequired.map((item) => item.label).join(", ")}`);
       return;
     }
 
@@ -471,7 +501,12 @@ export default function CompanyPage() {
         )}
 
         <div className="form-grid two">
-          <label className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}>
+          <label
+            ref={(node) => {
+              requiredFieldRefs.current.companyName = node;
+            }}
+            className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}
+          >
             <span>회사명</span>
             <input
               className="form-input"
@@ -481,7 +516,12 @@ export default function CompanyPage() {
             />
           </label>
 
-          <label className={`field ${!draft.jobTitle.trim() ? "field-error" : ""}`}>
+          <label
+            ref={(node) => {
+              requiredFieldRefs.current.jobTitle = node;
+            }}
+            className={`field ${!draft.jobTitle.trim() ? "field-error" : ""}`}
+          >
             <span>포지션</span>
             <input
               className="form-input"
@@ -512,6 +552,9 @@ export default function CompanyPage() {
           </label>
 
           <label
+            ref={(node) => {
+              requiredFieldRefs.current.requirements = node;
+            }}
             className={`field field-full ${draft.requirements.length === 0 ? "field-error" : ""}`}
           >
             <span>필수 조건</span>
@@ -561,7 +604,22 @@ export default function CompanyPage() {
           <div className="action-copy">
             <strong>공고 저장</strong>
             {hasMissingCompanyRequired && (
-              <p className="action-note warn">저장 전 확인: {missingCompanyRequired.join(", ")}</p>
+              <p className="action-note warn">
+                <span>저장 전 확인:</span>{" "}
+                {missingCompanyRequired.map((item, index) => (
+                  <Fragment key={item.key}>
+                    {index > 0 && <span className="action-note-separator">, </span>}
+                    <button
+                      type="button"
+                      className="action-note-link"
+                      onClick={() => focusRequiredField(item.key)}
+                      disabled={uiBusy || !canEdit}
+                    >
+                      {item.label}
+                    </button>
+                  </Fragment>
+                ))}
+              </p>
             )}
           </div>
           <div className="action-row">

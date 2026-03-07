@@ -6,7 +6,7 @@
 - 채용공고 URL 불러오기 지원: `/company`에서 붙여넣기, `txt`, URL 입력을 같은 분석 흐름으로 연결
 - 채용공고 불러오기 가이드 문서 추가: [COMPANY_FETCH_GUIDE.md](/Users/jino/study/project/resumeMake/docs/COMPANY_FETCH_GUIDE.md)
 - 상세 본문이 이미지인 공고를 위한 macOS Vision OCR fallback 추가
-- 채용공고 정규화 회귀 테스트 5개와 소개글 stale 이유 헬퍼 테스트 추가
+- 채용공고 정규화 회귀 테스트 11개와 소개글 stale 이유 헬퍼 테스트 추가
 
 ### Changed
 - 사람인 relay 공고는 `view -> view-ajax -> view-detail` 순서로 현재 공고 상세를 우선 추출하도록 개선

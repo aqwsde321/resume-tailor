@@ -615,6 +615,29 @@ input[type="file"] {
   color: #7b4b0b;
 }
 
+.action-note-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.action-note-link:hover,
+.action-note-link:focus-visible {
+  color: #5f3707;
+}
+
+.action-note-separator {
+  color: inherit;
+}
+
 .action-panel .action-row {
   margin-left: auto;
   justify-content: flex-end;
@@ -824,6 +847,7 @@ textarea {
 .field {
   display: grid;
   gap: 6px;
+  scroll-margin-top: 140px;
 }
 
 .field > span {

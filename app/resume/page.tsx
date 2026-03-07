@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
@@ -67,6 +67,8 @@ function makeEmptyProject(): ResumeProjectItem {
   };
 }
 
+type ResumeRequiredFieldKey = "desiredPosition" | "techStack";
+
 export default function ResumePage() {
   const {
     state,
@@ -82,6 +84,7 @@ export default function ResumePage() {
 
   const isBusy = state.currentTask !== null;
   const isResumeWorking = state.currentTask === "resume";
+  const requiredFieldRefs = useRef<Partial<Record<ResumeRequiredFieldKey, HTMLElement | null>>>({});
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
   const [achievementsText, setAchievementsText] = useState("");
@@ -90,12 +93,38 @@ export default function ResumePage() {
   const resumeNeedsConfirm =
     state.resumeJsonText.trim().length > 0 && state.resumeConfirmedJson !== normalizedDraftJson;
 
-  const missingResumeRequired: string[] = [];
+  const focusRequiredField = (key: ResumeRequiredFieldKey) => {
+    const root = requiredFieldRefs.current[key];
+    if (!root) {
+      return;
+    }
+
+    root.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    const target =
+      root.matches("input, textarea")
+        ? root
+        : root.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled])");
+
+    window.setTimeout(() => {
+      target?.focus({ preventScroll: true });
+
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        const caret = target.value.length;
+        target.setSelectionRange(caret, caret);
+      }
+    }, 220);
+  };
+
+  const missingResumeRequired: Array<{ key: ResumeRequiredFieldKey; label: string }> = [];
   if (!draft.desiredPosition.trim()) {
-    missingResumeRequired.push("희망 직무");
+    missingResumeRequired.push({ key: "desiredPosition", label: "희망 직무" });
   }
   if (draft.techStack.length === 0) {
-    missingResumeRequired.push("기술 스택");
+    missingResumeRequired.push({ key: "techStack", label: "기술 스택" });
   }
 
   const hasMissingResumeRequired = missingResumeRequired.length > 0;
@@ -228,7 +257,8 @@ export default function ResumePage() {
     clearStatus();
 
     if (hasMissingResumeRequired) {
-      setError(`먼저 채워 주세요: ${missingResumeRequired.join(", ")}`);
+      focusRequiredField(missingResumeRequired[0].key);
+      setError(`먼저 채워 주세요: ${missingResumeRequired.map((item) => item.label).join(", ")}`);
       return;
     }
 
@@ -350,7 +380,12 @@ export default function ResumePage() {
         )}
 
         <div className="form-grid two">
-          <label className={`field ${!draft.desiredPosition.trim() ? "field-error" : ""}`}>
+          <label
+            ref={(node) => {
+              requiredFieldRefs.current.desiredPosition = node;
+            }}
+            className={`field ${!draft.desiredPosition.trim() ? "field-error" : ""}`}
+          >
             <span>희망 직무</span>
             <input
               className="form-input"
@@ -388,7 +423,12 @@ export default function ResumePage() {
             />
           </label>
 
-          <div className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}>
+          <div
+            ref={(node) => {
+              requiredFieldRefs.current.techStack = node;
+            }}
+            className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}
+          >
             <span>기술 스택</span>
             <TagInput
               ariaLabel="기술 스택"
@@ -581,7 +621,22 @@ export default function ResumePage() {
           <div className="action-copy">
             <strong>이력서 저장</strong>
             {hasMissingResumeRequired && (
-              <p className="action-note warn">저장 전 확인: {missingResumeRequired.join(", ")}</p>
+              <p className="action-note warn">
+                <span>저장 전 확인:</span>{" "}
+                {missingResumeRequired.map((item, index) => (
+                  <Fragment key={item.key}>
+                    {index > 0 && <span className="action-note-separator">, </span>}
+                    <button
+                      type="button"
+                      className="action-note-link"
+                      onClick={() => focusRequiredField(item.key)}
+                      disabled={isBusy}
+                    >
+                      {item.label}
+                    </button>
+                  </Fragment>
+                ))}
+              </p>
             )}
           </div>
           <div className="action-row">
