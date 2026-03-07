@@ -6,8 +6,10 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { ToneInline } from "@/app/components/tone-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
+import { formatIntroToneLabel } from "@/lib/intro-tone";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
@@ -110,8 +112,8 @@ export default function ResultPage() {
   const actionDescription = !canGenerate
     ? ""
     : refreshReasonBadges.length > 0
-      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")}`
-      : "";
+      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")} · 톤 ${formatIntroToneLabel(state.introTone)}`
+      : `톤 ${formatIntroToneLabel(state.introTone)}`;
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -285,6 +287,7 @@ export default function ResultPage() {
           {
             resume: resume.data,
             company: company.data,
+            tone: state.introTone,
             agent: toAgentRunOptions(state.agentSettings)
           },
           {
@@ -394,6 +397,7 @@ export default function ResultPage() {
             {actionDescription && <span>{actionDescription}</span>}
           </div>
           <div className="action-controls">
+            <ToneInline disabled={isBusy || !canGenerate} />
             <ReasoningInline disabled={isBusy || !canGenerate} />
             <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
               {state.currentTask === "intro" ? "만드는 중..." : introFresh ? "다시 만들기" : "소개글 만들기"}

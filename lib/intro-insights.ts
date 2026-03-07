@@ -1,4 +1,6 @@
 import type { Company, Intro, Resume } from "@/lib/types";
+import type { IntroTone } from "@/lib/types";
+import { formatIntroToneLabel } from "@/lib/intro-tone";
 
 const STOPWORDS = new Set([
   "및",
@@ -476,7 +478,36 @@ export function buildMatchInsights(resume: Resume, company: Company): MatchInsig
   };
 }
 
-export function buildIntroSkillInput(resume: Resume, company: Company): string {
+function buildToneGuidance(tone: IntroTone): string[] {
+  switch (tone) {
+    case "confident":
+      return [
+        `- 이번 소개글 톤: ${formatIntroToneLabel(tone)}`,
+        "- 성과와 강점을 분명하게 말하되, 과장하거나 단정적으로 쓰지 않습니다."
+      ];
+    case "collaborative":
+      return [
+        `- 이번 소개글 톤: ${formatIntroToneLabel(tone)}`,
+        "- 협업, 조율, 커뮤니케이션 맥락을 자연스럽게 드러냅니다."
+      ];
+    case "problemSolving":
+      return [
+        `- 이번 소개글 톤: ${formatIntroToneLabel(tone)}`,
+        "- 문제를 구조화하고 개선한 경험을 중심으로 문장을 전개합니다."
+      ];
+    default:
+      return [
+        `- 이번 소개글 톤: ${formatIntroToneLabel(tone)}`,
+        "- 담백하고 사실 중심으로 쓰되, 불필요하게 꾸미지 않습니다."
+      ];
+  }
+}
+
+export function buildIntroSkillInput(
+  resume: Resume,
+  company: Company,
+  tone: IntroTone = "balanced"
+): string {
   const guidance = buildIntroGuidance(resume, company);
 
   return [
@@ -492,6 +523,9 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     "[작성 앵커]",
     ...formatWritingAnchors(guidance.writingAnchors),
     "",
+    "[톤 가이드]",
+    ...buildToneGuidance(tone),
+    "",
     "[출력 제약]",
     "- oneLineIntro는 25~45자 안팎으로 작성합니다.",
     "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
@@ -505,7 +539,8 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
     "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다.",
     "- missingButRelevant에는 근거는 있지만 소개글 본문에 아직 직접 드러나지 않은 필수/우대 요건만 담습니다.",
-    "- missingButRelevant는 0~3개로 제한하고, 보완 제안 문장으로 작성합니다."
+    "- missingButRelevant는 0~3개로 제한하고, 보완 제안 문장으로 작성합니다.",
+    `- oneLineIntro, shortIntro, longIntro는 모두 '${formatIntroToneLabel(tone)}' 톤을 일관되게 유지합니다.`
   ].join("\n");
 }
 

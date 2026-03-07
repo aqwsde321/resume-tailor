@@ -11,11 +11,13 @@ import {
 } from "react";
 
 import { normalizeAgentSettings } from "@/lib/agent-settings";
+import { isIntroTone } from "@/lib/intro-tone";
 import type {
   AgentSettings,
   Company,
   InputMode,
   Intro,
+  IntroTone,
   PipelineLog,
   StreamLogPayload,
   TaskKind
@@ -36,6 +38,7 @@ export interface IntroRefreshReason {
 
 export interface PipelineState {
   agentSettings: AgentSettings;
+  introTone: IntroTone;
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
@@ -60,6 +63,7 @@ const initialState: PipelineState = {
     model: "",
     modelReasoningEffort: "medium"
   },
+  introTone: "balanced",
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
@@ -117,6 +121,7 @@ function normalizeState(raw: unknown): PipelineState {
     ...initialState,
     ...value,
     agentSettings: normalizeAgentSettings(value.agentSettings),
+    introTone: isIntroTone(value.introTone) ? value.introTone : "balanced",
     companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
     intro: normalizeIntro(value.intro),
     previousIntro: normalizeIntro(value.previousIntro),

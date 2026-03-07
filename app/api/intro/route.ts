@@ -4,7 +4,14 @@ import { z } from "zod";
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
 import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/lib/intro-insights";
-import { AgentRunOptionsSchema, CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
+import {
+  AgentRunOptionsSchema,
+  CompanySchema,
+  IntroSchema,
+  IntroToneSchema,
+  ResumeSchema,
+  introOutputSchema
+} from "@/lib/schemas";
 import type { ApiSuccess, Intro } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -12,6 +19,7 @@ export const runtime = "nodejs";
 const RequestSchema = z.object({
   resume: ResumeSchema,
   company: CompanySchema,
+  tone: IntroToneSchema.optional(),
   agent: AgentRunOptionsSchema.optional()
 });
 
@@ -21,7 +29,7 @@ export async function POST(request: Request) {
 
     const generated = await runSkillJson<unknown>({
       skillName: "generate-intro",
-      inputText: buildIntroSkillInput(body.resume, body.company),
+      inputText: buildIntroSkillInput(body.resume, body.company, body.tone),
       outputSchema: introOutputSchema,
       ...body.agent
     });

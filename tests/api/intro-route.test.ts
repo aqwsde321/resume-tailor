@@ -110,6 +110,35 @@ describe("POST /api/intro", () => {
     });
   });
 
+  it("tone 설정이 있으면 intro 생성 입력에도 반영한다", async () => {
+    const mockedRunSkillJson = vi.mocked(runSkillJson);
+    mockedRunSkillJson.mockResolvedValue({
+      oneLineIntro: "백엔드 개발자",
+      shortIntro: "실무 경험이 있습니다.",
+      longIntro:
+        "실무 경험을 바탕으로 백엔드 구조를 안정적으로 운영해 왔고, TypeScript 기반 개발 경험을 갖추고 있습니다. 요구사항을 빠르게 파악하고 서비스에 맞는 서버 구조를 정리하는 데 익숙합니다. 입사 후에도 안정적인 API 운영에 기여할 수 있습니다.",
+      fitReasons: [],
+      matchedSkills: ["TypeScript"],
+      gapNotes: [],
+      missingButRelevant: []
+    });
+
+    const request = new Request("http://localhost/api/intro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumePayload,
+        company: companyPayload,
+        tone: "confident"
+      })
+    });
+
+    await POST(request);
+
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[톤 가이드]");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("자신감 있게");
+  });
+
   it("이전 형식 응답이면 분석 힌트를 기준으로 기본 기술을 보정한다", async () => {
     const mockedRunSkillJson = vi.mocked(runSkillJson);
     mockedRunSkillJson.mockResolvedValue({

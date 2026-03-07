@@ -42,10 +42,12 @@ describe("intro insight helpers", () => {
   }
 
   it("스킬 입력 텍스트에 분석 힌트와 출력 제약을 포함한다", () => {
-    const input = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture);
+    const input = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture, "collaborative");
 
     expect(input).toContain("[분석 힌트]");
     expect(input).toContain("[작성 앵커]");
+    expect(input).toContain("[톤 가이드]");
+    expect(input).toContain("협업 중심");
     expect(input).toContain("\"matchedSkills\": [");
     expect(input).toContain("React");
     expect(input).toContain("필수 요건");

@@ -551,6 +551,13 @@ input[type="file"] {
   pointer-events: none;
 }
 
+.inline-setting-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .inline-select {
   position: absolute;
   inset: 0;

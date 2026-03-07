@@ -3,7 +3,14 @@ import { z } from "zod";
 import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
 import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/lib/intro-insights";
-import { AgentRunOptionsSchema, CompanySchema, IntroSchema, ResumeSchema, introOutputSchema } from "@/lib/schemas";
+import {
+  AgentRunOptionsSchema,
+  CompanySchema,
+  IntroSchema,
+  IntroToneSchema,
+  ResumeSchema,
+  introOutputSchema
+} from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
 
 export const runtime = "nodejs";
@@ -11,6 +18,7 @@ export const runtime = "nodejs";
 const RequestSchema = z.object({
   resume: ResumeSchema,
   company: CompanySchema,
+  tone: IntroToneSchema.optional(),
   agent: AgentRunOptionsSchema.optional()
 });
 
@@ -24,7 +32,7 @@ export async function POST(request: Request) {
       try {
         const generated = await runSkillJsonStream<unknown>({
           skillName: "generate-intro",
-          inputText: buildIntroSkillInput(body.resume, body.company),
+          inputText: buildIntroSkillInput(body.resume, body.company, body.tone),
           outputSchema: introOutputSchema,
           ...body.agent,
           onLog: (payload) => send("log", payload)

@@ -11,6 +11,7 @@ const baseState: PipelineState = {
     model: "",
     modelReasoningEffort: "medium"
   },
+  introTone: "balanced",
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
