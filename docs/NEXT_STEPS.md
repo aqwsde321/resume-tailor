@@ -125,6 +125,7 @@
   - [x] 공고 URL 불러오기 입력 모드 추가
   - [x] 사람인 relay 상세 추출
   - [x] 잡코리아 `GI_Read_Comt_Ifrm` 상세 추출
+  - [x] Wanted / Jumpit 정적 HTML 추출 회귀 테스트 추가
   - [x] 이미지 상세 공고 OCR fallback
 
 완료 기준:

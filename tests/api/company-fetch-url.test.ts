@@ -555,6 +555,146 @@ describe("POST /api/company/fetch-url", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
+  it("원티드 공고는 정적 HTML 본문을 바로 읽는다", async () => {
+    const html = `
+      <html>
+        <head>
+          <meta property="og:site_name" content="원티드" />
+          <meta property="og:title" content="원티드랩 - 백엔드 엔지니어 | 원티드" />
+          <title>원티드랩 - 백엔드 엔지니어 | 원티드</title>
+        </head>
+        <body>
+          <main>
+            <article>
+              <h1>백엔드 엔지니어</h1>
+              <section>
+                <h2>주요 업무</h2>
+                <p>Java와 Kotlin 기반 결제 API를 개발합니다.</p>
+                <p>대용량 트래픽 환경에서 서비스 안정성을 개선합니다.</p>
+                <p>정산 도메인 요구사항을 제품과 운영 환경에 맞게 구조화합니다.</p>
+              </section>
+              <section>
+                <h2>자격 요건</h2>
+                <p>백엔드 개발 경력 3년 이상</p>
+                <p>Spring Boot 기반 서비스 개발 경험</p>
+                <p>RDBMS 설계 및 성능 최적화 경험</p>
+              </section>
+              <section>
+                <h2>우대 사항</h2>
+                <p>AWS 운영 경험</p>
+                <p>MSA 환경 경험</p>
+              </section>
+              <section>
+                <h2>기술 스택</h2>
+                <p>Java, Kotlin, Spring Boot, MySQL, Redis</p>
+              </section>
+            </article>
+          </main>
+        </body>
+      </html>
+    `;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(html, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        })
+      )
+    );
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.wanted.co.kr/wd/246810"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("원티드랩");
+    expect(body.data.jobTitleHint).toBe("백엔드 엔지니어");
+    expect(body.data.text).toContain("Java와 Kotlin 기반 결제 API를 개발합니다.");
+    expect(body.data.text).toContain("Spring Boot 기반 서비스 개발 경험");
+    expect(body.data.text).toContain("AWS 운영 경험");
+    expect(launchMock).not.toHaveBeenCalled();
+  });
+
+  it("점핏 공고는 정적 HTML 본문을 바로 읽는다", async () => {
+    const html = `
+      <html>
+        <head>
+          <meta property="og:site_name" content="점핏" />
+          <meta property="og:title" content="카카오스타일 - 백엔드 개발자 | 점핏" />
+          <title>카카오스타일 - 백엔드 개발자 | 점핏</title>
+        </head>
+        <body>
+          <main>
+            <div class="position-description">
+              <h1>백엔드 개발자</h1>
+              <section>
+                <h2>주요 업무</h2>
+                <p>주문/정산 도메인 백엔드 서비스를 개발합니다.</p>
+              </section>
+              <section>
+                <h2>자격 요건</h2>
+                <p>Java 또는 Kotlin 기반 서버 개발 경험</p>
+                <p>RDBMS 설계 및 운영 경험</p>
+              </section>
+              <section>
+                <h2>우대 사항</h2>
+                <p>Kafka 운영 경험</p>
+              </section>
+              <section>
+                <h2>기술 스택</h2>
+                <p>Java, Kotlin, Spring Boot, MySQL, Kafka</p>
+              </section>
+            </div>
+          </main>
+        </body>
+      </html>
+    `;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(html, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        })
+      )
+    );
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.jumpit.co.kr/position/13579"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("카카오스타일");
+    expect(body.data.jobTitleHint).toBe("백엔드 개발자");
+    expect(body.data.text).toContain("주문/정산 도메인 백엔드 서비스를 개발합니다.");
+    expect(body.data.text).toContain("Java 또는 Kotlin 기반 서버 개발 경험");
+    expect(body.data.text).toContain("Kafka 운영 경험");
+    expect(launchMock).not.toHaveBeenCalled();
+  });
+
   it("내부 주소는 차단한다", async () => {
     const request = new Request("http://localhost/api/company/fetch-url", {
       method: "POST",
