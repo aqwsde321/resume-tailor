@@ -2,12 +2,16 @@ import { isIP } from "node:net";
 
 import { load } from "cheerio";
 
+import { extractTextFromImages } from "@/lib/company-image-ocr";
 import { HttpError } from "@/lib/http";
 
 const FETCH_TIMEOUT_MS = 10000;
 const BROWSER_TIMEOUT_MS = 15000;
 const MAX_BODY_LENGTH = 2_000_000;
+const MAX_IMAGE_BYTES = 8_000_000;
+const MAX_OCR_IMAGE_COUNT = 4;
 const MIN_TEXT_LENGTH = 80;
+const MIN_OCR_TEXT_LENGTH = 60;
 const STRONG_TEXT_LENGTH = 180;
 const USER_AGENT =
   "Mozilla/5.0 (compatible; ResumeMakeBot/1.0; +https://localhost/resume-make)";
@@ -123,7 +127,7 @@ const GENERIC_SELECTORS = [
   "body"
 ];
 
-type ExtractionSource = "embedded" | "html" | "browser";
+type ExtractionSource = "embedded" | "html" | "browser" | "ocr";
 
 interface ExtractedCandidate {
   title: string;
@@ -136,6 +140,11 @@ interface ExtractedCandidate {
 interface BrowserFallbackResult {
   candidate: ExtractedCandidate | null;
   failure?: string;
+}
+
+interface ImageFetchHeaders {
+  cookieHeader?: string;
+  refererUrl?: string;
 }
 
 function splitSetCookieHeader(value: string): string[] {
@@ -209,6 +218,182 @@ function createHtmlResponseCandidate(
     text,
     source: "html",
     score: scoreTextQuality(text, title) + scoreBoost
+  };
+}
+
+function mergeTextBlocks(...values: Array<string | null | undefined>): string {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    if (!value) {
+      continue;
+    }
+
+    const normalized = normalizeBlock(value);
+    if (!normalized) {
+      continue;
+    }
+
+    for (const line of normalized.split("\n")) {
+      if (!line || seen.has(line)) {
+        continue;
+      }
+
+      seen.add(line);
+      merged.push(line);
+    }
+  }
+
+  return merged.join("\n");
+}
+
+function mergeCandidates(
+  primary: ExtractedCandidate | null | undefined,
+  secondary: ExtractedCandidate | null | undefined,
+  source: ExtractionSource,
+  scoreBoost: number
+): ExtractedCandidate | null {
+  if (!primary && !secondary) {
+    return null;
+  }
+
+  const title = primary?.title || secondary?.title || "";
+  const siteName = primary?.siteName || secondary?.siteName || "";
+  const text = mergeTextBlocks(primary?.text, secondary?.text);
+
+  if (!text) {
+    return null;
+  }
+
+  return {
+    title,
+    siteName,
+    text,
+    source,
+    score:
+      scoreTextQuality(text, title) +
+      Math.max(primary?.score ?? 0, secondary?.score ?? 0) +
+      scoreBoost
+  };
+}
+
+function collectImageUrlsFromHtml(html: string, baseUrl: URL, selectors: string[]): URL[] {
+  const $ = load(html);
+  const seen = new Set<string>();
+  const imageUrls: URL[] = [];
+  const scope = selectors.length > 0 ? $(selectors.join(",")) : $("body");
+
+  scope.find("img").each((_, node) => {
+    if (imageUrls.length >= MAX_OCR_IMAGE_COUNT) {
+      return;
+    }
+
+    const src =
+      $(node).attr("src") ||
+      $(node).attr("data-src") ||
+      $(node).attr("data-original") ||
+      $(node).attr("data-lazy-src");
+
+    if (!src || src.startsWith("data:")) {
+      return;
+    }
+
+    try {
+      const resolved = assertAllowedUrl(new URL(src, baseUrl).toString());
+      const key = resolved.toString();
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      imageUrls.push(resolved);
+    } catch {
+      return;
+    }
+  });
+
+  return imageUrls;
+}
+
+async function fetchOcrImage(
+  imageUrl: URL,
+  baseUrl: URL,
+  { cookieHeader, refererUrl }: ImageFetchHeaders
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(imageUrl, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "image/avif,image/webp,image/apng,image/*;q=0.9,*/*;q=0.5",
+        Referer: refererUrl || baseUrl.toString(),
+        ...(cookieHeader && imageUrl.origin === baseUrl.origin ? { Cookie: cookieHeader } : {})
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    if (contentType && !contentType.startsWith("image/")) {
+      return null;
+    }
+
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    if (imageBuffer.length === 0 || imageBuffer.length > MAX_IMAGE_BYTES) {
+      return null;
+    }
+
+    return {
+      buffer: imageBuffer,
+      contentType,
+      sourceUrl: imageUrl.toString()
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function extractImageOcrCandidateFromHtml(
+  html: string,
+  baseUrl: URL,
+  selectors: string[],
+  title: string,
+  siteName: string,
+  imageHeaders: ImageFetchHeaders,
+  scoreBoost: number
+): Promise<ExtractedCandidate | null> {
+  const imageUrls = collectImageUrlsFromHtml(html, baseUrl, selectors);
+  if (imageUrls.length === 0) {
+    return null;
+  }
+
+  const images = (
+    await Promise.all(imageUrls.map((imageUrl) => fetchOcrImage(imageUrl, baseUrl, imageHeaders)))
+  ).filter((image): image is NonNullable<typeof image> => !!image);
+
+  if (images.length === 0) {
+    return null;
+  }
+
+  const ocrText = mergeTextBlocks(...(await extractTextFromImages(images)));
+  if (!ocrText || ocrText.length < MIN_OCR_TEXT_LENGTH) {
+    return null;
+  }
+
+  return {
+    title,
+    siteName,
+    text: ocrText,
+    source: "ocr",
+    score: scoreTextQuality(ocrText, title) + scoreBoost + images.length * 60
   };
 }
 
@@ -304,8 +489,29 @@ async function fetchSaraminRelayCandidate(
     ajaxCandidate?.siteName || "사람인",
     1160
   );
+  const detailTitle = detailCandidate?.title || ajaxCandidate?.title || "";
+  const detailSiteName = detailCandidate?.siteName || ajaxCandidate?.siteName || "사람인";
 
-  return pickBestCandidate([detailCandidate, ajaxCandidate]);
+  if (isStrongCandidate(detailCandidate)) {
+    return pickBestCandidate([detailCandidate, ajaxCandidate]);
+  }
+
+  const detailImageCandidate = await extractImageOcrCandidateFromHtml(
+    detailHtml,
+    detailUrl,
+    [".user_content", "main.job-posting", ".job-content"],
+    detailTitle,
+    detailSiteName,
+    {
+      cookieHeader,
+      refererUrl: pageUrl.toString()
+    },
+    1240
+  );
+
+  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageCandidate, "ocr", 280);
+
+  return pickBestCandidate([mergedDetailCandidate, detailImageCandidate, detailCandidate, ajaxCandidate]);
 }
 
 function isPrivateIpv4(value: string): boolean {
@@ -916,14 +1122,31 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
     const resolvedUrl = new URL(page.url());
     const renderedHtml = await page.content();
     const htmlCandidate = extractTextFromHtml(renderedHtml, resolvedUrl, "browser");
+    const browserTitle = htmlCandidate.title;
+    const browserSiteName = htmlCandidate.siteName;
+    const browserNeedsImageOcr = !isStrongCandidate(htmlCandidate);
     const embeddedCandidate = extractEmbeddedCandidateFromResponses(
       jsonPayloads,
       resolvedUrl,
-      htmlCandidate.siteName
+      browserSiteName
     );
+    const imageOcrCandidate = browserNeedsImageOcr
+      ? await extractImageOcrCandidateFromHtml(
+          renderedHtml,
+          resolvedUrl,
+          getSelectors(resolvedUrl.hostname.toLowerCase()),
+          browserTitle,
+          browserSiteName,
+          {
+            refererUrl: resolvedUrl.toString()
+          },
+          920
+        )
+      : null;
+    const mergedCandidate = mergeCandidates(htmlCandidate, imageOcrCandidate, "browser", 220);
 
     return {
-      candidate: pickBestCandidate([embeddedCandidate, htmlCandidate])
+      candidate: pickBestCandidate([embeddedCandidate, mergedCandidate, imageOcrCandidate, htmlCandidate])
     };
   } catch (error) {
     return {
@@ -993,6 +1216,7 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
 
     const resolvedUrl = response.url || url.toString();
     const resolved = new URL(resolvedUrl);
+    const cookieHeader = extractCookieHeader(response.headers);
 
     if (contentType.includes("text/plain")) {
       const plainTitle = normalizeLine(url.hostname);
@@ -1034,10 +1258,7 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
     }
 
     if (isSaraminRelayUrl(resolved)) {
-      const saraminCandidate = await fetchSaraminRelayCandidate(
-        resolved,
-        extractCookieHeader(response.headers)
-      );
+      const saraminCandidate = await fetchSaraminRelayCandidate(resolved, cookieHeader);
 
       if (isUsableCandidate(saraminCandidate)) {
         return toFetchedCompanyPage(saraminCandidate, resolvedUrl, resolved.hostname);
@@ -1046,7 +1267,30 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
 
     const embeddedCandidate = extractEmbeddedCandidateFromHtml(body, resolved);
     const htmlCandidate = extractTextFromHtml(body, resolved, "html");
-    const staticBest = pickBestCandidate([embeddedCandidate, htmlCandidate]);
+    const staticTitle = htmlCandidate.title;
+    const staticSiteName = htmlCandidate.siteName;
+    const staticNeedsImageOcr = !isStrongCandidate(htmlCandidate);
+    const staticImageCandidate = staticNeedsImageOcr
+      ? await extractImageOcrCandidateFromHtml(
+          body,
+          resolved,
+          getSelectors(resolved.hostname.toLowerCase()),
+          staticTitle,
+          staticSiteName,
+          {
+            cookieHeader,
+            refererUrl: resolvedUrl
+          },
+          760
+        )
+      : null;
+    const staticMergedCandidate = mergeCandidates(htmlCandidate, staticImageCandidate, "html", 180);
+    const staticBest = pickBestCandidate([
+      embeddedCandidate,
+      staticMergedCandidate,
+      staticImageCandidate,
+      htmlCandidate
+    ]);
 
     if (isStrongCandidate(staticBest)) {
       return toFetchedCompanyPage(staticBest, resolvedUrl, resolved.hostname);

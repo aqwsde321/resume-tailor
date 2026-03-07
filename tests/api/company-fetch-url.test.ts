@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const launchMock = vi.hoisted(() => vi.fn());
+const extractTextFromImagesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("playwright", () => ({
   chromium: {
     launch: launchMock
   }
+}));
+
+vi.mock("@/lib/company-image-ocr", () => ({
+  extractTextFromImages: extractTextFromImagesMock
 }));
 
 import { POST } from "@/app/api/company/fetch-url/route";
@@ -34,6 +39,8 @@ describe("POST /api/company/fetch-url", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     launchMock.mockReset();
+    extractTextFromImagesMock.mockReset();
+    extractTextFromImagesMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -348,6 +355,118 @@ describe("POST /api/company/fetch-url", () => {
     expect(body.data.jobTitleHint).toBe("[청년디지털일자리]2026년 상반기 Java개발 신입/경력 사원");
     expect(body.data.text).toContain("EAI 시스템 구축 및 전환 개발/컨설팅 수행");
     expect(body.data.text).toContain("서류전형 → 과제수행 → 면접 → 최종합격");
+    expect(launchMock).not.toHaveBeenCalled();
+  });
+
+  it("상세 공고가 이미지면 OCR로 본문을 보강한다", async () => {
+    const headers = new Headers({
+      "content-type": "text/html; charset=utf-8"
+    });
+    headers.append("set-cookie", "PHPSESSID=image-session; Path=/; HttpOnly");
+
+    const baseHtml = `
+      <html>
+        <head>
+          <title>백엔드 개발자 채용 - 사람인</title>
+        </head>
+        <body>
+          <div class="wrap_jview"></div>
+        </body>
+      </html>
+    `;
+
+    const ajaxHtml = `
+      <div class="wrap_jv_cont">
+        <div class="wrap_jv_header">
+          <div class="jv_header">
+            <a class="company">테스트랩</a>
+            <h1 class="tit_job">백엔드 개발자</h1>
+          </div>
+        </div>
+        <div class="jv_cont jv_detail">
+          <iframe class="iframe_content" src="/zf_user/jobs/relay/view-detail?rec_idx=1000"></iframe>
+        </div>
+      </div>
+    `;
+
+    const detailHtml = `
+      <html>
+        <body>
+          <div class="user_content">
+            <p>상세 내용은 아래 이미지에서 확인해 주세요.</p>
+            <img src="/recruit-images/detail-1.png" />
+          </div>
+        </body>
+      </html>
+    `;
+
+    extractTextFromImagesMock.mockResolvedValue([
+      "주요 업무\nSpring Boot 기반 API 개발\n자격 요건\nJava 실무 경험\n우대 사항\nMSA 환경 경험"
+    ]);
+
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/zf_user/jobs/relay/view?")) {
+        return new Response(baseHtml, {
+          status: 200,
+          headers
+        });
+      }
+
+      if (url.endsWith("/zf_user/jobs/relay/view-ajax")) {
+        return new Response(ajaxHtml, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        });
+      }
+
+      if (url.includes("/zf_user/jobs/relay/view-detail?rec_idx=1000")) {
+        return new Response(detailHtml, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        });
+      }
+
+      if (url.endsWith("/recruit-images/detail-1.png")) {
+        expect((init?.headers as Record<string, string>).Referer).toContain("/zf_user/jobs/relay/view?");
+        expect((init?.headers as Record<string, string>).Cookie).toContain("PHPSESSID=image-session");
+
+        return new Response(new Uint8Array([137, 80, 78, 71]), {
+          status: 200,
+          headers: {
+            "content-type": "image/png"
+          }
+        });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=1000&view_type=avatar&t_ref=avatar"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("테스트랩");
+    expect(body.data.jobTitleHint).toBe("백엔드 개발자");
+    expect(body.data.text).toContain("Spring Boot 기반 API 개발");
+    expect(body.data.text).toContain("Java 실무 경험");
+    expect(extractTextFromImagesMock).toHaveBeenCalledTimes(1);
     expect(launchMock).not.toHaveBeenCalled();
   });
 
