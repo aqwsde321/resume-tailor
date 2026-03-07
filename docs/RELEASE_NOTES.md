@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## v0.6.0 (2026-03-07)
+
 ### Added
 
 - 소개글 단계에 `톤` 선택 추가: `담백하게`, `자신감 있게`, `협업 중심`, `문제 해결 중심`
@@ -23,6 +25,10 @@
 - `npm run typecheck`
 - `npm run test`
 - `npm run test:e2e -- tests/e2e/flow.spec.ts`
+
+### Tag
+
+- Git tag: `v0.6.0`
 
 ## v0.5.0 (2026-03-07)
 
