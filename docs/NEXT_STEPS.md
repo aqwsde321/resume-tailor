@@ -67,6 +67,7 @@
 - 현재 반영:
   - [x] API 응답 직전에 `normalizeCompany()` 후처리 추가
   - [x] fixture 기반 정규화 회귀 테스트 11개 추가
+  - [x] Wanted / Jumpit URL 추출 결과를 반영한 company route golden case 추가
 
 완료 기준:
 - 동일 공고 재분석 시 핵심 필드 흔들림이 줄어든다.

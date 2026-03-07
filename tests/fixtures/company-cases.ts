@@ -16,6 +16,21 @@ export type CompanyNormalizationGoldenCase = {
   };
 };
 
+export type CompanyRouteGoldenCase = {
+  name: string;
+  sourceText: string;
+  generated: Company;
+  expected: {
+    companyName: string;
+    jobTitle: string;
+    requirements: string[];
+    preferredSkills: string[];
+    techStack: string[];
+    jobDescriptionIncludes?: string[];
+    jobDescriptionExcludes?: string[];
+  };
+};
+
 export const companyNormalizationCases: CompanyNormalizationGoldenCase[] = [
   {
     name: "혜택과 중복을 제거하고 기술 스택을 분리한다",
@@ -239,6 +254,89 @@ export const companyNormalizationCases: CompanyNormalizationGoldenCase[] = [
       preferredSkills: ["Airflow 경험"],
       preferredExcludes: ["건강검진 지원"],
       techStack: ["Python", "Airflow", "BigQuery"]
+    }
+  }
+];
+
+export const companyRouteCases: CompanyRouteGoldenCase[] = [
+  {
+    name: "원티드 정적 HTML 기반 공고도 요건과 스택을 정리한다",
+    sourceText: [
+      "원티드랩 - 백엔드 엔지니어 | 원티드",
+      "주요 업무",
+      "Java와 Kotlin 기반 결제 API를 개발합니다.",
+      "대용량 트래픽 환경에서 서비스 안정성을 개선합니다.",
+      "자격 요건",
+      "백엔드 개발 경력 3년 이상",
+      "Spring Boot 기반 서비스 개발 경험",
+      "RDBMS 설계 및 성능 최적화 경험",
+      "우대 사항",
+      "AWS 운영 경험",
+      "MSA 환경 경험",
+      "기술 스택",
+      "Java, Kotlin, Spring Boot, MySQL, Redis"
+    ].join("\n"),
+    generated: {
+      companyName: " 원티드랩 ",
+      companyDescription: "채용 플랫폼을 운영합니다.",
+      jobTitle: "백엔드 엔지니어",
+      jobDescription:
+        "Java와 Kotlin 기반 결제 API를 개발합니다. 대용량 트래픽 환경에서 서비스 안정성을 개선합니다. 지원 방법 홈페이지 지원",
+      requirements: [
+        "백엔드 개발 경력 3년 이상",
+        "필수 조건: Spring Boot 기반 서비스 개발 경험",
+        "RDBMS 설계 및 성능 최적화 경험",
+        "지원방법 홈페이지 지원"
+      ],
+      preferredSkills: ["우대 사항: AWS 운영 경험", "MSA 환경 경험", "복지 포인트 지급"],
+      techStack: ["Java, Kotlin, Spring Boot, MySQL, Redis", "Redis"]
+    },
+    expected: {
+      companyName: "원티드랩",
+      jobTitle: "백엔드 엔지니어",
+      requirements: [
+        "백엔드 개발 경력 3년 이상",
+        "Spring Boot 기반 서비스 개발 경험",
+        "RDBMS 설계 및 성능 최적화 경험"
+      ],
+      preferredSkills: ["AWS 운영 경험", "MSA 환경 경험"],
+      techStack: ["Java", "Kotlin", "Spring Boot", "MySQL", "Redis"],
+      jobDescriptionIncludes: ["Java와 Kotlin 기반 결제 API를 개발합니다.", "대용량 트래픽 환경에서 서비스 안정성을 개선합니다."],
+      jobDescriptionExcludes: ["지원 방법"]
+    }
+  },
+  {
+    name: "점핏 정적 HTML 기반 공고도 오분류와 잡음을 정리한다",
+    sourceText: [
+      "카카오스타일 - 백엔드 개발자 | 점핏",
+      "주요 업무",
+      "주문/정산 도메인 백엔드 서비스를 개발합니다.",
+      "자격 요건",
+      "Java 또는 Kotlin 기반 서버 개발 경험",
+      "RDBMS 설계 및 운영 경험",
+      "우대 사항",
+      "Kafka 운영 경험",
+      "기술 스택",
+      "Java, Kotlin, Spring Boot, MySQL, Kafka"
+    ].join("\n"),
+    generated: {
+      companyName: "카카오스타일",
+      companyDescription: "패션 플랫폼 팀입니다.",
+      jobTitle: "백엔드 개발자",
+      jobDescription:
+        "주문/정산 도메인 백엔드 서비스를 개발합니다. 채용 절차 서류전형 > 1차 인터뷰 > 최종합격",
+      requirements: ["자격 요건: Java 또는 Kotlin 기반 서버 개발 경험", "RDBMS 설계 및 운영 경험", "식대 지원"],
+      preferredSkills: ["Required: Spring Boot 실무 경험", "우대 사항: Kafka 운영 경험", "채용 시 마감"],
+      techStack: ["Java | Kotlin | Spring Boot | MySQL | Kafka", "즉시 지원"]
+    },
+    expected: {
+      companyName: "카카오스타일",
+      jobTitle: "백엔드 개발자",
+      requirements: ["Java 또는 Kotlin 기반 서버 개발 경험", "RDBMS 설계 및 운영 경험", "Spring Boot 실무 경험"],
+      preferredSkills: ["Kafka 운영 경험"],
+      techStack: ["Java", "Kotlin", "Spring Boot", "MySQL", "Kafka"],
+      jobDescriptionIncludes: ["주문/정산 도메인 백엔드 서비스를 개발합니다."],
+      jobDescriptionExcludes: ["채용 절차", "최종합격"]
     }
   }
 ];

@@ -8,6 +8,7 @@
 - 상세 본문이 이미지인 공고를 위한 macOS Vision OCR fallback 추가
 - 채용공고 정규화 회귀 테스트 11개와 소개글 stale 이유 헬퍼 테스트 추가
 - 소개글 생성 전에 필수/우대 요건과 이력서 근거를 묶는 `[작성 앵커]` 추가
+- Wanted / Jumpit URL 추출 결과를 반영한 company route golden case 추가
 
 ### Changed
 - 사람인 relay 공고는 `view -> view-ajax -> view-detail` 순서로 현재 공고 상세를 우선 추출하도록 개선

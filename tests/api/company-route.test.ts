@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/company/route";
 import { runSkillJson } from "@/lib/codex-client";
+import { companyRouteCases } from "../fixtures/company-cases";
 
 vi.mock("@/lib/codex-client", () => ({
   runSkillJson: vi.fn()
@@ -72,4 +73,37 @@ describe("POST /api/company", () => {
     expect(body.data.preferredSkills).toEqual(["Spring Boot 경험"]);
     expect(body.data.techStack).toEqual(["Java", "Spring Boot", "Oracle"]);
   });
+
+  for (const fixture of companyRouteCases) {
+    it(`${fixture.name}`, async () => {
+      const mockedRunSkillJson = vi.mocked(runSkillJson);
+      mockedRunSkillJson.mockResolvedValue(fixture.generated);
+
+      const request = new Request("http://localhost/api/company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: fixture.sourceText })
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.ok).toBe(true);
+      expect(body.data.companyName).toBe(fixture.expected.companyName);
+      expect(body.data.jobTitle).toBe(fixture.expected.jobTitle);
+      expect(body.data.requirements).toEqual(fixture.expected.requirements);
+      expect(body.data.preferredSkills).toEqual(fixture.expected.preferredSkills);
+      expect(body.data.techStack).toEqual(fixture.expected.techStack);
+      expect(mockedRunSkillJson.mock.calls.at(-1)?.[0]?.inputText).toContain(fixture.sourceText);
+
+      fixture.expected.jobDescriptionIncludes?.forEach((text) => {
+        expect(body.data.jobDescription).toContain(text);
+      });
+
+      fixture.expected.jobDescriptionExcludes?.forEach((text) => {
+        expect(body.data.jobDescription).not.toContain(text);
+      });
+    });
+  }
 });
