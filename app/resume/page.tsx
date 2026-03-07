@@ -552,8 +552,8 @@ export default function ResumePage() {
                 </button>
               </div>
 
-              <div className="form-grid two">
-                <label className="field">
+              <div className="project-grid">
+                <label className="field field-full">
                   <span>프로젝트 이름</span>
                   <input
                     className="form-input"
@@ -562,23 +562,27 @@ export default function ResumePage() {
                     disabled={isBusy}
                   />
                 </label>
-                <label className="field">
-                  <span>기술 스택</span>
-                  <TagInput
-                    values={item.techStack}
-                    onChange={(values) => updateProjectTechStack(index, values)}
-                    placeholder="입력 후 Enter로 추가"
-                    disabled={isBusy}
-                  />
-                </label>
-                <label className="field field-full">
+                <label className="field project-description-field">
                   <span>내용</span>
                   <AutoGrowTextarea
+                    className="project-description-textarea"
                     value={item.description}
                     onChange={(event) => updateProject(index, "description", event.target.value)}
                     disabled={isBusy}
                   />
                 </label>
+                <div className="project-stack-panel">
+                  <label className="field">
+                    <span>기술 스택</span>
+                    <TagInput
+                      values={item.techStack}
+                      onChange={(values) => updateProjectTechStack(index, values)}
+                      placeholder="입력 후 Enter로 추가"
+                      disabled={isBusy}
+                    />
+                    <span className="field-help">이 프로젝트에 직접 쓴 기술만 짧게 나눠 두면 비교하기 쉽습니다.</span>
+                  </label>
+                </div>
               </div>
             </div>
           ))}

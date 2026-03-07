@@ -1044,6 +1044,51 @@ input.tag-input-entry:focus {
   gap: 8px;
 }
 
+.project-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.92fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.project-description-field {
+  margin: 0;
+}
+
+.project-description-textarea {
+  min-height: 132px;
+}
+
+.project-stack-panel {
+  align-self: stretch;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(35, 56, 102, 0.12);
+  background: linear-gradient(180deg, rgba(246, 249, 255, 0.95), rgba(255, 255, 255, 0.86));
+}
+
+.project-stack-panel .field {
+  gap: 8px;
+}
+
+.project-stack-panel .tag-input {
+  min-height: 112px;
+  align-content: flex-start;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.project-stack-panel .tag-chip {
+  border-color: rgba(16, 36, 58, 0.12);
+  background: rgba(16, 36, 58, 0.06);
+  color: #203449;
+}
+
+.project-stack-panel .tag-chip-remove {
+  background: rgba(16, 36, 58, 0.08);
+  color: #43566d;
+}
+
 .muted-help {
   margin: 0;
   color: var(--muted);
@@ -1650,6 +1695,15 @@ textarea:focus-visible {
   .action-panel button,
   .action-panel .nav-btn {
     width: 100%;
+  }
+
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-description-textarea,
+  .project-stack-panel .tag-input {
+    min-height: 104px;
   }
 
   .url-fetch-row {
