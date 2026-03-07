@@ -21,15 +21,24 @@ function getIntroInsights(intro: Intro | null) {
   const fitReasons = Array.isArray(intro.fitReasons) ? intro.fitReasons.filter(Boolean) : [];
   const matchedSkills = Array.isArray(intro.matchedSkills) ? intro.matchedSkills.filter(Boolean) : [];
   const gapNotes = Array.isArray(intro.gapNotes) ? intro.gapNotes.filter(Boolean) : [];
+  const missingButRelevant = Array.isArray(intro.missingButRelevant)
+    ? intro.missingButRelevant.filter(Boolean)
+    : [];
 
-  if (fitReasons.length === 0 && matchedSkills.length === 0 && gapNotes.length === 0) {
+  if (
+    fitReasons.length === 0 &&
+    matchedSkills.length === 0 &&
+    gapNotes.length === 0 &&
+    missingButRelevant.length === 0
+  ) {
     return null;
   }
 
   return {
     fitReasons,
     matchedSkills,
-    gapNotes
+    gapNotes,
+    missingButRelevant
   };
 }
 
@@ -170,6 +179,9 @@ export default function ResultPage() {
         : "소개글을 만들기 전에 어디가 잘 맞는지 먼저 보여줍니다.",
       highlights: introInsights?.fitReasons.length ? introInsights.fitReasons : (matchInsights?.highlights ?? []),
       gaps: introInsights?.gapNotes.length ? introInsights.gapNotes : (matchInsights?.gaps ?? []),
+      opportunities: introInsights?.missingButRelevant.length
+        ? introInsights.missingButRelevant
+        : (matchInsights?.opportunities ?? []),
       keywords: introInsights?.matchedSkills.length
         ? introInsights.matchedSkills
         : (matchInsights?.keywords ?? [])
@@ -445,6 +457,17 @@ export default function ResultPage() {
                 ))}
               </ul>
             </article>
+
+            {insightView.opportunities.length > 0 && (
+              <article className="insight-card info">
+                <h3>더 살릴 수 있는 점</h3>
+                <ul className="insight-list">
+                  {insightView.opportunities.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </article>
+            )}
           </div>
 
           {insightView.keywords.length > 0 && (

@@ -34,9 +34,10 @@
 
 - [x] `generate-intro` 출력 스키마 확장
 - [x] `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons[]`, `matchedSkills[]` 반영
-- [ ] `missingButRelevant[]`, `tone` 검토
+- [~] `missingButRelevant[]`, `tone` 검토
 - [x] 자기소개 생성 전 `resume`와 `company`의 매칭 포인트를 중간 구조로 먼저 계산하는 단계 추가
 - [x] 필수와 우대 요건, 이력서 근거를 연결하는 내부 `작성 앵커`와 결과 화면의 `공고와 연결한 내 경험` 섹션 추가
+- [x] `missingButRelevant[]`와 결과 화면의 `더 살릴 수 있는 점` 섹션 추가
 - [~] 프롬프트 금지 규칙 명시
   - [x] 근거 없는 과장
   - [x] 공고에 없는 표현 임의 추가 억제

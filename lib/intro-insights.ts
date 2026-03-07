@@ -75,6 +75,7 @@ const EVIDENCE_PRIORITY: Record<string, number> = {
 export type MatchInsights = {
   highlights: string[];
   gaps: string[];
+  opportunities: string[];
   keywords: string[];
 };
 
@@ -172,6 +173,10 @@ function formatEvidence(entry: EvidenceEntry): string {
   };
 
   return `${labelMap[entry.label] ?? entry.label}: ${entry.text}`;
+}
+
+function stripEvidenceLabel(evidence: string): string {
+  return evidence.replace(/^(요약|희망직무|강점|성과|경력|프로젝트):\s*/u, "").trim();
 }
 
 function findEvidence(entries: EvidenceEntry[], tokens: string[], limit = 2): string[] {
@@ -322,6 +327,38 @@ function formatWritingAnchors(writingAnchors: WritingAnchor[]): string[] {
   ]);
 }
 
+function introMentionsAnchor(text: string, anchor: WritingAnchor): boolean {
+  return referencesTarget(text, anchor.target);
+}
+
+function buildMissingButRelevantSuggestions(
+  writingAnchors: WritingAnchor[],
+  intro: Pick<Intro, "oneLineIntro" | "shortIntro" | "longIntro">
+): string[] {
+  const introBody = [intro.oneLineIntro, intro.shortIntro, intro.longIntro]
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  if (!introBody) {
+    return [];
+  }
+
+  return normalizeList(
+    writingAnchors
+      .filter((anchor) => !introMentionsAnchor(introBody, anchor))
+      .map((anchor) => {
+        const label = anchor.type === "requirement" ? "필수 요건" : "우대 조건";
+        const evidence = anchor.evidence[0] ? stripEvidenceLabel(anchor.evidence[0]) : "";
+
+        return evidence
+          ? `${label} '${anchor.target}'은 ${evidence} 근거를 써서 한 문장 더 보강할 수 있습니다.`
+          : `${label} '${anchor.target}'은 소개글에서 한 번 더 드러내면 좋습니다.`;
+      }),
+    3
+  );
+}
+
 export function buildIntroGuidance(resume: Resume, company: Company): IntroGuidance {
   const resumeKeywords = collectResumeKeywords(resume);
   const resumeTech = collectResumeTech(resume);
@@ -434,6 +471,7 @@ export function buildMatchInsights(resume: Resume, company: Company): MatchInsig
       gaps.length > 0
         ? gaps
         : ["확인된 큰 공백은 없지만, 공고 문구와 표현 톤을 더 맞추면 결과가 좋아집니다."],
+    opportunities: [],
     keywords: guidance.keywordCandidates
   };
 }
@@ -465,7 +503,9 @@ export function buildIntroSkillInput(resume: Resume, company: Company): string {
     "- 자기소개 문장은 resume.json의 프로젝트, 성과, 강점, 경력 설명을 재료로 삼고 요약 문장만 반복하지 않습니다.",
     "- fitReasons에는 requirementMatches 또는 preferredMatches에 있는 근거를 우선 사용합니다.",
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
-    "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다."
+    "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다.",
+    "- missingButRelevant에는 근거는 있지만 소개글 본문에 아직 직접 드러나지 않은 필수/우대 요건만 담습니다.",
+    "- missingButRelevant는 0~3개로 제한하고, 보완 제안 문장으로 작성합니다."
   ].join("\n");
 }
 
@@ -473,6 +513,7 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
   const guidance = buildIntroGuidance(resume, company);
   const rawFitReasons = normalizeList(intro.fitReasons, 4);
   const rawGapNotes = normalizeList(intro.gapNotes, 3);
+  const rawMissingButRelevant = normalizeList(intro.missingButRelevant, 3);
   const canonicalMatchedSkills = normalizeList(
     intro.matchedSkills
       .map((item) => canonicalizeSkill(item, guidance.matchedSkills))
@@ -494,6 +535,17 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
   const filteredGapNotes = rawGapNotes.filter((item) =>
     guidance.gapCandidates.some((target) => referencesTarget(item, target))
   );
+  const availableMissingAnchors = guidance.writingAnchors.filter(
+    (anchor) => !introMentionsAnchor(`${intro.oneLineIntro} ${intro.shortIntro} ${intro.longIntro}`, anchor)
+  );
+  const filteredMissingButRelevant = rawMissingButRelevant.filter((item) =>
+    availableMissingAnchors.some(
+      (anchor) =>
+        referencesTarget(item, anchor.target) ||
+        anchor.evidence.some((evidence) => referencesTarget(item, stripEvidenceLabel(evidence)))
+    )
+  );
+  const computedMissingButRelevant = buildMissingButRelevantSuggestions(guidance.writingAnchors, intro);
 
   return {
     oneLineIntro: intro.oneLineIntro.trim(),
@@ -504,6 +556,8 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
       canonicalMatchedSkills.length > 0
         ? canonicalMatchedSkills
         : guidance.matchedSkills.slice(0, Math.min(4, guidance.matchedSkills.length)),
-    gapNotes: filteredGapNotes
+    gapNotes: filteredGapNotes,
+    missingButRelevant:
+      filteredMissingButRelevant.length > 0 ? filteredMissingButRelevant : computedMissingButRelevant
   };
 }

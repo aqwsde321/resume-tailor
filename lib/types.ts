@@ -56,6 +56,7 @@ export interface Intro {
   fitReasons: string[];
   matchedSkills: string[];
   gapNotes: string[];
+  missingButRelevant: string[];
 }
 
 export interface ApiSuccess<T> {

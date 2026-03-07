@@ -76,7 +76,8 @@ describe("intro insight helpers", () => {
           "GraphQL API를 직접 운영했습니다."
         ],
         matchedSkills: ["react", "TypeScript", "Spring Boot"],
-        gapNotes: ["GraphQL 경험은 이력서에서 직접 확인되지 않습니다.", "Kubernetes 경험이 필요합니다."]
+        gapNotes: ["GraphQL 경험은 이력서에서 직접 확인되지 않습니다.", "Kubernetes 경험이 필요합니다."],
+        missingButRelevant: []
       },
       frontendResumeFixture,
       frontendCompanyFixture
@@ -87,6 +88,32 @@ describe("intro insight helpers", () => {
     expect(normalized.matchedSkills).toEqual(["React", "TypeScript"]);
     expect(normalized.fitReasons).toEqual(["React 기반 서비스 개발 경험이 있어 공고와 맞닿아 있습니다."]);
     expect(normalized.gapNotes).toEqual(["GraphQL 경험은 이력서에서 직접 확인되지 않습니다."]);
+    expect(normalized.missingButRelevant).toEqual([]);
+  });
+
+  it("소개글 본문에 덜 반영된 연결 포인트를 별도로 계산한다", () => {
+    const normalized = normalizeIntroWithGuidance(
+      {
+        oneLineIntro: "React 기반 프론트엔드 개발자",
+        shortIntro:
+          "React와 TypeScript 기반 관리자 도구를 개발하며 데이터 중심 화면 설계 경험을 쌓았습니다.",
+        longIntro:
+          "React와 TypeScript 기반 관리자 도구를 개발하며 데이터 중심 화면 설계 경험을 쌓았습니다. 공고의 React 실무 경험과 TypeScript 활용 역량은 실제 프로젝트 경험으로 확인됩니다. 입사 후에도 관리자 제품 화면을 빠르게 이해하고 개선에 기여할 수 있습니다.",
+        fitReasons: [],
+        matchedSkills: ["React", "TypeScript"],
+        gapNotes: [],
+        missingButRelevant: []
+      },
+      frontendResumeFixture,
+      frontendCompanyFixture
+    );
+
+    expect(normalized.missingButRelevant).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("협업 중심 개발 문화 적응"),
+        expect.stringContaining("Next.js 경험")
+      ])
+    );
   });
 
   it("결과 화면 fallback용 매칭 인사이트를 생성한다", () => {
@@ -95,6 +122,7 @@ describe("intro insight helpers", () => {
     expect(insights.highlights.some((item) => item.includes("Node.js"))).toBe(true);
     expect(insights.highlights.some((item) => item.includes("요구사항"))).toBe(true);
     expect(insights.gaps.some((item) => item.includes("AWS"))).toBe(true);
+    expect(insights.opportunities).toEqual([]);
     expect(insights.keywords).toEqual(expect.arrayContaining(["backend", "Node.js", "TypeScript"]));
   });
 });

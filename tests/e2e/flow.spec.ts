@@ -170,7 +170,10 @@ test.beforeEach(async ({ page }) => {
                 "운영 대시보드 구축 경험이 채용공고의 데이터 중심 화면 개발 업무와 맞닿아 있습니다."
               ],
               matchedSkills: ["React", "TypeScript", "Next.js"],
-              gapNotes: ["디자인 시스템 운영 경험은 자기소개에서 추가로 보강하면 좋습니다."]
+              gapNotes: ["디자인 시스템 운영 경험은 자기소개에서 추가로 보강하면 좋습니다."],
+              missingButRelevant: [
+                "우대 조건 'Next.js 경험'은 Admin Console 프로젝트 근거를 써서 한 문장 더 보강할 수 있습니다."
+              ]
             }
           }
         },
@@ -211,6 +214,8 @@ test("3단계 흐름을 완료하면 AI 근거와 소개문이 표시된다", as
     page.getByText("React와 TypeScript 기반 관리자 도구 개발 경험이 공고 요구사항과 직접 연결됩니다.")
   ).toBeVisible();
   await expect(page.getByText("디자인 시스템 운영 경험은 자기소개에서 추가로 보강하면 좋습니다.")).toBeVisible();
+  await expect(page.getByText("더 살릴 수 있는 점")).toBeVisible();
+  await expect(page.getByText("우대 조건 'Next.js 경험'은 Admin Console 프로젝트 근거를 써서 한 문장 더 보강할 수 있습니다.")).toBeVisible();
   await expect(page.getByText("React 기반 대시보드 경험의 프론트엔드 개발자")).toBeVisible();
   await expect(
     page.getByText("입사 후에도 관리자용 제품 화면과 내부 운영 도구를 빠르게 이해하고 사용자 경험 개선에 기여할 수 있습니다.")

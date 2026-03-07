@@ -75,9 +75,10 @@ STEP 2 `/company`:
 STEP 3 `/result`:
 - STEP 1/2 확정 전 생성 제한
 - `oneLineIntro`, `shortIntro`, `longIntro` 생성/출력
-- `fitReasons`, `matchedSkills`, `gapNotes` 기반 근거 카드 표시
+- `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant` 기반 근거 카드 표시
 - 소개글 생성 전 `공고 요건 -> 내 경험/성과/강점 -> 기여` 방향의 내부 작성 앵커 계산
 - 결과 화면에 `공고와 연결한 내 경험` 섹션 표시
+- 결과 화면에 `더 살릴 수 있는 점` 섹션 표시
 - 복사 버튼
 - 재생성 버튼
 - 직전 결과와 현재 결과 비교 영역
@@ -121,7 +122,7 @@ STEP 3 `/result`:
 1. `resumeConfirmedJson`, `companyConfirmedJson` 확보
 2. `buildIntroGuidance()`로 매칭 기술, 필수/우대 근거, gap 후보 계산
 3. 내부 `작성 앵커`로 필수/우대 요건과 이력서 근거를 묶어 프롬프트에 전달
-4. `generate-intro`가 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`, `matchedSkills`, `gapNotes` 생성
+4. `generate-intro`가 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant` 생성
 5. 결과를 후처리해 실제 근거 범위 안으로 다시 정규화
 
 공고 URL 보조 흐름:
@@ -171,6 +172,7 @@ SSE 이벤트:
 - `fitReasons[]`
 - `matchedSkills[]`
 - `gapNotes[]`
+- `missingButRelevant[]`
 
 ## 9. 상태 전이 규칙(중요)
 
@@ -223,6 +225,7 @@ R3. 생성 JSON 품질 편차:
 - 2026-03-07: 공고 URL 불러오기와 사이트별 상세 추출, OCR fallback을 도입.
 - 2026-03-07: 자기소개 생성 전에 필수/우대 요건과 이력서 근거를 묶는 내부 작성 앵커와 결과 화면의 `공고와 연결한 내 경험` 섹션을 추가.
 - 2026-03-07: 저장 전 확인 문구에서 누락 항목을 누르면 해당 필드로 이동하도록 수정.
+- 2026-03-07: 소개글에 아직 덜 반영된 연결 포인트를 `missingButRelevant[]`로 계산하고, 결과 화면의 `더 살릴 수 있는 점` 섹션으로 표시하도록 확장.
 
 ## 12. 다음 마일스톤
 

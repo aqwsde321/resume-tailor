@@ -47,7 +47,8 @@ describe("pipeline intro freshness helpers", () => {
         longIntro: "긴 소개",
         fitReasons: [],
         matchedSkills: [],
-        gapNotes: []
+        gapNotes: [],
+        missingButRelevant: []
       },
       introSource: {
         resumeConfirmedJson: '{"name":"old"}',
@@ -77,7 +78,8 @@ describe("pipeline intro freshness helpers", () => {
         longIntro: "긴 소개",
         fitReasons: [],
         matchedSkills: [],
-        gapNotes: []
+        gapNotes: [],
+        missingButRelevant: []
       },
       introSource: {
         resumeConfirmedJson: '{"name":"saved"}',

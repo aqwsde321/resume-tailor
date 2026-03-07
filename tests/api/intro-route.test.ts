@@ -46,7 +46,8 @@ describe("POST /api/intro", () => {
       gapNotes: [
         "AWS 경험은 이력서에서 직접 확인되지 않습니다.",
         "Kubernetes 경험이 필요합니다."
-      ]
+      ],
+      missingButRelevant: []
     });
 
     const request = new Request("http://localhost/api/intro", {
@@ -68,6 +69,7 @@ describe("POST /api/intro", () => {
     expect(body.data.fitReasons).toHaveLength(1);
     expect(body.data.matchedSkills).toEqual(["TypeScript"]);
     expect(body.data.gapNotes).toEqual(["AWS 경험은 이력서에서 직접 확인되지 않습니다."]);
+    expect(body.data.missingButRelevant).toEqual([]);
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("generate-intro");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[분석 힌트]");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("\"matchedSkills\": [");
@@ -82,7 +84,8 @@ describe("POST /api/intro", () => {
         "실무 경험을 바탕으로 백엔드 구조를 안정적으로 운영해 왔고, TypeScript 기반 개발 경험을 갖추고 있습니다. 요구사항을 빠르게 파악하고 서비스에 맞는 서버 구조를 정리하는 데 익숙합니다. 입사 후에도 안정적인 API 운영에 기여할 수 있습니다.",
       fitReasons: [],
       matchedSkills: ["TypeScript"],
-      gapNotes: []
+      gapNotes: [],
+      missingButRelevant: []
     });
 
     const request = new Request("http://localhost/api/intro", {
@@ -132,6 +135,7 @@ describe("POST /api/intro", () => {
     expect(body.data.fitReasons).toEqual([]);
     expect(body.data.matchedSkills).toEqual(["TypeScript"]);
     expect(body.data.gapNotes).toEqual([]);
+    expect(body.data.missingButRelevant).toEqual([]);
   });
 
   it("resume 타입이 잘못되면 400을 반환한다", async () => {

@@ -101,7 +101,8 @@ function normalizeIntro(raw: unknown): Intro | null {
           : "",
     fitReasons: normalizeStringArray(value.fitReasons),
     matchedSkills: normalizeStringArray(value.matchedSkills),
-    gapNotes: normalizeStringArray(value.gapNotes)
+    gapNotes: normalizeStringArray(value.gapNotes),
+    missingButRelevant: normalizeStringArray(value.missingButRelevant)
   };
 }
 

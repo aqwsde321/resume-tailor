@@ -64,6 +64,7 @@ resumeMake/
   - 채용공고 입력, URL 불러오기, 분석, 폼 수정, 확정
 - `app/result/page.tsx`
   - 자기소개 생성, 비교, 복사, 재생성
+  - `공고와 연결한 내 경험`, `더 살릴 수 있는 점` 같은 결과 근거 섹션 표시
 - `app/api/resume/*`
   - 이력서 구조화 API와 스트림 API
 - `app/api/company/*`
@@ -98,6 +99,7 @@ resumeMake/
   - 공고 구조화 결과 후처리
 - `intro-insights.ts`
   - 자기소개 생성 전에 매칭 근거 계산
+  - `missingButRelevant[]` 같은 소개글 후처리 보조 계산
 - `stream-client.ts`, `sse.ts`, `http.ts`
   - 스트림/HTTP 처리 유틸
 
@@ -171,7 +173,7 @@ resumeMake/
 2. 화면에서 `생각 깊이`를 선택할 수 있습니다.
 3. `intro-insights.ts`가 요건과 이력서 근거를 먼저 계산합니다.
 4. `/api/intro` 또는 `/api/intro/stream`이 `generate-intro` 스킬을 호출합니다.
-5. 생성 결과와 근거 카드가 화면에 표시됩니다.
+5. 생성 결과와 근거 카드, `더 살릴 수 있는 점` 섹션이 화면에 표시됩니다.
 
 ## 5. 파일 배치 규칙
 

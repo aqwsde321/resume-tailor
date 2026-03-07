@@ -7,7 +7,7 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
 
 ## 목적
 `output/resume.json`과 `output/company.json`을 읽어
-회사 맞춤 한줄 소개(oneLineIntro), 짧은 소개(shortIntro), 긴 소개(longIntro), 지원 근거(fitReasons, matchedSkills, gapNotes)를 생성하고
+회사 맞춤 한줄 소개(oneLineIntro), 짧은 소개(shortIntro), 긴 소개(longIntro), 지원 근거(fitReasons, matchedSkills, gapNotes, missingButRelevant)를 생성하고
 `output/intro.json`으로 저장한다.
 
 ---
@@ -66,8 +66,12 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
   - 공고 요구사항 중 이력서에서 직접 근거가 약한 항목만 작성
   - `[분석 힌트]`의 `gapCandidates`에 없는 항목은 추가하지 않는다
   - 억지로 채우지 말고 없으면 빈 배열
+- `missingButRelevant`: 0~3개 문자열 배열
+  - 이력서 근거는 있지만 소개글 본문에 아직 직접 드러나지 않은 필수/우대 요건만 작성
+  - `[작성 앵커]`에 있는 항목만 사용하고, `gapNotes`처럼 부족한 점이 아니라 보강하면 좋은 포인트로 작성
+  - 예: `우대 조건 'Next.js 경험'은 Admin Console 프로젝트 근거를 써서 한 문장 더 보강할 수 있습니다.`
 - 과장 금지, resume.json의 사실 기반으로만 작성
-- `fitReasons`, `matchedSkills`, `gapNotes`도 모두 사실 기반으로만 작성
+- `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant`도 모두 사실 기반으로만 작성
 - 전문적·간결한 톤
 - 설명문·주석 없이 유효한 JSON만 출력
 
@@ -79,7 +83,8 @@ description: resume.json과 company.json으로 회사 맞춤 자기소개를 생
   "longIntro": "",
   "fitReasons": [],
   "matchedSkills": [],
-  "gapNotes": []
+  "gapNotes": [],
+  "missingButRelevant": []
 }
 ```
 

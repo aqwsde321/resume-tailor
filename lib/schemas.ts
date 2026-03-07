@@ -59,7 +59,8 @@ export const IntroSchema = z
     longIntro: z.string().default(""),
     fitReasons: StringArraySchema,
     matchedSkills: StringArraySchema,
-    gapNotes: StringArraySchema
+    gapNotes: StringArraySchema,
+    missingButRelevant: StringArraySchema
   })
   .strict();
 
@@ -162,7 +163,15 @@ export const companyOutputSchema = {
 export const introOutputSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["oneLineIntro", "shortIntro", "longIntro", "fitReasons", "matchedSkills", "gapNotes"],
+  required: [
+    "oneLineIntro",
+    "shortIntro",
+    "longIntro",
+    "fitReasons",
+    "matchedSkills",
+    "gapNotes",
+    "missingButRelevant"
+  ],
   properties: {
     oneLineIntro: { type: "string" },
     shortIntro: { type: "string" },
@@ -176,6 +185,10 @@ export const introOutputSchema = {
       items: { type: "string" }
     },
     gapNotes: {
+      type: "array",
+      items: { type: "string" }
+    },
+    missingButRelevant: {
       type: "array",
       items: { type: "string" }
     }
