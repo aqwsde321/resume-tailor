@@ -1,74 +1,29 @@
 # 운영 런북
 
-- 문서 버전: v0.4
-- 마지막 업데이트: 2026-03-07
-- 기준 범위: 로컬 MVP 운영 및 복구
+- 문서 버전: v0.5
+- 마지막 업데이트: 2026-03-08
+- 기준 범위: 로컬 MVP 운영 점검, 장애 대응, 복구
 
 ## 1. 목적
 
-로컬 환경에서 ResumeMake를 안정적으로 실행하고 복구하기 위한 절차를 정의합니다.
+로컬 환경에서 ResumeMake를 운영할 때 필요한 점검, 장애 대응, 복구 절차를 정의합니다.
 
 ## 2. 운영 전제
 
 - 최초 설치와 실행 방법은 [README](../README.md)를 기준으로 합니다.
 - 운영 모드는 `Docker 실행` 또는 `로컬 실행` 중 하나를 사용합니다.
 - 두 방식 모두 Codex 인증이 필요합니다.
+- 이 문서는 앱이 이미 실행 가능한 상태라는 전제에서, 실행 이후 점검과 복구 절차에 집중합니다.
 
-## 3. 실행 모드별 기본 절차
+## 3. 기준 문서
 
-### 3.1 Docker 실행
+설치/실행 관련 상세 절차는 아래 문서를 기준으로 유지합니다.
 
-최초 1회:
+- Docker 최초 실행, 포트 변경, 이미지 교체: [README](../README.md)
+- 로컬 개발 실행: [README](../README.md)
+- GitHub Actions와 Docker Hub publish 설정: [README](../README.md)
 
-```bash
-docker compose pull
-docker compose run --rm app codex login --device-auth
-docker compose up -d
-```
-
-포트를 바꾸고 싶으면 실행할 때만 아래처럼 지정합니다. 지정하지 않으면 기본값은 `3000`입니다.
-
-```bash
-APP_PORT=3100 docker compose up -d
-```
-
-일상 운영:
-
-```bash
-docker compose pull
-docker compose up -d
-docker compose logs -f app
-docker compose down
-```
-
-메모:
-
-- 일반 사용자 기준으로 `docker compose build`는 필요하지 않습니다.
-- 인증 정보는 `codex-home` volume에 저장됩니다.
-- Docker 로그인 전에 ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`가 켜져 있는지 확인합니다.
-- 최신 공개 이미지를 반영하려면 `docker compose pull` 후 `docker compose up -d`를 실행합니다.
-- 인증 정보까지 초기화하려면 `docker compose down -v`를 사용합니다.
-- 개발자가 현재 소스를 직접 이미지로 검증하려면 `docker build -t resume-tailor:local .` 후 `RESUME_MAKE_IMAGE=resume-tailor:local docker compose up -d`를 사용합니다.
-
-### 3.2 로컬 실행
-
-```bash
-npm install
-codex auth login
-npm run dev
-```
-
-`codex`가 PATH에 없으면 `CODEX_CLI_PATH`를 설정합니다.
-
-```bash
-export CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
-npm run dev
-```
-
-브라우저 접속:
-
-- 기본: [http://localhost:3000](http://localhost:3000)
-- 포트를 바꿨다면 `http://localhost:<APP_PORT>`
+운영 런북에는 위 내용을 다시 복제하지 않고, 실행 이후 점검과 복구 절차만 유지합니다.
 
 ## 4. 일상 점검 체크리스트
 
@@ -96,12 +51,8 @@ codex auth login
 
 4. 품질 점검
 
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-```
+- 검증 명령은 [README](../README.md)의 `검증 명령` 섹션을 기준으로 실행합니다.
+- 운영 중 이상이 의심되면 최소 `npm run test`까지는 다시 확인합니다.
 
 ## 5. 장애 대응 가이드
 
@@ -163,11 +114,7 @@ docker compose run --rm app codex login --device-auth
 docker compose run --rm app codex login status
 ```
 
-3. 로그인 후 앱을 다시 실행합니다.
-
-```bash
-docker compose up -d
-```
+3. 로그인 후 README 기준으로 앱을 다시 실행합니다.
 
 ### E. `Unable to acquire lock ... .next/dev/lock`
 
@@ -232,6 +179,8 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
   -d '{"text":"샘플 이력서 텍스트"}'
 ```
 
+포트를 바꿔 실행했다면 `3000` 대신 해당 포트를 사용합니다.
+
 정상 패턴:
 
 - `event: log` 여러 건
@@ -251,30 +200,3 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
 
 - 서버리스나 원격 배포 시 Codex 인증과 세션 정책을 별도로 재설계해야 합니다.
 - 공고 이미지 OCR fallback도 현재는 macOS 로컬 실행 기준입니다.
-
-## 9. GitHub Actions와 Docker Hub publish
-
-`main` 브랜치에 push되면 `.github/workflows/docker-publish.yml`이 실행됩니다.
-
-동작 순서:
-
-1. `npm ci`
-2. `npm run lint`
-3. `npm run typecheck`
-4. `npm run test`
-5. `npm run build`
-6. Docker Hub에 `latest`, `sha-<commit>` 태그 push
-
-필수 GitHub 설정:
-
-- Repository secret `DOCKERHUB_TOKEN`
-- Repository variable `DOCKER_USERNAME`
-  - 비우면 워크플로 기본값 `aqwsde321` 사용
-- Repository variable `DOCKERHUB_IMAGE`
-  - 비우면 워크플로 기본값 `aqwsde321/resume-tailor` 사용
-
-사용자 배포 흐름:
-
-- 사용자는 저장소를 받은 뒤 `docker compose pull`로 공개 이미지를 받습니다.
-- 최초 1회만 `docker compose run --rm app codex login --device-auth`로 Codex 인증을 합니다.
-- 이후에는 `docker compose up -d`로 실행하고, 업데이트가 필요할 때만 다시 `docker compose pull`을 실행합니다.
