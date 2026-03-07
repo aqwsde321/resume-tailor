@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## v0.5.0 (2026-03-07)
+
 ### Added
 
 - Docker 실행 환경 추가: `Dockerfile`, `docker-compose.yml`, `codex-home` volume 기반 공유 실행
@@ -43,8 +45,13 @@
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
+- `npm run test:e2e -- tests/e2e/flow.spec.ts`
 - 실제 사람인 URL 추출 확인
 - 실제 잡코리아 URL 추출 확인
+
+### Tag
+
+- Git tag: `v0.5.0`
 
 ## v0.4.0 (2026-03-07)
 
