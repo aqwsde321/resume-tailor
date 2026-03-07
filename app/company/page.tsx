@@ -84,10 +84,10 @@ export default function CompanyPage() {
     missingCompanyRequired.push("회사명");
   }
   if (!draft.jobTitle.trim()) {
-    missingCompanyRequired.push("채용 직무");
+    missingCompanyRequired.push("포지션");
   }
   if (draft.requirements.length === 0) {
-    missingCompanyRequired.push("필수 요구사항");
+    missingCompanyRequired.push("필수 조건");
   }
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
@@ -130,30 +130,30 @@ export default function CompanyPage() {
     clearStatus();
 
     if (!file.name.toLowerCase().endsWith(".txt")) {
-      setError("MVP는 txt 파일만 지원합니다.");
+      setError("지금은 txt 파일만 올릴 수 있어요.");
       return;
     }
 
     const text = await file.text();
     setCompanyText(text);
-    setMessage("채용공고 txt 파일을 입력란에 반영했습니다.");
+    setMessage("파일 내용을 입력칸에 넣었어요.");
   };
 
   const handleAnalyze = async () => {
     clearStatus();
 
     if (!canEdit) {
-      setError("먼저 STEP 1에서 이력서 정보를 확정하세요.");
+      setError("먼저 이력서를 저장해 주세요.");
       return;
     }
 
     if (!state.companyText.trim()) {
-      setError("채용공고 텍스트를 입력해주세요.");
+      setError("채용 공고 내용을 먼저 넣어 주세요.");
       return;
     }
 
     clearLogs();
-    startTask("company", "채용공고 분석을 시작했습니다.");
+    startTask("company", "공고를 읽고 있어요.");
 
     try {
       const company = await postSseJson<Company>(
@@ -174,9 +174,9 @@ export default function CompanyPage() {
         introSource: null
       }));
 
-      setMessage("채용공고 항목 분석 완료. 폼을 검토 후 '채용공고 정보 확정'을 눌러주세요.");
+      setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "채용공고 분석 중 오류가 발생했습니다.");
+      setError(error instanceof Error ? error.message : "공고를 읽는 중 문제가 생겼어요.");
     } finally {
       finishTask();
     }
@@ -186,7 +186,7 @@ export default function CompanyPage() {
     clearStatus();
 
     if (hasMissingCompanyRequired) {
-      setError(`필수 항목을 입력하세요: ${missingCompanyRequired.join(", ")}`);
+      setError(`먼저 채워 주세요: ${missingCompanyRequired.join(", ")}`);
       return;
     }
 
@@ -195,7 +195,7 @@ export default function CompanyPage() {
       const details = validated.error.issues
         .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
         .join(" | ");
-      setError(`채용공고 항목 검증 실패: ${formatIssueDetails(details)}`);
+      setError(`입력값을 다시 확인해 주세요: ${formatIssueDetails(details)}`);
       return;
     }
 
@@ -208,46 +208,38 @@ export default function CompanyPage() {
       introSource: null
     }));
 
-    setMessage("채용공고 정보 확정 완료. STEP 3에서 자기소개를 생성하세요.");
+    setMessage("공고를 저장했어요. 이제 소개글을 만들어 보세요.");
   };
 
   return (
     <AppFrame
       step="company"
-      title="STEP 2 채용공고 분석/확정"
-      description="확정된 이력서를 기준으로 채용공고를 구조화하고 확정합니다."
+      title="공고 정리"
+      description="채용 공고에서 필요한 내용만 뽑아 저장합니다."
     >
       {!canEdit && (
-        <section className="card">
-          <h2>먼저 이력서 확정이 필요합니다.</h2>
-          <p>STEP 1에서 이력서 정보를 확정해야 STEP 2를 진행할 수 있습니다.</p>
+        <section className="card card-alert">
+          <p className="card-kicker">먼저 하기</p>
+          <h2>먼저 이력서를 저장해 주세요.</h2>
+          <p>이 단계는 이력서를 저장한 뒤에 열립니다.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
-              STEP 1으로 이동
+              이력서로 가기
             </Link>
           </div>
         </section>
       )}
 
-      <section className="card">
+      <section className="card card-accent">
         <div className="card-head">
           <div>
-            <p className="card-kicker">공고 원문 입력</p>
-            <h2>채용공고 입력</h2>
+            <p className="card-kicker">입력</p>
+            <h2>공고 넣기</h2>
           </div>
-          <button
-            type="button"
-            className="primary"
-            onClick={handleAnalyze}
-            disabled={isBusy || !canEdit}
-          >
-            {state.currentTask === "company" ? "분석 중..." : "채용공고 분석 시작"}
-          </button>
         </div>
 
         <p className="card-copy">
-          회사 공고 전문을 넣으면 필수 요구사항과 직무 정보를 구조화합니다. 이 단계는 STEP 1 이력서 확정이
-          완료돼야 활성화됩니다.
+          채용 공고를 붙여넣으면 회사명, 역할, 조건을 정리해 줍니다.
         </p>
 
         <div className="tabs">
@@ -257,7 +249,7 @@ export default function CompanyPage() {
             onClick={() => patch((prev) => ({ ...prev, companyInputMode: "text" }))}
             disabled={isBusy || !canEdit}
           >
-            텍스트 입력
+            붙여넣기
           </button>
           <button
             type="button"
@@ -265,7 +257,7 @@ export default function CompanyPage() {
             onClick={() => patch((prev) => ({ ...prev, companyInputMode: "file" }))}
             disabled={isBusy || !canEdit}
           >
-            txt 업로드
+            파일 업로드
           </button>
         </div>
 
@@ -281,29 +273,43 @@ export default function CompanyPage() {
         <textarea
           value={state.companyText}
           onChange={(event) => setCompanyText(event.target.value)}
-          placeholder="채용공고 텍스트를 붙여넣으세요."
+          placeholder="채용 공고 내용을 붙여넣어 주세요."
           disabled={isBusy || !canEdit}
         />
+
+        <div className="action-panel">
+          <div className="action-copy">
+            <strong>먼저 초안을 만들어요</strong>
+            <span>입력한 공고를 읽고 회사명, 포지션, 조건을 정리합니다.</span>
+          </div>
+          <button
+            type="button"
+            className="primary"
+            onClick={handleAnalyze}
+            disabled={isBusy || !canEdit}
+          >
+            {state.currentTask === "company" ? "정리 중..." : "내용 정리"}
+          </button>
+        </div>
       </section>
 
-      <section className="card">
+      <section className="card card-review">
         <div className="card-head">
           <div>
-            <p className="card-kicker">회사 기준 검토</p>
-            <h2>채용공고 항목 수정</h2>
+            <p className="card-kicker">확인</p>
+            <h2>공고 다듬기</h2>
           </div>
           {companyNeedsConfirm ? (
-            <span className="inline-badge warn">미확정 변경 있음</span>
+            <span className="inline-badge warn">수정됨</span>
           ) : state.companyConfirmedJson ? (
-            <span className="inline-badge ok">확정됨</span>
+            <span className="inline-badge ok">저장됨</span>
           ) : (
-            <span className="inline-badge">분석 전</span>
+            <span className="inline-badge">아직 없음</span>
           )}
         </div>
 
         <p className="card-copy">
-          공고에서 추출된 회사명, 채용 직무, 요구사항을 정리하는 단계입니다. 확정 후에만 STEP 3에서
-          자기소개 생성이 열립니다.
+          자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
         </p>
 
         <div className="form-grid two">
@@ -318,7 +324,7 @@ export default function CompanyPage() {
           </label>
 
           <label className={`field ${!draft.jobTitle.trim() ? "field-error" : ""}`}>
-            <span>채용 직무</span>
+            <span>포지션</span>
             <input
               className="form-input"
               value={draft.jobTitle}
@@ -339,7 +345,7 @@ export default function CompanyPage() {
           </label>
 
           <label className="field field-full">
-            <span>업무 설명</span>
+            <span>주요 업무</span>
             <AutoGrowTextarea
               value={draft.jobDescription}
               onChange={(event) => syncDraft({ ...draft, jobDescription: event.target.value })}
@@ -350,7 +356,7 @@ export default function CompanyPage() {
           <label
             className={`field field-full ${draft.requirements.length === 0 ? "field-error" : ""}`}
           >
-            <span>필수 요구사항 (쉼표 구분)</span>
+            <span>필수 조건 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={requirementsText}
@@ -364,7 +370,7 @@ export default function CompanyPage() {
           </label>
 
           <label className="field field-full">
-            <span>우대사항 (쉼표 구분)</span>
+            <span>우대 조건 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={preferredSkillsText}
@@ -378,7 +384,7 @@ export default function CompanyPage() {
           </label>
 
           <label className="field field-full">
-            <span>기술 스택 (쉼표 구분)</span>
+            <span>기술 스택 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={techStackText}
@@ -393,28 +399,38 @@ export default function CompanyPage() {
         </div>
 
         {hasMissingCompanyRequired && (
-          <p className="required-help">필수 항목: {missingCompanyRequired.join(", ")}</p>
+          <p className="required-help">먼저 채워 주세요: {missingCompanyRequired.join(", ")}</p>
         )}
 
-        <div className="action-row">
-          <button
-            type="button"
-            className="primary"
-            onClick={handleConfirmCompany}
-            disabled={
-              isBusy ||
-              !canEdit ||
-              !state.companyJsonText.trim() ||
-              hasMissingCompanyRequired
-            }
-          >
-            채용공고 정보 확정
-          </button>
-          {state.companyConfirmedJson && (
-            <Link className="nav-btn" href={"/result" as Route}>
-              STEP 3 결과로 이동
-            </Link>
-          )}
+        <div className="action-panel review">
+          <div className="action-copy">
+            <strong>확인했으면 저장해요</strong>
+            <span>
+              {state.companyConfirmedJson && !companyNeedsConfirm
+                ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
+                : "필수 조건을 채우면 소개글 단계로 넘어갈 수 있어요."}
+            </span>
+          </div>
+          <div className="action-row">
+            <button
+              type="button"
+              className="primary"
+              onClick={handleConfirmCompany}
+              disabled={
+                isBusy ||
+                !canEdit ||
+                !state.companyJsonText.trim() ||
+                hasMissingCompanyRequired
+              }
+            >
+              공고 저장
+            </button>
+            {state.companyConfirmedJson && (
+              <Link className="nav-btn" href={"/result" as Route}>
+                소개글 만들기로 가기
+              </Link>
+            )}
+          </div>
         </div>
       </section>
     </AppFrame>

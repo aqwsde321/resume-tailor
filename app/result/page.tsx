@@ -86,11 +86,11 @@ export default function ResultPage() {
     }
 
     return {
-      kicker: introInsights ? "AI 생성 근거" : "매칭 분석",
-      title: introInsights ? "자기소개가 참조한 지원 근거" : "지원 근거 미리보기",
+      kicker: introInsights ? "근거" : "미리 보기",
+      title: introInsights ? "이 소개글의 근거" : "잘 맞는 부분 미리 보기",
       description: introInsights
-        ? "자기소개 생성과 함께 모델이 구조화한 근거입니다. 공고를 다시 생성하면 이 내용도 함께 갱신됩니다."
-        : "자기소개 생성 전에, 확정된 이력서와 채용공고가 어디서 맞물리는지 자동으로 요약합니다.",
+        ? "소개글을 만들 때 참고한 내용입니다. 공고를 다시 정리하면 함께 바뀝니다."
+        : "소개글을 만들기 전에 어디가 잘 맞는지 먼저 보여줍니다.",
       highlights: introInsights?.fitReasons.length ? introInsights.fitReasons : (matchInsights?.highlights ?? []),
       gaps: introInsights?.gapNotes.length ? introInsights.gapNotes : (matchInsights?.gaps ?? []),
       keywords: introInsights?.matchedSkills.length
@@ -103,7 +103,7 @@ export default function ResultPage() {
     clearStatus();
 
     if (!canGenerate) {
-      setError("STEP 1/2에서 정보 확정을 완료하세요.");
+      setError("이력서와 공고를 먼저 저장해 주세요.");
       return;
     }
 
@@ -114,24 +114,24 @@ export default function ResultPage() {
       resumeRaw = JSON.parse(state.resumeConfirmedJson ?? "{}");
       companyRaw = JSON.parse(state.companyConfirmedJson ?? "{}");
     } catch {
-      setError("확정 정보를 읽지 못했습니다. STEP 1/2를 다시 확인해주세요.");
+      setError("저장된 내용을 읽지 못했어요. 다시 확인해 주세요.");
       return;
     }
 
     const resume = ResumeSchema.safeParse(resumeRaw);
     if (!resume.success) {
-      setError("확정된 이력서 정보 검증에 실패했습니다. STEP 1에서 다시 확정하세요.");
+      setError("저장한 이력서 내용을 다시 확인해 주세요.");
       return;
     }
 
     const company = CompanySchema.safeParse(companyRaw);
     if (!company.success) {
-      setError("확정된 채용공고 정보 검증에 실패했습니다. STEP 2에서 다시 확정하세요.");
+      setError("저장한 공고 내용을 다시 확인해 주세요.");
       return;
     }
 
     clearLogs();
-    startTask("intro", "자기소개 생성을 시작했습니다.");
+    startTask("intro", "소개글을 만들고 있어요.");
 
     try {
       const intro = await postSseJson<Intro>(
@@ -156,70 +156,81 @@ export default function ResultPage() {
         }
       }));
 
-      setMessage("자기소개 생성 완료.");
+      setMessage("소개글이 준비됐어요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "자기소개 생성 중 오류가 발생했습니다.");
+      setError(error instanceof Error ? error.message : "소개글을 만드는 중 문제가 생겼어요.");
     } finally {
       finishTask();
     }
   };
 
-  const copyText = async (value: string, label: string) => {
+  const copyText = async (value: string) => {
     clearStatus();
 
     try {
       await navigator.clipboard.writeText(value);
-      setMessage(`${label}를 클립보드에 복사했습니다.`);
+      setMessage("복사했어요.");
     } catch {
-      setError("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
+      setError("복사하지 못했어요. 브라우저 권한을 확인해 주세요.");
     }
   };
 
   return (
     <AppFrame
       step="result"
-      title="STEP 3 결과 생성"
-      description="확정된 이력서/채용공고 정보를 바탕으로 자기소개를 생성합니다."
+      title="소개글 만들기"
+      description="저장한 이력서와 공고로 소개글 초안을 만듭니다."
     >
       {!canGenerate && (
-        <section className="card">
-          <h2>정보 확정이 필요합니다.</h2>
-          <p>STEP 1에서 이력서, STEP 2에서 채용공고 정보를 먼저 확정하세요.</p>
+        <section className="card card-alert">
+          <p className="card-kicker">먼저 하기</p>
+          <h2>먼저 저장해 주세요.</h2>
+          <p>이력서와 공고를 먼저 저장해야 소개글을 만들 수 있어요.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
-              STEP 1로 이동
+              이력서로 가기
             </Link>
             <Link href={"/company" as Route} className="nav-btn">
-              STEP 2로 이동
+              공고로 가기
             </Link>
           </div>
         </section>
       )}
 
-      <section className="card">
+      <section className="card card-accent">
         <div className="card-head">
           <div>
-            <p className="card-kicker">결과 출력</p>
-            <h2>자기소개 생성</h2>
+            <p className="card-kicker">만들기</p>
+            <h2>소개글 만들기</h2>
           </div>
-          <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
-            {state.currentTask === "intro" ? "생성 중..." : introFresh ? "다시 생성" : "자기소개 생성"}
-          </button>
         </div>
 
         <p className="card-copy">
-          확정된 이력서와 채용공고를 조합해 회사 맞춤 자기소개를 만듭니다. 공고만 다시 바꾼 뒤 재생성하는
-          흐름을 기준으로 설계되어 있습니다.
+          저장한 이력서와 공고를 바탕으로 바로 다듬어 쓸 초안을 만듭니다.
         </p>
 
         <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
-          {introFresh ? "현재 결과는 최신입니다." : "확정 정보가 변경되어 재생성이 필요합니다."}
+          {introFresh ? "지금 결과가 최신이에요." : "내용이 바뀌어 다시 만들어야 해요."}
         </p>
 
         <div className="action-row">
           <Link href={"/company" as Route} className="nav-btn">
-            회사 공고 수정으로 이동
+            공고 수정하기
           </Link>
+        </div>
+
+        <div className="action-panel">
+          <div className="action-copy">
+            <strong>{introFresh ? "필요하면 다시 만들어요" : "소개글을 만들어요"}</strong>
+            <span>
+              {canGenerate
+                ? "저장한 이력서와 공고를 바탕으로 바로 초안을 만듭니다."
+                : "이력서와 공고를 저장하면 버튼이 활성화돼요."}
+            </span>
+          </div>
+          <button type="button" className="primary" onClick={handleGenerate} disabled={isBusy || !canGenerate}>
+            {state.currentTask === "intro" ? "만드는 중..." : introFresh ? "다시 만들기" : "소개글 만들기"}
+          </button>
         </div>
       </section>
 
@@ -236,7 +247,7 @@ export default function ResultPage() {
 
           <div className="insight-grid">
             <article className="insight-card ok">
-              <h3>매칭 근거</h3>
+              <h3>잘 맞는 점</h3>
               <ul className="insight-list">
                 {insightView.highlights.map((item) => (
                   <li key={item}>{item}</li>
@@ -245,7 +256,7 @@ export default function ResultPage() {
             </article>
 
             <article className="insight-card warn">
-              <h3>보완 포인트</h3>
+              <h3>보완할 점</h3>
               <ul className="insight-list">
                 {insightView.gaps.map((item) => (
                   <li key={item}>{item}</li>
@@ -269,11 +280,11 @@ export default function ResultPage() {
       <section className="card result-output-shell">
         <div className="result-output-head">
           <div>
-            <p className="card-kicker">생성 결과</p>
-            <h2>복사하기 전에 문장을 빠르게 검토하세요</h2>
+            <p className="card-kicker">결과</p>
+            <h2>복사 전에 한 번만 읽어 보세요</h2>
           </div>
           <p className="card-copy">
-            한 줄 소개와 짧은 자기소개를 세로로 배치해 문장 흐름을 바로 비교할 수 있게 정리했습니다.
+            짧은 소개와 긴 소개를 순서대로 볼 수 있게 정리했어요.
           </p>
         </div>
 
@@ -284,28 +295,28 @@ export default function ResultPage() {
               <button
                 type="button"
                 className="secondary"
-                onClick={() => void copyText(state.intro?.oneLineIntro ?? "", "한 줄 소개")}
+                onClick={() => void copyText(state.intro?.oneLineIntro ?? "")}
                 disabled={isBusy || !state.intro}
               >
                 복사
               </button>
             </div>
-            <p>{state.intro?.oneLineIntro ?? "아직 생성되지 않았습니다."}</p>
+            <p>{state.intro?.oneLineIntro ?? "아직 만든 소개글이 없어요."}</p>
           </article>
 
           <article className="result-block">
             <div className="result-head">
-              <h3>짧은 자기소개</h3>
+              <h3>짧은 소개</h3>
               <button
                 type="button"
                 className="secondary"
-                onClick={() => void copyText(state.intro?.shortIntro ?? "", "짧은 자기소개")}
+                onClick={() => void copyText(state.intro?.shortIntro ?? "")}
                 disabled={isBusy || !state.intro}
               >
                 복사
               </button>
             </div>
-            <p>{state.intro?.shortIntro ?? "아직 생성되지 않았습니다."}</p>
+            <p>{state.intro?.shortIntro ?? "아직 만든 소개글이 없어요."}</p>
           </article>
         </div>
       </section>
@@ -313,34 +324,34 @@ export default function ResultPage() {
       {state.previousIntro && state.intro && (
         <section className="card">
           <div className="card-head">
-            <h2>이전 결과 비교</h2>
+            <h2>이전 결과와 비교</h2>
           </div>
 
           <div className="compare-grid">
             <article className="result-block compare-old">
               <div className="result-head">
-                <h3>직전 한 줄 소개</h3>
+                <h3>이전 한 줄 소개</h3>
               </div>
               <p>{state.previousIntro.oneLineIntro}</p>
             </article>
 
             <article className="result-block compare-new">
               <div className="result-head">
-                <h3>현재 한 줄 소개</h3>
+                <h3>지금 한 줄 소개</h3>
               </div>
               <p>{state.intro.oneLineIntro}</p>
             </article>
 
             <article className="result-block compare-old">
               <div className="result-head">
-                <h3>직전 짧은 자기소개</h3>
+                <h3>이전 짧은 소개</h3>
               </div>
               <p>{state.previousIntro.shortIntro}</p>
             </article>
 
             <article className="result-block compare-new">
               <div className="result-head">
-                <h3>현재 짧은 자기소개</h3>
+                <h3>지금 짧은 소개</h3>
               </div>
               <p>{state.intro.shortIntro}</p>
             </article>

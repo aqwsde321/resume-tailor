@@ -1,5 +1,6 @@
 import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
+import { formatReasoningEffortValue } from "@/lib/agent-settings";
 import { HttpError } from "@/lib/http";
 import { readSkillMarkdown } from "@/lib/skills";
 import type { AgentRunOptions, SkillName, StreamLogPayload } from "@/lib/types";
@@ -237,9 +238,7 @@ export async function runSkillJsonStream<T>(params: {
       emitLog(params.onLog, {
         level: "info",
         phase: "config",
-        message: `실행 설정: model=${params.model ?? "config 기본값"}, reasoning=${
-          params.modelReasoningEffort ?? "config 기본값"
-        }`
+        message: `설정: 생각 깊이 ${formatReasoningEffortValue(params.modelReasoningEffort ?? "medium")}`
       });
 
       const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {

@@ -9,11 +9,11 @@ export const MODEL_REASONING_EFFORT_VALUES = [
 ] as const satisfies readonly ModelReasoningEffort[];
 
 export const MODEL_REASONING_EFFORT_LABELS: Record<ModelReasoningEffort, string> = {
-  minimal: "Minimal",
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  xhigh: "XHigh"
+  minimal: "가볍게",
+  low: "낮게",
+  medium: "보통",
+  high: "높게",
+  xhigh: "깊게"
 };
 
 export function isModelReasoningEffort(value: unknown): value is ModelReasoningEffort {

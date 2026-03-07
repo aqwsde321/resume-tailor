@@ -184,25 +184,25 @@ export default function ResumePage() {
     clearStatus();
 
     if (!file.name.toLowerCase().endsWith(".txt")) {
-      setError("MVP는 txt 파일만 지원합니다.");
+      setError("지금은 txt 파일만 올릴 수 있어요.");
       return;
     }
 
     const text = await file.text();
     setResumeText(text);
-    setMessage("이력서 txt 파일을 입력란에 반영했습니다.");
+    setMessage("파일 내용을 입력칸에 넣었어요.");
   };
 
   const handleAnalyze = async () => {
     clearStatus();
 
     if (!state.resumeText.trim()) {
-      setError("이력서 텍스트를 입력해주세요.");
+      setError("이력서 내용을 먼저 넣어 주세요.");
       return;
     }
 
     clearLogs();
-    startTask("resume", "이력서 분석을 시작했습니다.");
+    startTask("resume", "이력서를 읽고 있어요.");
 
     try {
       const resume = await postSseJson<Resume>(
@@ -224,9 +224,9 @@ export default function ResumePage() {
         introSource: null
       }));
 
-      setMessage("이력서 항목 분석 완료. 폼을 검토 후 '이력서 정보 확정'을 눌러주세요.");
+      setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "이력서 분석 중 오류가 발생했습니다.");
+      setError(error instanceof Error ? error.message : "이력서를 읽는 중 문제가 생겼어요.");
     } finally {
       finishTask();
     }
@@ -236,7 +236,7 @@ export default function ResumePage() {
     clearStatus();
 
     if (hasMissingResumeRequired) {
-      setError(`필수 항목을 입력하세요: ${missingResumeRequired.join(", ")}`);
+      setError(`먼저 채워 주세요: ${missingResumeRequired.join(", ")}`);
       return;
     }
 
@@ -245,7 +245,7 @@ export default function ResumePage() {
       const details = validated.error.issues
         .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
         .join(" | ");
-      setError(`이력서 항목 검증 실패: ${formatIssueDetails(details)}`);
+      setError(`입력값을 다시 확인해 주세요: ${formatIssueDetails(details)}`);
       return;
     }
 
@@ -263,29 +263,25 @@ export default function ResumePage() {
       };
     });
 
-    setMessage("이력서 정보 확정 완료. STEP 2에서 채용공고를 분석하세요.");
+    setMessage("이력서를 저장했어요. 이제 공고를 정리해 주세요.");
   };
 
   return (
     <AppFrame
       step="resume"
-      title="STEP 1 이력서 분석/확정"
-      description="이력서 텍스트를 구조화한 뒤, 항목별 폼에서 검토하고 확정합니다."
+      title="이력서 정리"
+      description="이력서 내용을 읽고, 필요한 정보만 정리해 저장합니다."
     >
-      <section className="card">
+      <section className="card card-accent">
         <div className="card-head">
           <div>
-            <p className="card-kicker">원문 입력</p>
-            <h2>이력서 입력</h2>
+            <p className="card-kicker">입력</p>
+            <h2>이력서 넣기</h2>
           </div>
-          <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
-            {state.currentTask === "resume" ? "분석 중..." : "이력서 분석 시작"}
-          </button>
         </div>
 
         <p className="card-copy">
-          txt 업로드 또는 직접 붙여넣기 후 분석을 시작합니다. 원문은 길어도 괜찮고, 아래 폼에서 다시
-          정리할 수 있습니다.
+          파일을 올리거나 내용을 붙여넣으면 바로 정리해 줍니다.
         </p>
 
         <div className="tabs">
@@ -295,7 +291,7 @@ export default function ResumePage() {
             onClick={() => patch((prev) => ({ ...prev, resumeInputMode: "text" }))}
             disabled={isBusy}
           >
-            텍스트 입력
+            붙여넣기
           </button>
           <button
             type="button"
@@ -303,7 +299,7 @@ export default function ResumePage() {
             onClick={() => patch((prev) => ({ ...prev, resumeInputMode: "file" }))}
             disabled={isBusy}
           >
-            txt 업로드
+            파일 업로드
           </button>
         </div>
 
@@ -319,29 +315,38 @@ export default function ResumePage() {
         <textarea
           value={state.resumeText}
           onChange={(event) => setResumeText(event.target.value)}
-          placeholder="이력서 텍스트를 붙여넣으세요."
+          placeholder="이력서 내용을 붙여넣어 주세요."
           disabled={isBusy}
         />
+
+        <div className="action-panel">
+          <div className="action-copy">
+            <strong>먼저 초안을 만들어요</strong>
+            <span>입력한 내용을 읽고 아래 폼을 채워 줍니다.</span>
+          </div>
+          <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
+            {state.currentTask === "resume" ? "정리 중..." : "내용 정리"}
+          </button>
+        </div>
       </section>
 
-      <section className="card">
+      <section className="card card-review">
         <div className="card-head">
           <div>
-            <p className="card-kicker">구조화 검토</p>
-            <h2>이력서 항목 수정</h2>
+            <p className="card-kicker">확인</p>
+            <h2>이력서 다듬기</h2>
           </div>
           {resumeNeedsConfirm ? (
-            <span className="inline-badge warn">미확정 변경 있음</span>
+            <span className="inline-badge warn">수정됨</span>
           ) : state.resumeConfirmedJson ? (
-            <span className="inline-badge ok">확정됨</span>
+            <span className="inline-badge ok">저장됨</span>
           ) : (
-            <span className="inline-badge">분석 전</span>
+            <span className="inline-badge">아직 없음</span>
           )}
         </div>
 
         <p className="card-copy">
-          분석 결과는 JSON이 아닌 한글 폼으로 다듬습니다. 필수 항목을 채우고 하단에서 이력서를 확정하면
-          STEP 2가 열립니다.
+          자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
         </p>
 
         <div className="form-grid two">
@@ -394,7 +399,7 @@ export default function ResumePage() {
           </label>
 
           <label className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}>
-            <span>기술 스택 (쉼표 구분)</span>
+            <span>기술 스택 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={techStackText}
@@ -408,7 +413,7 @@ export default function ResumePage() {
           </label>
 
           <label className="field field-full">
-            <span>성과/수상 (쉼표 구분)</span>
+            <span>성과 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={achievementsText}
@@ -422,7 +427,7 @@ export default function ResumePage() {
           </label>
 
           <label className="field field-full">
-            <span>강점 (쉼표 구분)</span>
+            <span>강점 (쉼표로 구분)</span>
             <input
               className="form-input"
               value={strengthsText}
@@ -437,7 +442,7 @@ export default function ResumePage() {
         </div>
 
         {hasMissingResumeRequired && (
-          <p className="required-help">필수 항목: {missingResumeRequired.join(", ")}</p>
+          <p className="required-help">먼저 채워 주세요: {missingResumeRequired.join(", ")}</p>
         )}
 
         <div className="array-section">
@@ -449,11 +454,11 @@ export default function ResumePage() {
               onClick={() => syncDraft({ ...draft, experience: [...draft.experience, makeEmptyExperience()] })}
               disabled={isBusy}
             >
-              경력 추가
+              추가
             </button>
           </div>
 
-          {draft.experience.length === 0 && <p className="muted-help">추가된 경력이 없습니다.</p>}
+          {draft.experience.length === 0 && <p className="muted-help">아직 경력이 없어요.</p>}
 
           {draft.experience.map((item, index) => (
             <div className="array-item" key={`experience-${index}`}>
@@ -485,7 +490,7 @@ export default function ResumePage() {
                   />
                 </label>
                 <label className="field">
-                  <span>역할</span>
+                  <span>담당 역할</span>
                   <input
                     className="form-input"
                     value={item.role}
@@ -503,7 +508,7 @@ export default function ResumePage() {
                   />
                 </label>
                 <label className="field field-full">
-                  <span>설명</span>
+                  <span>내용</span>
                   <AutoGrowTextarea
                     value={item.description}
                     onChange={(event) => updateExperience(index, "description", event.target.value)}
@@ -524,11 +529,11 @@ export default function ResumePage() {
               onClick={() => syncDraft({ ...draft, projects: [...draft.projects, makeEmptyProject()] })}
               disabled={isBusy}
             >
-              프로젝트 추가
+              추가
             </button>
           </div>
 
-          {draft.projects.length === 0 && <p className="muted-help">추가된 프로젝트가 없습니다.</p>}
+          {draft.projects.length === 0 && <p className="muted-help">아직 프로젝트가 없어요.</p>}
 
           {draft.projects.map((item, index) => (
             <div className="array-item" key={`project-${index}`}>
@@ -551,7 +556,7 @@ export default function ResumePage() {
 
               <div className="form-grid two">
                 <label className="field">
-                  <span>프로젝트명</span>
+                  <span>이름</span>
                   <input
                     className="form-input"
                     value={item.name}
@@ -560,7 +565,7 @@ export default function ResumePage() {
                   />
                 </label>
                 <label className="field">
-                  <span>기술 스택 (쉼표 구분)</span>
+                  <span>기술 스택 (쉼표로 구분)</span>
                   <input
                     className="form-input"
                     value={stringifyCsv(item.techStack)}
@@ -569,7 +574,7 @@ export default function ResumePage() {
                   />
                 </label>
                 <label className="field field-full">
-                  <span>설명</span>
+                  <span>내용</span>
                   <AutoGrowTextarea
                     value={item.description}
                     onChange={(event) => updateProject(index, "description", event.target.value)}
@@ -581,20 +586,30 @@ export default function ResumePage() {
           ))}
         </div>
 
-        <div className="action-row">
-          <button
-            type="button"
-            className="primary"
-            onClick={handleConfirmResume}
-            disabled={isBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
-          >
-            이력서 정보 확정
-          </button>
-          {state.resumeConfirmedJson && (
-            <Link className="nav-btn" href={"/company" as Route}>
-              STEP 2 채용공고로 이동
-            </Link>
-          )}
+        <div className="action-panel review">
+          <div className="action-copy">
+            <strong>확인했으면 저장해요</strong>
+            <span>
+              {state.resumeConfirmedJson && !resumeNeedsConfirm
+                ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
+                : "필수 항목을 채우면 다음 단계로 넘어갈 수 있어요."}
+            </span>
+          </div>
+          <div className="action-row">
+            <button
+              type="button"
+              className="primary"
+              onClick={handleConfirmResume}
+              disabled={isBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
+            >
+              이력서 저장
+            </button>
+            {state.resumeConfirmedJson && (
+              <Link className="nav-btn" href={"/company" as Route}>
+                공고 정리로 가기
+              </Link>
+            )}
+          </div>
         </div>
       </section>
     </AppFrame>

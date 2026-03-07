@@ -20,31 +20,27 @@ const STEP_META: Record<
   StepKey,
   {
     eyebrow: string;
-    objective: string;
     detail: string;
   }
 > = {
   resume: {
-    eyebrow: "Resume Intake",
-    objective: "이력서 원문을 구조화하고 지원 기준이 되는 기본 프로필을 확정합니다.",
-    detail: "입력 원문은 자유롭게 수정할 수 있지만, 다음 단계는 이력서 확정 후에만 열립니다."
+    eyebrow: "이력서",
+    detail: "내용을 확인하고 저장하면 다음 단계로 넘어갈 수 있어요."
   },
   company: {
-    eyebrow: "Company Targeting",
-    objective: "채용공고에서 핵심 요구사항만 분리해 회사 기준 JSON을 확정합니다.",
-    detail: "이 단계에서 공고를 다시 분석하면 결과는 자동으로 재생성 필요 상태가 됩니다."
+    eyebrow: "공고",
+    detail: "공고를 저장하면 소개글을 만들 수 있어요."
   },
   result: {
-    eyebrow: "Intro Output",
-    objective: "확정된 이력서와 채용공고를 조합해 회사 맞춤 자기소개를 생성합니다.",
-    detail: "회사 공고만 바꿔 다시 생성하는 흐름이 자연스럽게 유지되도록 설계되어 있습니다."
+    eyebrow: "소개글",
+    detail: "공고를 바꾼 뒤 다시 만들면 새 결과로 바로 바뀝니다."
   }
 };
 
 const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
-  resume: "이력서 분석",
-  company: "채용공고 분석",
-  intro: "자기소개 생성"
+  resume: "이력서 정리",
+  company: "공고 정리",
+  intro: "소개글 만들기"
 };
 
 interface AppFrameProps {
@@ -81,18 +77,18 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const selectedReasoningLabel = formatReasoningEffortValue(state.agentSettings.modelReasoningEffort);
 
   const steps = useMemo(() => {
-    const stepStatusLabel = (status: StepStatus): string => {
+    const stepStatusLabel = (key: StepKey, status: StepStatus): string => {
       switch (status) {
         case "done":
           return "완료";
         case "working":
-          return "진행";
+          return "지금";
         case "locked":
           return "잠김";
         case "blocked":
-          return "선행 필요";
+          return key === step ? "대기" : "먼저 완료";
         default:
-          return "대기";
+          return "준비됨";
       }
     };
 
@@ -119,27 +115,27 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
     return [
       {
         key: "resume" as const,
-        label: "1. 이력서",
+        label: "이력서",
         href: "/resume" as StepRoute,
         enabled: true,
         status: resumeStatus,
-        statusLabel: stepStatusLabel(resumeStatus)
+        statusLabel: stepStatusLabel("resume", resumeStatus)
       },
       {
         key: "company" as const,
-        label: "2. 채용공고",
+        label: "공고",
         href: "/company" as StepRoute,
         enabled: companyStatus !== "locked",
         status: companyStatus,
-        statusLabel: stepStatusLabel(companyStatus)
+        statusLabel: stepStatusLabel("company", companyStatus)
       },
       {
         key: "result" as const,
-        label: "3. 결과",
+        label: "소개글",
         href: "/result" as StepRoute,
         enabled: resultStatus !== "locked",
         status: resultStatus,
-        statusLabel: stepStatusLabel(resultStatus)
+        statusLabel: stepStatusLabel("result", resultStatus)
       }
     ];
   }, [hasResume, hasCompany, introFresh, step]);
@@ -154,8 +150,8 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
         <div className="backdrop" />
         <div className="container">
           <section className="card">
-            <h2>로딩 중...</h2>
-            <p>로컬 상태를 불러오고 있습니다.</p>
+            <h2>불러오는 중...</h2>
+            <p>저장된 내용을 읽고 있어요.</p>
           </section>
         </div>
       </main>
@@ -167,7 +163,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       <div className="backdrop" />
       <div className="container">
         <header className="hero">
-          <p className="eyebrow">ResumeMake Local MVP</p>
+          <p className="eyebrow">ResumeMake</p>
           <h1>{title}</h1>
           <p>{description}</p>
           <p className="hero-note">
@@ -200,8 +196,8 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           {state.currentTask && (
             <section className="busy-banner" aria-live="polite">
               <span className="spinner" />
-              <strong>{TASK_LABEL[state.currentTask]} 진행 중</strong>
-              <span>{elapsedSeconds}s 경과</span>
+              <strong>{TASK_LABEL[state.currentTask]} 중</strong>
+              <span>{elapsedSeconds}초 지남</span>
             </section>
           )}
         </section>
@@ -209,16 +205,16 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
         <section className="support-shell">
           <section className="agent-config-panel">
             <div>
-              <p className="card-kicker">실행 설정</p>
-              <h2>이성 수준 선택</h2>
+              <p className="card-kicker">설정</p>
+              <h2>생각 깊이</h2>
               <p className="agent-config-copy">
-                기본값은 {selectedReasoningLabel}이며, 필요하면 아래에서만 조정합니다.
+                기본은 {selectedReasoningLabel}이에요. 필요할 때만 바꿔 주세요.
               </p>
             </div>
 
             <div className="agent-config-grid">
               <label className="field">
-                <span>이성 수준</span>
+                <span>생각 깊이</span>
                 <select
                   className="form-select"
                   value={state.agentSettings.modelReasoningEffort}
@@ -250,7 +246,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
 
         <section className="card">
           <div className="card-head">
-            <h2>AI 분석 로그</h2>
+            <h2>작업 기록</h2>
             <div className="log-actions">
               <button
                 type="button"
@@ -258,20 +254,20 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
                 onClick={() => setLogExpanded((prev) => !prev)}
                 disabled={logs.length === 0}
               >
-                {logExpanded ? "로그 접기" : "로그 펼치기"}
+                {logExpanded ? "접기" : "더 보기"}
               </button>
               <button type="button" className="secondary" onClick={clearLogs}>
-                로그 비우기
+                비우기
               </button>
             </div>
           </div>
 
           {logs.length === 0 ? (
-            <p className="log-empty">아직 로그가 없습니다.</p>
+            <p className="log-empty">아직 기록이 없어요.</p>
           ) : (
             <>
               {!logExpanded && hiddenLogCount > 0 && (
-                <p className="muted-help">최근 5개만 표시 중 ({hiddenLogCount}개 숨김)</p>
+                <p className="muted-help">최근 5개만 보여주고 있어요 ({hiddenLogCount}개 더 있음)</p>
               )}
               <ul className="log-list">
                 {visibleLogs.map((log) => {
@@ -283,8 +279,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
                     <li key={log.id} className={`log-item ${log.level}`}>
                       <div className="log-meta">
                         <span>{at}</span>
-                        <span>{log.task}</span>
-                        <span>{log.phase}</span>
+                        <span>{TASK_LABEL[log.task]}</span>
                       </div>
                       <p>{log.message}</p>
                     </li>
