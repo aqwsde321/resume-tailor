@@ -138,7 +138,7 @@ resume-tailor/
 - `README.md`
   - 설치와 실행 진입점
 - `PROJECT_STRUCTURE.md`
-  - 현재 문서, 코드 구조 설명
+  - 현재 문서와 코드 구조 설명
 - `SERVICE_PLAN.md`
   - 제품 범위와 규칙 기준
 - `OPS_RUNBOOK.md`
@@ -149,7 +149,7 @@ resume-tailor/
 배포 자동화를 담는 GitHub Actions 폴더입니다.
 
 - `docker-publish.yml`
-  - `main` push 시 `lint`, `typecheck`, `test`, `build`를 실행한 뒤 Docker Hub에 이미지 publish
+  - `main` push 시 `lint`, `typecheck`, `test`, `build`를 실행한 뒤 Docker Hub에 이미지를 publish
 
 ### `scripts/`
 

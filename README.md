@@ -6,7 +6,7 @@
 
 ![ResumeTailor 주요 흐름](./docs/images/app-flow-overview.png)
 
-이력서 정리, 공고 정리, 소개글 만들기 주요 화면을 실제 앱 기준으로 다시 캡처한 미리보기입니다.
+이력서 정리, 공고 정리, 소개글 만들기 흐름을 실제 앱 화면으로 보여주는 미리보기입니다.
 
 ## 1. 빠른 시작
 
@@ -185,7 +185,7 @@ RESUME_TAILOR_IMAGE=resume-tailor:local docker compose up -d
 
 </details>
 
-추가 운영 명령과 장애 대응은 [운영 런북](./docs/OPS_RUNBOOK.md)을 참고하세요.
+추가 운영 명령과 장애 대응 절차는 [운영 런북](./docs/OPS_RUNBOOK.md)을 참고하세요.
 
 ### 1.3 로컬 개발 실행
 
@@ -210,7 +210,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000) 으로 접속하면 루트 경로가 `/resume`으로 이동합니다.
+브라우저에서 [http://localhost:3000](http://localhost:3000)으로 접속하면 루트 경로가 `/resume`으로 이동합니다.
 
 <details>
 <summary>macOS에서 Codex 앱 번들을 직접 쓰는 경우</summary>
@@ -227,9 +227,9 @@ npm run dev
 
 ## 2. 첫 사용 흐름
 
-1. `/resume` 에서 이력서 텍스트를 붙여넣고 분석 후 폼을 수정한 뒤 확정합니다.
-2. `/company` 에서 채용공고 텍스트를 붙여넣거나 `txt`, URL로 불러온 뒤 분석 후 폼을 수정하고 확정합니다.
-3. `/result` 에서 자기소개를 생성하거나 다시 생성합니다.
+1. `/resume`에서 이력서 텍스트를 붙여넣고 분석한 뒤, 폼을 수정하고 확정합니다.
+2. `/company`에서 채용공고 텍스트를 붙여넣거나 `txt`, URL로 불러온 뒤 분석하고, 폼을 수정해 확정합니다.
+3. `/result`에서 자기소개를 생성하거나 다시 생성합니다.
 
 추가 메모:
 
