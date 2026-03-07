@@ -73,7 +73,7 @@ export async function extractTextFromImages(
     return [];
   }
 
-  const tempDir = await mkdtemp(path.join(tmpdir(), "resume-make-ocr-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "resume-tailor-ocr-"));
 
   try {
     const imagePaths = await Promise.all(

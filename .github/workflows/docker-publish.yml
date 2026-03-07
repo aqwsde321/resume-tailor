@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME || 'aqwsde321' }}
-  DOCKER_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'aqwsde321/resume-tailor' }}
+  DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME || 'qrqr' }}
+  DOCKER_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'qrqr/resume-tailor' }}
 
 jobs:
   verify:

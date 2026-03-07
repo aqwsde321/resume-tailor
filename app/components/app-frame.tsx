@@ -270,7 +270,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       {isWorking && <div className="busy-overlay" aria-hidden="true" />}
       <div className="container">
         <header className="hero">
-          <p className="eyebrow">ResumeMake</p>
+          <p className="eyebrow">ResumeTailor</p>
           <h1>{title}</h1>
           <p>{description}</p>
         </header>

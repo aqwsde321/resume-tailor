@@ -14,7 +14,7 @@ const MIN_TEXT_LENGTH = 80;
 const MIN_OCR_TEXT_LENGTH = 60;
 const STRONG_TEXT_LENGTH = 180;
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; ResumeMakeBot/1.0; +https://localhost/resume-make)";
+  "Mozilla/5.0 (compatible; ResumeTailorBot/1.0; +https://localhost/resume-tailor)";
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::1"]);
 

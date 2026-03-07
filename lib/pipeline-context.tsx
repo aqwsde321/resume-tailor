@@ -23,7 +23,8 @@ import type {
   TaskKind
 } from "@/lib/types";
 
-const STORAGE_KEY = "resume-make.pipeline.v2";
+const STORAGE_KEY = "resume-tailor.pipeline.v2";
+const LEGACY_STORAGE_KEY = "resume-make.pipeline.v2";
 const MAX_LOG_COUNT = 300;
 
 interface IntroSource {
@@ -167,6 +168,14 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
         setState(normalizeState(JSON.parse(stored)));
+      } else {
+        const legacyStored = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (legacyStored) {
+          const nextState = normalizeState(JSON.parse(legacyStored));
+          setState(nextState);
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+          window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+        }
       }
     } finally {
       setHydrated(true);

@@ -6,12 +6,13 @@
 
 ## 1. 목적
 
-로컬 환경에서 ResumeMake를 운영할 때 필요한 점검, 장애 대응, 복구 절차를 정의합니다.
+로컬 환경에서 ResumeTailor를 운영할 때 필요한 점검, 장애 대응, 복구 절차를 정의합니다.
 
 ## 2. 운영 전제
 
 - 최초 설치와 실행 방법은 [README](../README.md)를 기준으로 합니다.
 - 운영 모드는 `Docker 실행` 또는 `로컬 실행` 중 하나를 사용합니다.
+- Docker 실행은 이 저장소를 clone한 뒤 `docker compose pull`로 공개 이미지를 받아 실행하는 흐름을 기준으로 합니다.
 - 두 방식 모두 Codex 인증이 필요합니다.
 - 이 문서는 앱이 이미 실행 가능한 상태라는 전제에서, 실행 이후 점검과 복구 절차에 집중합니다.
 
@@ -19,7 +20,7 @@
 
 설치/실행 관련 상세 절차는 아래 문서를 기준으로 유지합니다.
 
-- Docker 최초 실행, 포트 변경, 이미지 교체: [README](../README.md)
+- Docker 저장소 clone, 공개 이미지 pull, 포트 변경, 이미지 교체: [README](../README.md)
 - 로컬 개발 실행: [README](../README.md)
 - GitHub Actions와 Docker Hub publish 설정: [README](../README.md)
 
@@ -189,7 +190,7 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
 
 ## 7. 브라우저 저장 상태와 초기화
 
-로컬 상태는 브라우저 `LocalStorage`의 `resume-make.pipeline.v2` 키에 저장됩니다.
+로컬 상태는 브라우저 `LocalStorage`의 `resume-tailor.pipeline.v2` 키에 저장됩니다.
 
 - 상태 초기화가 필요하면 브라우저 저장소에서 해당 키를 삭제합니다.
 - 브라우저를 바꾸면 기존 상태가 자동으로 이어지지 않습니다.

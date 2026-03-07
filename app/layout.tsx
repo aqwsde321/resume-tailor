@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "@/app/providers";
 
 export const metadata: Metadata = {
-  title: "ResumeMake",
+  title: "ResumeTailor",
   description: "이력서/채용공고 기반 자기소개 생성 로컬 앱",
   icons: {
     icon: "/favicon.ico"

@@ -1,7 +1,7 @@
 services:
   app:
-    image: ${RESUME_MAKE_IMAGE:-aqwsde321/resume-tailor:latest}
-    container_name: resume-make-app
+    image: ${RESUME_TAILOR_IMAGE:-${RESUME_MAKE_IMAGE:-qrqr/resume-tailor:latest}}
+    container_name: resume-tailor-app
     environment:
       CODEX_HOME: /root/.codex
       HOSTNAME: 0.0.0.0

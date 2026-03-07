@@ -1,13 +1,13 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.3
-- 마지막 업데이트: 2026-03-07
+- 문서 버전: v0.4
+- 마지막 업데이트: 2026-03-08
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
 
 ```text
-resumeMake/
+resume-tailor/
 ├─ .github/
 │  └─ workflows/             # main push 시 검증 후 Docker Hub publish
 ├─ app/                      # Next.js App Router 화면과 API route
@@ -36,7 +36,7 @@ resumeMake/
 ├─ docs/                     # 기획, 운영, 구조, 가이드 문서
 ├─ scripts/                  # 보조 스크립트
 ├─ Dockerfile                # Docker 이미지 정의
-├─ docker-compose.yml        # 로컬 공유 실행용 compose 설정
+├─ docker-compose.yml        # 공개 이미지 pull 기반 공유 실행 설정
 ├─ package.json              # 의존성 및 npm scripts
 └─ README.md                 # 설치/실행/사용 흐름 진입점
 ```
