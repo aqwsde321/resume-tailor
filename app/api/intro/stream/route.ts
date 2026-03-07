@@ -12,6 +12,7 @@ import {
   introOutputSchema
 } from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
+import { parseTaskResult } from "@/lib/task-result";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
         });
 
         const validated = normalizeIntroWithGuidance(
-          IntroSchema.parse(generated),
+          parseTaskResult("소개글", IntroSchema, generated),
           body.resume,
           body.company
         );

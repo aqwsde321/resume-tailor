@@ -10,6 +10,7 @@ import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import { formatSavedAt } from "@/lib/date-format";
 import { parseListText, stringifyLineList } from "@/lib/list-input";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
@@ -272,6 +273,7 @@ export default function ResumePage() {
     }
 
     const normalized = JSON.stringify(validated.data, null, 2);
+    const savedAt = new Date().toISOString();
 
     patch((prev) => {
       const resumeChanged = prev.resumeConfirmedJson !== normalized;
@@ -280,6 +282,7 @@ export default function ResumePage() {
         ...prev,
         resumeJsonText: normalized,
         resumeConfirmedJson: normalized,
+        resumeSavedAt: savedAt,
         companyConfirmedJson: resumeChanged ? null : prev.companyConfirmedJson,
         introSource: prev.introSource
       };
@@ -606,6 +609,7 @@ export default function ResumePage() {
         <div className="action-panel review">
           <div className="action-copy">
             <strong>이력서 저장</strong>
+            {state.resumeSavedAt && <span className="action-meta">마지막 저장 {formatSavedAt(state.resumeSavedAt)}</span>}
             {hasMissingResumeRequired && (
               <p className="action-note warn">
                 <span>저장 전 확인:</span>{" "}

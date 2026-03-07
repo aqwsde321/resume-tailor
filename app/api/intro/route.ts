@@ -12,6 +12,7 @@ import {
   ResumeSchema,
   introOutputSchema
 } from "@/lib/schemas";
+import { parseTaskResult } from "@/lib/task-result";
 import type { ApiSuccess, Intro } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -34,7 +35,11 @@ export async function POST(request: Request) {
       ...body.agent
     });
 
-    const validated = normalizeIntroWithGuidance(IntroSchema.parse(generated), body.resume, body.company);
+    const validated = normalizeIntroWithGuidance(
+      parseTaskResult("소개글", IntroSchema, generated),
+      body.resume,
+      body.company
+    );
 
     const payload: ApiSuccess<Intro> = {
       ok: true,

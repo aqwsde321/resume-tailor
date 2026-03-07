@@ -5,6 +5,25 @@
 
 ## Unreleased
 
+### Added
+
+- 소개글 단계에 `톤` 선택 추가: `담백하게`, `자신감 있게`, `협업 중심`, `문제 해결 중심`
+- 이력서, 공고, 소개글의 마지막 저장/생성 시각 표시 추가
+- 스트림 클라이언트와 stream API의 빈 결과, 형식 오류, 본문 누락 대응 테스트 추가
+
+### Changed
+
+- `generate-intro` 스킬과 입력 프롬프트가 `[톤 가이드]`를 우선 반영하도록 조정
+- 작업 중 중앙 모달에 스피너와 단계형 진행 상태를 추가하고, 사용자 용어로 `결과 준비` 문구를 사용하도록 정리
+- stream API가 빈 결과와 형식 오류를 더 구체적인 사용자용 메시지로 반환하도록 개선
+
+### Verified
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test`
+- `npm run test:e2e -- tests/e2e/flow.spec.ts`
+
 ## v0.5.0 (2026-03-07)
 
 ### Added

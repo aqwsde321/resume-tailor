@@ -4,6 +4,7 @@ import { z } from "zod";
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, ResumeSchema, resumeOutputSchema } from "@/lib/schemas";
+import { parseTaskResult } from "@/lib/task-result";
 import type { ApiSuccess, Resume } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       ...body.agent
     });
 
-    const validated = ResumeSchema.parse(generated);
+    const validated = parseTaskResult("이력서", ResumeSchema, generated);
 
     const payload: ApiSuccess<Resume> = {
       ok: true,

@@ -48,6 +48,9 @@ export interface PipelineState {
   companyJsonText: string;
   resumeConfirmedJson: string | null;
   companyConfirmedJson: string | null;
+  resumeSavedAt: string | null;
+  companySavedAt: string | null;
+  introSavedAt: string | null;
   intro: Intro | null;
   previousIntro: Intro | null;
   introSource: IntroSource | null;
@@ -73,6 +76,9 @@ const initialState: PipelineState = {
   companyJsonText: "",
   resumeConfirmedJson: null,
   companyConfirmedJson: null,
+  resumeSavedAt: null,
+  companySavedAt: null,
+  introSavedAt: null,
   intro: null,
   previousIntro: null,
   introSource: null,
@@ -123,6 +129,9 @@ function normalizeState(raw: unknown): PipelineState {
     agentSettings: normalizeAgentSettings(value.agentSettings),
     introTone: isIntroTone(value.introTone) ? value.introTone : "balanced",
     companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
+    resumeSavedAt: typeof value.resumeSavedAt === "string" ? value.resumeSavedAt : null,
+    companySavedAt: typeof value.companySavedAt === "string" ? value.companySavedAt : null,
+    introSavedAt: typeof value.introSavedAt === "string" ? value.introSavedAt : null,
     intro: normalizeIntro(value.intro),
     previousIntro: normalizeIntro(value.previousIntro),
     logs: Array.isArray(value.logs)

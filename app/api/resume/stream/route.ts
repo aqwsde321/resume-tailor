@@ -4,6 +4,7 @@ import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, ResumeSchema, resumeOutputSchema } from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
+import { parseTaskResult } from "@/lib/task-result";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
           onLog: (payload) => send("log", payload)
         });
 
-        const validated = ResumeSchema.parse(generated);
+        const validated = parseTaskResult("이력서", ResumeSchema, generated);
 
         send("result", {
           data: validated

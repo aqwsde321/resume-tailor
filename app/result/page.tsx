@@ -8,6 +8,7 @@ import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { ToneInline } from "@/app/components/tone-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import { formatSavedAt } from "@/lib/date-format";
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
 import { formatIntroToneLabel } from "@/lib/intro-tone";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
@@ -114,6 +115,11 @@ export default function ResultPage() {
     : refreshReasonBadges.length > 0
       ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")} · 톤 ${formatIntroToneLabel(state.introTone)}`
       : `톤 ${formatIntroToneLabel(state.introTone)}`;
+  const savedMetaItems = [
+    state.resumeSavedAt ? `이력서 저장 ${formatSavedAt(state.resumeSavedAt)}` : null,
+    state.companySavedAt ? `공고 저장 ${formatSavedAt(state.companySavedAt)}` : null,
+    state.introSavedAt ? `소개글 생성 ${formatSavedAt(state.introSavedAt)}` : null
+  ].filter((item): item is string => Boolean(item));
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -299,6 +305,7 @@ export default function ResultPage() {
         ...prev,
         previousIntro: prev.intro,
         intro,
+        introSavedAt: new Date().toISOString(),
         introSource: {
           resumeConfirmedJson: prev.resumeConfirmedJson ?? "",
           companyConfirmedJson: prev.companyConfirmedJson ?? ""
@@ -380,6 +387,15 @@ export default function ResultPage() {
         <div className={`fresh-badge ${freshnessTone}`}>
           <strong>{freshnessHeading}</strong>
           {freshnessBody && <span>{freshnessBody}</span>}
+          {savedMetaItems.length > 0 && (
+            <div className="save-meta-row" aria-label="마지막 저장 시각">
+              {savedMetaItems.map((item) => (
+                <span key={item} className="save-meta-chip">
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
           {refreshReasonBadges.length > 0 && (
             <div className="reason-chip-row" aria-label="다시 만들기 이유">
               {refreshReasonBadges.map((badge) => (

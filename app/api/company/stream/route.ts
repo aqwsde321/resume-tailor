@@ -5,6 +5,7 @@ import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
 import { createSseResponse } from "@/lib/sse";
+import { parseTaskResult } from "@/lib/task-result";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
           onLog: (payload) => send("log", payload)
         });
 
-        const validated = normalizeCompany(CompanySchema.parse(generated));
+        const validated = normalizeCompany(parseTaskResult("공고", CompanySchema, generated));
 
         send("result", {
           data: validated

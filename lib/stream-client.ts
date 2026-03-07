@@ -46,8 +46,53 @@ function toErrorMessage(payload: unknown): string {
   const maybeError = payload as { message?: unknown; details?: unknown };
   const message = typeof maybeError.message === "string" ? maybeError.message : "요청 실패";
   const details = typeof maybeError.details === "string" ? maybeError.details : "";
+  const normalized = normalizeUserFacingMessage(message);
+
+  if (normalized !== message) {
+    return normalized;
+  }
 
   return details ? `${message} (${details})` : message;
+}
+
+function normalizeUserFacingMessage(message: string): string {
+  if (
+    message.includes("결과를 받지 못했어요") ||
+    message.includes("응답이 비어 있습니다") ||
+    message.includes("스트리밍 결과를 수신하지 못했습니다.")
+  ) {
+    return "결과를 끝까지 받지 못했어요. 다시 시도해 주세요.";
+  }
+
+  if (
+    message.includes("결과 형식을 확인하지 못했어요") ||
+    message.includes("응답 데이터 검증에 실패했습니다.")
+  ) {
+    return `${message.replace("응답 데이터 검증에 실패했습니다.", "생성된 결과 형식을 확인하지 못했어요.")} 다시 시도해 주세요.`;
+  }
+
+  if (
+    message.includes("JSON 문자열이 아닙니다") ||
+    message.includes("응답 형식이 올바르지 않습니다") ||
+    message.includes("스트리밍 응답 본문이 없습니다.")
+  ) {
+    return "생성된 결과를 읽지 못했어요. 다시 시도해 주세요.";
+  }
+
+  return message;
+}
+
+async function parseFailureResponse(response: Response): Promise<string> {
+  try {
+    const failure = (await response.json()) as ApiFailure;
+    if (failure && typeof failure === "object" && !failure.ok && "error" in failure) {
+      return toErrorMessage(failure.error);
+    }
+  } catch {
+    return `요청 처리에 실패했어요. 다시 시도해 주세요. (${response.status})`;
+  }
+
+  return `요청 처리에 실패했어요. 다시 시도해 주세요. (${response.status})`;
 }
 
 export async function postSseJson<T>(
@@ -64,12 +109,11 @@ export async function postSseJson<T>(
   });
 
   if (!response.ok) {
-    const failure = (await response.json()) as ApiFailure;
-    throw new Error(toErrorMessage(failure.error));
+    throw new Error(await parseFailureResponse(response));
   }
 
   if (!response.body) {
-    throw new Error("스트리밍 응답 본문이 없습니다.");
+    throw new Error(normalizeUserFacingMessage("스트리밍 응답 본문이 없습니다."));
   }
 
   const reader = response.body.getReader();
@@ -121,7 +165,7 @@ export async function postSseJson<T>(
   }
 
   if (result === null) {
-    throw new Error("스트리밍 결과를 수신하지 못했습니다.");
+    throw new Error(normalizeUserFacingMessage("스트리밍 결과를 수신하지 못했습니다."));
   }
 
   return result;

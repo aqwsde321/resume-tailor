@@ -5,6 +5,7 @@ import { normalizeCompany } from "@/lib/company-normalize";
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
+import { parseTaskResult } from "@/lib/task-result";
 import type { ApiSuccess, Company } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       ...body.agent
     });
 
-    const validated = normalizeCompany(CompanySchema.parse(generated));
+    const validated = normalizeCompany(parseTaskResult("공고", CompanySchema, generated));
 
     const payload: ApiSuccess<Company> = {
       ok: true,

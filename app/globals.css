@@ -249,6 +249,13 @@ body {
   color: #7b4b0b;
 }
 
+.sticky-save-row,
+.save-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .support-shell {
   display: grid;
   gap: 12px;
@@ -490,6 +497,19 @@ input[type="file"] {
 .action-copy span {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.action-meta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .action-controls {
@@ -1482,6 +1502,24 @@ button:disabled {
   background: rgba(161, 104, 26, 0.1);
   color: #78450a;
   border: 1px solid rgba(161, 104, 26, 0.24);
+}
+
+.save-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 56, 102, 0.14);
+  background: rgba(255, 255, 255, 0.64);
+  color: #31455f;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.save-meta-chip.subtle {
+  background: rgba(255, 255, 255, 0.7);
+  color: #475a73;
 }
 
 .reason-chip-row {

@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import type { PipelineLog } from "@/lib/types";
 
@@ -131,6 +132,11 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       return state.companyConfirmedJson ? "공고 변경" : "공고 다시 저장";
     })
     .join(" · ");
+  const saveSummaryItems = [
+    state.resumeSavedAt ? `이력서 ${formatSavedAt(state.resumeSavedAt)}` : null,
+    state.companySavedAt ? `공고 ${formatSavedAt(state.companySavedAt)}` : null,
+    state.introSavedAt ? `소개글 ${formatSavedAt(state.introSavedAt)}` : null
+  ].filter((item): item is string => Boolean(item));
 
   const steps = useMemo(() => {
     const stepStatusLabel = (key: StepKey, status: StepStatus): string => {
@@ -290,6 +296,16 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
               </li>
             ))}
           </ol>
+
+          {saveSummaryItems.length > 0 && (
+            <div className="sticky-save-row" aria-label="마지막 저장 시각">
+              {saveSummaryItems.map((item) => (
+                <span key={item} className="save-meta-chip subtle">
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
 
         {!state.currentTask && introRefreshReasons.length > 0 && (
           <p className="sticky-note warn">

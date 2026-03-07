@@ -10,6 +10,7 @@ import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import { formatSavedAt } from "@/lib/date-format";
 import { parseListText, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
@@ -321,11 +322,13 @@ export default function CompanyPage() {
     }
 
     const normalized = JSON.stringify(validated.data, null, 2);
+    const savedAt = new Date().toISOString();
 
     patch((prev) => ({
       ...prev,
       companyJsonText: normalized,
       companyConfirmedJson: normalized,
+      companySavedAt: savedAt,
       introSource: prev.introSource
     }));
 
@@ -589,6 +592,7 @@ export default function CompanyPage() {
         <div className="action-panel review">
           <div className="action-copy">
             <strong>공고 저장</strong>
+            {state.companySavedAt && <span className="action-meta">마지막 저장 {formatSavedAt(state.companySavedAt)}</span>}
             {hasMissingCompanyRequired && (
               <p className="action-note warn">
                 <span>저장 전 확인:</span>{" "}
