@@ -10,6 +10,7 @@ import type { PipelineLog } from "@/lib/types";
 type StepKey = "resume" | "company" | "result";
 type StepRoute = "/resume" | "/company" | "/result";
 type StepStatus = "blocked" | "locked" | "ready" | "working" | "done";
+type BusyStageKey = "prepare" | "analyze" | "finalize";
 
 const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
   resume: "이력서 정리",
@@ -38,6 +39,55 @@ const LEVEL_LABEL: Record<PipelineLog["level"], string> = {
   success: "완료",
   error: "오류"
 };
+
+const ANALYSIS_PHASES = new Set(["turn", "reasoning", "command", "mcp", "search", "plan"]);
+const FINALIZE_PHASES = new Set(["patch", "response"]);
+
+const TASK_PROGRESS_LABELS: Record<
+  "resume" | "company" | "intro",
+  Record<BusyStageKey, string>
+> = {
+  resume: {
+    prepare: "입력 준비",
+    analyze: "이력서 분석",
+    finalize: "결과 준비"
+  },
+  company: {
+    prepare: "입력 준비",
+    analyze: "공고 분석",
+    finalize: "결과 준비"
+  },
+  intro: {
+    prepare: "입력 준비",
+    analyze: "근거 연결",
+    finalize: "소개글 생성"
+  }
+};
+
+function getBusyStage(task: "resume" | "company" | "intro", logs: PipelineLog[]): BusyStageKey {
+  const taskLogs = logs.filter((log) => log.task === task);
+
+  if (taskLogs.some((log) => FINALIZE_PHASES.has(log.phase))) {
+    return "finalize";
+  }
+
+  if (taskLogs.some((log) => ANALYSIS_PHASES.has(log.phase))) {
+    return "analyze";
+  }
+
+  return "prepare";
+}
+
+function getBusyProgressValue(stage: BusyStageKey): number {
+  switch (stage) {
+    case "analyze":
+      return 58;
+    case "finalize":
+      return 88;
+    default:
+      return 22;
+  }
+}
 
 interface AppFrameProps {
   step: StepKey;
@@ -172,6 +222,10 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const logs = useMemo(() => [...state.logs].slice(-100).reverse(), [state.logs]);
   const liveLogs = logs.slice(0, 6);
   const latestLog = logs[0] ?? null;
+  const busyStage = state.currentTask ? getBusyStage(state.currentTask, state.logs) : null;
+  const busyStageLabels = state.currentTask ? TASK_PROGRESS_LABELS[state.currentTask] : null;
+  const busyStageOrder: BusyStageKey[] = ["prepare", "analyze", "finalize"];
+  const busyProgressValue = busyStage ? getBusyProgressValue(busyStage) : 0;
 
   const formatLogTime = (value: string) =>
     new Date(value).toLocaleTimeString("ko-KR", {
@@ -284,11 +338,40 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           <div className="live-log-head">
             <div>
               <p className="card-kicker">실행 중</p>
-              <h2>{TASK_LABEL[state.currentTask]}</h2>
-              <p className="live-log-copy">입력과 확인 영역은 잠시 멈춰두고 있어요.</p>
+              <div className="live-log-title-row">
+                <span className="live-log-spinner" aria-hidden="true" />
+                <h2>{TASK_LABEL[state.currentTask]}</h2>
+              </div>
+              <p className="live-log-copy">
+                {busyStage && busyStageLabels
+                  ? `${busyStageLabels[busyStage]} 단계예요. 입력과 확인 영역은 잠시 멈춰두고 있어요.`
+                  : "입력과 확인 영역은 잠시 멈춰두고 있어요."}
+              </p>
             </div>
             <span className="live-log-timer">{elapsedSeconds}초</span>
           </div>
+
+          {busyStage && busyStageLabels && (
+            <div className="live-progress" aria-label="작업 진행 상태">
+              <div className="live-progress-track" aria-hidden="true">
+                <div className="live-progress-fill" style={{ width: `${busyProgressValue}%` }} />
+              </div>
+              <ol className="live-progress-steps">
+                {busyStageOrder.map((stage, index) => {
+                  const currentIndex = busyStageOrder.indexOf(busyStage);
+                  const status =
+                    index < currentIndex ? "done" : index === currentIndex ? "current" : "upcoming";
+
+                  return (
+                    <li key={stage} className={`live-progress-step ${status}`}>
+                      <span className="live-progress-dot" aria-hidden="true" />
+                      <span>{busyStageLabels[stage]}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
 
           {liveLogs.length > 0 ? (
             <ul className="log-list compact">
