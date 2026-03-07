@@ -21,7 +21,7 @@ export function ReasoningInline({ disabled = false }: ReasoningInlineProps) {
   return (
     <label className={`inline-setting${disabled ? " disabled" : ""}`}>
       <span className="inline-setting-hint" aria-hidden="true">
-        생각 깊이
+        높을수록 더 오래 걸릴 수 있어요
       </span>
       <span className="inline-setting-value" aria-hidden="true">
         {selectedLabel}
@@ -29,7 +29,7 @@ export function ReasoningInline({ disabled = false }: ReasoningInlineProps) {
       <span className="inline-select-caret" aria-hidden="true" />
       <select
         className="inline-select"
-        aria-label={`생각 깊이: ${selectedLabel}`}
+        aria-label={`생각 깊이: ${selectedLabel}. 높을수록 더 오래 걸릴 수 있어요.`}
         value={selectedEffort}
         onChange={(event) =>
           patch((prev) => ({

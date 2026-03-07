@@ -497,16 +497,22 @@ input[type="file"] {
 
 .inline-setting-hint {
   position: absolute;
+  display: block;
   left: 50%;
   bottom: calc(100% + 8px);
-  padding: 6px 10px;
-  border-radius: 999px;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 40px));
+  padding: 7px 10px;
+  border-radius: 14px;
   background: rgba(19, 34, 74, 0.94);
   box-shadow: 0 10px 24px rgba(21, 41, 84, 0.18);
   color: #fff;
   font-size: 0.72rem;
   font-weight: 700;
+  line-height: 1.35;
   white-space: nowrap;
+  word-break: keep-all;
+  text-align: center;
   opacity: 0;
   transform: translate(-50%, 6px);
   pointer-events: none;
