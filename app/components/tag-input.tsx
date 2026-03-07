@@ -5,13 +5,20 @@ import { useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { parseInlineItems } from "@/lib/list-input";
 
 interface TagInputProps {
+  ariaLabel?: string;
   disabled?: boolean;
   onChange: (values: string[]) => void;
   placeholder?: string;
   values: string[];
 }
 
-export function TagInput({ values, onChange, disabled = false, placeholder }: TagInputProps) {
+export function TagInput({
+  ariaLabel,
+  values,
+  onChange,
+  disabled = false,
+  placeholder
+}: TagInputProps) {
   const [draft, setDraft] = useState("");
 
   const commitDraft = (rawValue: string) => {
@@ -80,6 +87,7 @@ export function TagInput({ values, onChange, disabled = false, placeholder }: Ta
       <input
         type="text"
         className="tag-input-entry"
+        aria-label={ariaLabel}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}

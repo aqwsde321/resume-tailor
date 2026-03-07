@@ -1046,9 +1046,7 @@ input.tag-input-entry:focus {
 
 .project-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.92fr);
   gap: 12px;
-  align-items: start;
 }
 
 .project-description-field {
@@ -1056,11 +1054,10 @@ input.tag-input-entry:focus {
 }
 
 .project-description-textarea {
-  min-height: 132px;
+  min-height: 112px;
 }
 
 .project-stack-panel {
-  align-self: stretch;
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid rgba(35, 56, 102, 0.12);
@@ -1072,8 +1069,7 @@ input.tag-input-entry:focus {
 }
 
 .project-stack-panel .tag-input {
-  min-height: 112px;
-  align-content: flex-start;
+  min-height: 56px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.92);
 }
@@ -1146,6 +1142,19 @@ button {
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 999px;
 }
 
 .primary {
@@ -1695,10 +1704,6 @@ textarea:focus-visible {
   .action-panel button,
   .action-panel .nav-btn {
     width: 100%;
-  }
-
-  .project-grid {
-    grid-template-columns: 1fr;
   }
 
   .project-description-textarea,

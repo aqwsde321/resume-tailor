@@ -272,14 +272,10 @@ export default function ResumePage() {
           </div>
         </div>
 
-        <p className="card-copy">
-          파일을 올리거나 내용을 붙여넣으면 바로 정리해 줍니다.
-        </p>
-
         {isResumeWorking && (
           <p className="processing-banner">
             <span className="spinner" />
-            이력서 내용을 읽고 항목 초안을 만들고 있어요.
+            정리 중입니다.
           </p>
         )}
 
@@ -320,8 +316,7 @@ export default function ResumePage() {
 
         <div className="action-panel">
           <div className="action-copy">
-            <strong>먼저 초안을 만들어요</strong>
-            <span>입력한 내용을 읽고 아래 폼을 채워 줍니다.</span>
+            <strong>초안 만들기</strong>
           </div>
           <div className="action-controls">
             <ReasoningInline disabled={isBusy} />
@@ -347,14 +342,10 @@ export default function ResumePage() {
           )}
         </div>
 
-        <p className="card-copy">
-          자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
-        </p>
-
         {isResumeWorking && (
           <p className="processing-banner review">
             <span className="spinner" />
-            정리 결과를 반영하는 중이에요. 완료되면 바로 아래에서 확인할 수 있습니다.
+            결과 반영 중입니다.
           </p>
         )}
 
@@ -397,16 +388,16 @@ export default function ResumePage() {
             />
           </label>
 
-          <label className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}>
+          <div className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}>
             <span>기술 스택</span>
             <TagInput
+              ariaLabel="기술 스택"
               values={draft.techStack}
               onChange={(values) => syncDraft({ ...draft, techStack: values })}
               placeholder="입력 후 Enter로 추가"
               disabled={isBusy}
             />
-            <span className="field-help">짧은 항목은 칩으로 나눠 두면 보기 쉽고 수정도 빨라요.</span>
-          </label>
+          </div>
 
           <label className="field field-full">
             <span>성과</span>
@@ -422,7 +413,6 @@ export default function ResumePage() {
               disabled={isBusy}
             />
             <ListPreview items={draft.achievements} label="지금 들어간 성과" />
-            <span className="field-help">문장형 항목은 한 줄씩 나누면 검토가 훨씬 쉬워집니다.</span>
           </label>
 
           <label className="field field-full">
@@ -439,7 +429,6 @@ export default function ResumePage() {
               disabled={isBusy}
             />
             <ListPreview items={draft.strengths} label="지금 들어간 강점" />
-            <span className="field-help">예전처럼 쉼표로 붙여 넣어도 읽을 수 있지만, 줄바꿈 입력이 더 안정적입니다.</span>
           </label>
         </div>
 
@@ -562,7 +551,7 @@ export default function ResumePage() {
                     disabled={isBusy}
                   />
                 </label>
-                <label className="field project-description-field">
+                <label className="field field-full project-description-field">
                   <span>내용</span>
                   <AutoGrowTextarea
                     className="project-description-textarea"
@@ -571,17 +560,17 @@ export default function ResumePage() {
                     disabled={isBusy}
                   />
                 </label>
-                <div className="project-stack-panel">
-                  <label className="field">
+                <div className="project-stack-panel field-full">
+                  <div className="field">
                     <span>기술 스택</span>
                     <TagInput
+                      ariaLabel="프로젝트 기술 스택"
                       values={item.techStack}
                       onChange={(values) => updateProjectTechStack(index, values)}
                       placeholder="입력 후 Enter로 추가"
                       disabled={isBusy}
                     />
-                    <span className="field-help">이 프로젝트에 직접 쓴 기술만 짧게 나눠 두면 비교하기 쉽습니다.</span>
-                  </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -590,12 +579,7 @@ export default function ResumePage() {
 
         <div className="action-panel review">
           <div className="action-copy">
-            <strong>확인했으면 저장해요</strong>
-            <span>
-              {state.resumeConfirmedJson && !resumeNeedsConfirm
-                ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
-                : "필수 항목을 채우면 다음 단계로 넘어갈 수 있어요."}
-            </span>
+            <strong>이력서 저장</strong>
             {hasMissingResumeRequired && (
               <p className="action-note warn">저장 전 확인: {missingResumeRequired.join(", ")}</p>
             )}

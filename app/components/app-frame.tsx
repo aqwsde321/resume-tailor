@@ -11,27 +11,6 @@ type StepKey = "resume" | "company" | "result";
 type StepRoute = "/resume" | "/company" | "/result";
 type StepStatus = "blocked" | "locked" | "ready" | "working" | "done";
 
-const STEP_META: Record<
-  StepKey,
-  {
-    eyebrow: string;
-    detail: string;
-  }
-> = {
-  resume: {
-    eyebrow: "이력서",
-    detail: "내용을 확인하고 저장하면 다음 단계로 넘어갈 수 있어요."
-  },
-  company: {
-    eyebrow: "공고",
-    detail: "공고를 저장하면 소개글을 만들 수 있어요."
-  },
-  result: {
-    eyebrow: "소개글",
-    detail: "공고를 바꾼 뒤 다시 만들면 새 결과로 바로 바뀝니다."
-  }
-};
-
 const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
   resume: "이력서 정리",
   company: "공고 정리",
@@ -92,7 +71,6 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
   const hasIntro = Boolean(state.intro);
-  const stepMeta = STEP_META[step];
   const refreshSummary = introRefreshReasons
     .map((reason) => {
       if (reason.key === "resume") {
@@ -235,7 +213,6 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
               <div>
                 <p className="card-kicker">실행 중</p>
                 <h2>{TASK_LABEL[state.currentTask]}</h2>
-                <p className="live-log-copy">분석 단계를 순서대로 진행하고 있습니다.</p>
               </div>
               <span className="live-log-timer">{elapsedSeconds}초</span>
             </div>
@@ -254,9 +231,6 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           <p className="eyebrow">ResumeMake</p>
           <h1>{title}</h1>
           <p>{description}</p>
-          <p className="hero-note">
-            <strong>{stepMeta.eyebrow}</strong> {stepMeta.detail}
-          </p>
         </header>
 
         <section className="sticky-shell">

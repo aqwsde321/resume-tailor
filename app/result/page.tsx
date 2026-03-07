@@ -83,26 +83,26 @@ export default function ResultPage() {
       ? "지금 결과가 최신이에요."
       : "최신 내용으로 다시 만들 차례예요.";
   const freshnessBody = !canGenerate
-    ? "이력서와 공고를 먼저 저장해 주세요."
+    ? ""
     : !state.intro
-      ? "저장한 이력서와 공고로 세 가지 버전을 바로 만들 수 있어요."
+      ? ""
       : introFresh
-        ? "현재 저장된 이력서와 공고 기준과 결과가 같습니다."
+        ? ""
         : refreshReasons.length > 0
-          ? `${refreshReasons.map((reason) => reason.message).join(" ")} 최신 내용으로 다시 만들면 바로 반영돼요.`
-          : "저장한 내용을 다시 확인한 뒤 새 소개글을 만들면 됩니다.";
+          ? refreshReasons.map((reason) => reason.message).join(" ")
+          : "";
   const actionHeading = !canGenerate
-    ? "소개글을 만들 준비를 해요"
+    ? "소개글 만들기"
     : !state.intro
       ? "소개글을 만들어요"
       : refreshReasons.length > 0
         ? "바뀐 내용으로 다시 만들어요"
         : "필요하면 다시 만들어요";
   const actionDescription = !canGenerate
-    ? "이력서와 공고를 저장하면 버튼이 활성화돼요."
+    ? ""
     : refreshReasonBadges.length > 0
-      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")} 반영이 필요해요.`
-      : "공고를 바꾸고 싶다면 위쪽 단계 버튼에서 공고를 다시 열 수 있어요.";
+      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")}`
+      : "";
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -321,7 +321,6 @@ export default function ResultPage() {
         <section className="card card-alert">
           <p className="card-kicker">먼저 하기</p>
           <h2>먼저 저장해 주세요.</h2>
-          <p>이력서와 공고를 먼저 저장해야 소개글을 만들 수 있어요.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
               이력서로 가기
@@ -341,20 +340,16 @@ export default function ResultPage() {
           </div>
         </div>
 
-        <p className="card-copy">
-          저장한 이력서와 공고로 한 줄 소개, 짧은 소개, 긴 소개를 한 번에 만듭니다.
-        </p>
-
         {isIntroWorking && (
           <p className="processing-banner">
             <span className="spinner" />
-            근거를 묶고 소개글 세 가지 버전을 만드는 중이에요.
+            만드는 중입니다.
           </p>
         )}
 
         <div className={`fresh-badge ${freshnessTone}`}>
           <strong>{freshnessHeading}</strong>
-          <span>{freshnessBody}</span>
+          {freshnessBody && <span>{freshnessBody}</span>}
           {refreshReasonBadges.length > 0 && (
             <div className="reason-chip-row" aria-label="다시 만들기 이유">
               {refreshReasonBadges.map((badge) => (
@@ -369,7 +364,7 @@ export default function ResultPage() {
         <div className="action-panel">
           <div className="action-copy">
             <strong>{actionHeading}</strong>
-            <span>{actionDescription}</span>
+            {actionDescription && <span>{actionDescription}</span>}
           </div>
           <div className="action-controls">
             <ReasoningInline disabled={isBusy || !canGenerate} />
@@ -388,8 +383,6 @@ export default function ResultPage() {
               <h2>{insightView.title}</h2>
             </div>
           </div>
-
-          <p className="card-copy">{insightView.description}</p>
 
           <div className="insight-grid">
             <article className="insight-card ok">
@@ -429,9 +422,6 @@ export default function ResultPage() {
             <p className="card-kicker">결과</p>
             <h2>복사 전에 한 번만 읽어 보세요</h2>
           </div>
-          <p className="card-copy">
-            한 줄 소개, 짧은 소개, 긴 소개를 차례로 볼 수 있게 정리했어요.
-          </p>
           <p className="sr-only" aria-live="polite">
             {copyAnnouncement}
           </p>

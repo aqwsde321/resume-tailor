@@ -312,7 +312,6 @@ export default function CompanyPage() {
         <section className="card card-alert">
           <p className="card-kicker">먼저 하기</p>
           <h2>먼저 이력서를 저장해 주세요.</h2>
-          <p>이 단계는 이력서를 저장한 뒤에 열립니다.</p>
           <div className="action-row">
             <Link href={"/resume" as Route} className="nav-btn">
               이력서로 가기
@@ -329,16 +328,10 @@ export default function CompanyPage() {
           </div>
         </div>
 
-        <p className="card-copy">
-          {state.companyInputMode === "url"
-            ? "공고 URL을 불러와 본문을 채운 뒤, 기존 흐름대로 정리할 수 있어요."
-            : "채용 공고를 붙여넣거나 파일로 넣으면 회사명, 역할, 조건을 정리해 줍니다."}
-        </p>
-
         {isCompanyWorking && (
           <p className="processing-banner">
             <span className="spinner" />
-            공고 내용을 읽고 회사 기준 초안을 만들고 있어요.
+            정리 중입니다.
           </p>
         )}
 
@@ -400,10 +393,6 @@ export default function CompanyPage() {
                 {isUrlLoading ? "불러오는 중..." : "URL 불러오기"}
               </button>
             </div>
-            <p className="input-helper">
-              정적 HTML 공고 페이지를 먼저 지원합니다. 불러오면 아래 입력칸에서 바로 수정할 수 있어요.
-            </p>
-
             {urlPreview && (
               <div className="url-preview" aria-live="polite">
                 <div className="url-preview-head">
@@ -420,8 +409,11 @@ export default function CompanyPage() {
                     <span>포지션</span>
                     <strong>{urlPreview.jobTitle || "확인 필요"}</strong>
                   </span>
+                  <span className="url-preview-chip">
+                    <span>출처</span>
+                    <strong>{urlPreview.sourceHost}</strong>
+                  </span>
                 </div>
-                <p className="input-helper">출처 {urlPreview.sourceHost} · 아래 입력칸에서 바로 수정할 수 있어요.</p>
               </div>
             )}
           </div>
@@ -440,8 +432,7 @@ export default function CompanyPage() {
 
         <div className="action-panel">
           <div className="action-copy">
-            <strong>먼저 초안을 만들어요</strong>
-            <span>입력한 공고를 읽고 회사명, 포지션, 조건을 정리합니다.</span>
+            <strong>초안 만들기</strong>
           </div>
           <div className="action-controls">
             <ReasoningInline disabled={uiBusy || !canEdit} />
@@ -472,14 +463,10 @@ export default function CompanyPage() {
           )}
         </div>
 
-        <p className="card-copy">
-          자동으로 정리된 내용을 보고 필요한 부분만 고치면 됩니다.
-        </p>
-
         {isCompanyWorking && (
           <p className="processing-banner review">
             <span className="spinner" />
-            정리 결과를 반영하는 중이에요. 완료되면 바로 아래에서 확인할 수 있습니다.
+            결과 반영 중입니다.
           </p>
         )}
 
@@ -540,7 +527,6 @@ export default function CompanyPage() {
               disabled={uiBusy || !canEdit}
             />
             <ListPreview items={draft.requirements} label="지금 들어간 필수 조건" />
-            <span className="field-help">핵심 조건은 줄 단위로 나누면 빠르게 검토할 수 있습니다.</span>
           </label>
 
           <label className="field field-full">
@@ -557,29 +543,23 @@ export default function CompanyPage() {
               disabled={uiBusy || !canEdit}
             />
             <ListPreview items={draft.preferredSkills} label="지금 들어간 우대 조건" />
-            <span className="field-help">우대 조건도 문장 단위로 나누면 놓치는 항목이 줄어듭니다.</span>
           </label>
 
-          <label className="field field-full">
+          <div className="field field-full">
             <span>기술 스택</span>
             <TagInput
+              ariaLabel="공고 기술 스택"
               values={draft.techStack}
               onChange={(values) => syncDraft({ ...draft, techStack: values })}
               placeholder="입력 후 Enter로 추가"
               disabled={uiBusy || !canEdit}
             />
-            <span className="field-help">짧은 스택은 칩으로 정리해 두면 공고 비교가 쉬워집니다.</span>
-          </label>
+          </div>
         </div>
 
         <div className="action-panel review">
           <div className="action-copy">
-            <strong>확인했으면 저장해요</strong>
-            <span>
-              {state.companyConfirmedJson && !companyNeedsConfirm
-                ? "저장된 상태예요. 수정했다면 다시 저장해 주세요."
-                : "필수 조건을 채우면 소개글 단계로 넘어갈 수 있어요."}
-            </span>
+            <strong>공고 저장</strong>
             {hasMissingCompanyRequired && (
               <p className="action-note warn">저장 전 확인: {missingCompanyRequired.join(", ")}</p>
             )}
