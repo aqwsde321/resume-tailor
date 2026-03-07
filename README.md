@@ -36,13 +36,18 @@
 - Docker Desktop 또는 Docker Engine
 - Codex 로그인 가능한 계정
 
+처음 로그인 전에 한 번 확인:
+
+- ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`를 켜 두세요.
+- Docker에서는 브라우저 리다이렉트 로그인보다 장치 코드 로그인이 안정적입니다.
+
 저장소를 받은 뒤 프로젝트 루트에서 아래 순서로 실행합니다.
 
 ```bash
 git clone <repo-url>
 cd resumeMake
 docker compose build
-docker compose run --rm app codex auth login
+docker compose run --rm app codex login --device-auth
 docker compose up
 ```
 
@@ -50,7 +55,8 @@ docker compose up
 
 추가 메모:
 
-- `codex auth login`은 컨테이너 안에서 실행되며, 인증 정보는 `codex-home` Docker volume에 저장됩니다.
+- `codex login --device-auth`는 컨테이너 안에서 실행되며, 인증 정보는 `codex-home` Docker volume에 저장됩니다.
+- 브라우저에서 `localhost에서 연결을 거부했습니다`가 뜨면, 일반 브라우저 리다이렉트 로그인 대신 장치 코드 로그인을 사용해야 하는 경우가 많습니다.
 - 한 번 로그인한 뒤에는 보통 `docker compose up`만 다시 실행하면 됩니다.
 - 코드 변경 후 이미지를 다시 반영하려면 `docker compose up --build`를 사용하세요.
 - 인증 정보를 포함한 Docker volume까지 지우려면 `docker compose down -v`를 사용합니다.
@@ -60,7 +66,13 @@ docker compose up
 최초 1회 로그인:
 
 ```bash
-docker compose run --rm app codex auth login
+docker compose run --rm app codex login --device-auth
+```
+
+로그인 확인:
+
+```bash
+docker compose run --rm app codex login status
 ```
 
 백그라운드 실행:

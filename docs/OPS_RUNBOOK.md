@@ -22,7 +22,7 @@
 
 ```bash
 docker compose build
-docker compose run --rm app codex auth login
+docker compose run --rm app codex login --device-auth
 docker compose up
 ```
 
@@ -37,6 +37,7 @@ docker compose down
 메모:
 
 - 인증 정보는 `codex-home` volume에 저장됩니다.
+- Docker 로그인 전에 ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`가 켜져 있는지 확인합니다.
 - 코드 변경을 반영하려면 `docker compose up --build`를 사용합니다.
 - 인증 정보까지 초기화하려면 `docker compose down -v`를 사용합니다.
 
@@ -118,7 +119,7 @@ hash -r
 조치:
 
 ```bash
-codex auth login
+codex login
 # dev 서버 재시작
 ```
 
@@ -135,7 +136,30 @@ export CODEX_CLI_PATH=/Applications/Codex.app/Contents/Resources/codex
 npm run dev
 ```
 
-### D. `Unable to acquire lock ... .next/dev/lock`
+### D. Docker 로그인 중 `localhost에서 연결을 거부했습니다`
+
+원인:
+
+- 컨테이너 안 로그인에서 브라우저 리다이렉트 콜백 포트를 직접 받지 못함
+- 장치 코드 인증이 비활성화되어 있음
+
+조치:
+
+1. ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`를 켭니다.
+2. Docker에서는 아래 명령으로 다시 로그인합니다.
+
+```bash
+docker compose run --rm app codex login --device-auth
+docker compose run --rm app codex login status
+```
+
+3. 로그인 후 앱을 다시 실행합니다.
+
+```bash
+docker compose up
+```
+
+### E. `Unable to acquire lock ... .next/dev/lock`
 
 원인:
 
@@ -148,7 +172,7 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 # 기존 dev 프로세스 종료 후 재실행
 ```
 
-### E. `URL 불러오기`가 현재 공고 대신 주변 문구를 읽는다
+### F. `URL 불러오기`가 현재 공고 대신 주변 문구를 읽는다
 
 원인:
 
@@ -162,7 +186,7 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 - 실제 추출 결과에 `추천공고`, `취업 전략`, footer 문구가 섞였는지 확인합니다.
 - 같은 URL을 `/company`의 `URL 불러오기`로 다시 실행해 textarea에 어떤 본문이 들어오는지 확인합니다.
 
-### F. 이미지 기반 상세 공고가 약하게 읽힌다
+### G. 이미지 기반 상세 공고가 약하게 읽힌다
 
 원인:
 
@@ -175,7 +199,7 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 - 가능하면 공고 본문을 직접 붙여넣어 비교합니다.
 - 이미지가 너무 흐리거나 작은 경우 붙여넣기 또는 `txt` 입력으로 우회합니다.
 
-### G. `결과를 끝까지 받지 못했어요` 또는 `결과 형식을 확인하지 못했어요`가 표시된다
+### H. `결과를 끝까지 받지 못했어요` 또는 `결과 형식을 확인하지 못했어요`가 표시된다
 
 원인:
 
