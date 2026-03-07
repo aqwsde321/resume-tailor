@@ -12,7 +12,7 @@
 
 - 최초 설치와 실행 방법은 [README](../README.md)를 기준으로 합니다.
 - 운영 모드는 `Docker 실행` 또는 `로컬 실행` 중 하나를 사용합니다.
-- Docker 실행은 이 저장소를 clone한 뒤 `docker compose pull`로 공개 이미지를 받아 실행하는 흐름을 기준으로 합니다.
+- Docker 실행은 `docker pull`/`docker run` 직접 실행 또는 저장소 clone 후 `docker compose` 실행 두 흐름을 모두 지원합니다.
 - 두 방식 모두 Codex 인증이 필요합니다.
 - 이 문서는 앱이 이미 실행 가능한 상태라는 전제에서, 실행 이후 점검과 복구 절차에 집중합니다.
 
@@ -20,7 +20,7 @@
 
 설치/실행 관련 상세 절차는 아래 문서를 기준으로 유지합니다.
 
-- Docker 저장소 clone, 공개 이미지 pull, 포트 변경, 이미지 교체: [README](../README.md)
+- Docker 직접 실행, Docker 저장소 clone, 공개 이미지 pull, 포트 변경, 이미지 교체: [README](../README.md)
 - 로컬 개발 실행: [README](../README.md)
 - GitHub Actions와 Docker Hub publish 설정: [README](../README.md)
 
@@ -108,7 +108,23 @@ npm run dev
 조치:
 
 1. ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`를 켭니다.
-2. Docker에서는 아래 명령으로 다시 로그인합니다.
+2. Docker에서는 실행 방식에 맞게 아래 명령으로 다시 로그인합니다.
+
+`docker run` 직접 실행:
+
+```bash
+docker run --rm -it \
+  -v resume-tailor-codex:/root/.codex \
+  qrqr/resume-tailor:latest \
+  codex login --device-auth
+
+docker run --rm -it \
+  -v resume-tailor-codex:/root/.codex \
+  qrqr/resume-tailor:latest \
+  codex login status
+```
+
+`docker compose` 실행:
 
 ```bash
 docker compose run --rm app codex login --device-auth
