@@ -144,7 +144,7 @@ export default function CompanyPage() {
       ...prev,
       companyText: value,
       companyConfirmedJson: null,
-      introSource: null
+      introSource: prev.introSource
     }));
   };
 
@@ -171,7 +171,7 @@ export default function CompanyPage() {
       ...prev,
       companyJsonText: value,
       companyConfirmedJson: null,
-      introSource: null
+      introSource: prev.introSource
     }));
   };
 
@@ -230,7 +230,7 @@ export default function CompanyPage() {
         ...prev,
         companyJsonText: JSON.stringify(company, null, 2),
         companyConfirmedJson: null,
-        introSource: null
+        introSource: prev.introSource
       }));
 
       setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
@@ -326,7 +326,7 @@ export default function CompanyPage() {
       ...prev,
       companyJsonText: normalized,
       companyConfirmedJson: normalized,
-      introSource: null
+      introSource: prev.introSource
     }));
 
     setMessage("공고를 저장했어요. 이제 소개글을 만들어 보세요.");
@@ -357,13 +357,6 @@ export default function CompanyPage() {
             <h2>공고 넣기</h2>
           </div>
         </div>
-
-        {isCompanyWorking && (
-          <p className="processing-banner">
-            <span className="spinner" />
-            정리 중입니다.
-          </p>
-        )}
 
         <div className="tabs">
           <button
@@ -492,13 +485,6 @@ export default function CompanyPage() {
             <span className="inline-badge">아직 없음</span>
           )}
         </div>
-
-        {isCompanyWorking && (
-          <p className="processing-banner review">
-            <span className="spinner" />
-            결과 반영 중입니다.
-          </p>
-        )}
 
         <div className="form-grid two">
           <label

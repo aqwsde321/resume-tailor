@@ -50,6 +50,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   const { hydrated, state } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
+  const isWorking = Boolean(state.currentTask);
 
   useEffect(() => {
     const startedAt = state.taskStartedAt;
@@ -204,29 +205,10 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   }
 
   return (
-    <main className="page">
+    <main className={`page ${isWorking ? "page-busy" : ""}`} aria-busy={isWorking}>
       <div className="backdrop" />
+      {isWorking && <div className="busy-overlay" aria-hidden="true" />}
       <div className="container">
-        {state.currentTask && (
-          <section className="live-log-modal" aria-live="polite" role="status">
-            <div className="live-log-head">
-              <div>
-                <p className="card-kicker">실행 중</p>
-                <h2>{TASK_LABEL[state.currentTask]}</h2>
-              </div>
-              <span className="live-log-timer">{elapsedSeconds}초</span>
-            </div>
-
-            {liveLogs.length > 0 ? (
-              <ul className="log-list compact">
-                {liveLogs.map((log) => renderLogItem(log))}
-              </ul>
-            ) : (
-              <p className="log-empty">실행 준비를 마치고 있어요.</p>
-            )}
-          </section>
-        )}
-
         <header className="hero">
           <p className="eyebrow">ResumeMake</p>
           <h1>{title}</h1>
@@ -254,14 +236,6 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
               </li>
             ))}
           </ol>
-
-        {state.currentTask && (
-          <section className="busy-banner" aria-live="polite">
-            <span className="spinner" />
-            <strong>{TASK_LABEL[state.currentTask]} 중</strong>
-            <span>{elapsedSeconds}초 지남</span>
-          </section>
-        )}
 
         {!state.currentTask && introRefreshReasons.length > 0 && (
           <p className="sticky-note warn">
@@ -304,6 +278,27 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
           </section>
         )}
       </div>
+
+      {state.currentTask && (
+        <section className="live-log-modal" aria-live="polite" role="dialog" aria-modal="true">
+          <div className="live-log-head">
+            <div>
+              <p className="card-kicker">실행 중</p>
+              <h2>{TASK_LABEL[state.currentTask]}</h2>
+              <p className="live-log-copy">입력과 확인 영역은 잠시 멈춰두고 있어요.</p>
+            </div>
+            <span className="live-log-timer">{elapsedSeconds}초</span>
+          </div>
+
+          {liveLogs.length > 0 ? (
+            <ul className="log-list compact">
+              {liveLogs.map((log) => renderLogItem(log))}
+            </ul>
+          ) : (
+            <p className="log-empty">실행 준비를 마치고 있어요.</p>
+          )}
+        </section>
+      )}
     </main>
   );
 }

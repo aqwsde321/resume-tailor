@@ -7,7 +7,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
-import { buildMatchInsights } from "@/lib/intro-insights";
+import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
@@ -134,6 +134,28 @@ export default function ResultPage() {
 
     return buildMatchInsights(confirmedResume, confirmedCompany);
   }, [confirmedResume, confirmedCompany]);
+  const writingAnchorView = useMemo(() => {
+    if (!confirmedResume || !confirmedCompany) {
+      return null;
+    }
+
+    const guidance = buildIntroGuidance(confirmedResume, confirmedCompany);
+    if (guidance.writingAnchors.length === 0) {
+      return null;
+    }
+
+    return {
+      kicker: state.intro ? "연결 근거" : "미리 보기",
+      title: state.intro ? "공고와 연결한 내 경험" : "소개글에 반영할 연결 근거",
+      description: state.intro
+        ? "공고 요건과 내 경험을 이렇게 묶어 소개글에 반영했습니다."
+        : "소개글을 만들 때 먼저 연결할 공고 요건과 내 경험입니다.",
+      anchors: guidance.writingAnchors.slice(0, 5).map((anchor) => ({
+        ...anchor,
+        label: anchor.type === "requirement" ? "필수 요건" : "우대 조건"
+      }))
+    };
+  }, [confirmedCompany, confirmedResume, state.intro]);
   const introInsights = useMemo(() => getIntroInsights(state.intro), [state.intro]);
   const insightView = useMemo(() => {
     if (!introInsights && !matchInsights) {
@@ -340,13 +362,6 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {isIntroWorking && (
-          <p className="processing-banner">
-            <span className="spinner" />
-            만드는 중입니다.
-          </p>
-        )}
-
         <div className={`fresh-badge ${freshnessTone}`}>
           <strong>{freshnessHeading}</strong>
           {freshnessBody && <span>{freshnessBody}</span>}
@@ -374,6 +389,34 @@ export default function ResultPage() {
           </div>
         </div>
       </section>
+
+      {writingAnchorView && (
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <p className="card-kicker">{writingAnchorView.kicker}</p>
+              <h2>{writingAnchorView.title}</h2>
+              <p className="anchor-note">{writingAnchorView.description}</p>
+            </div>
+          </div>
+
+          <div className="anchor-grid" aria-label={writingAnchorView.title}>
+            {writingAnchorView.anchors.map((anchor) => (
+              <article key={`${anchor.type}-${anchor.target}`} className={`anchor-card ${anchor.type}`}>
+                <div className="anchor-head">
+                  <span className={`anchor-type ${anchor.type}`}>{anchor.label}</span>
+                </div>
+                <h3>{anchor.target}</h3>
+                <ul className="anchor-evidence">
+                  {anchor.evidence.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {insightView && (
         <section className="card">

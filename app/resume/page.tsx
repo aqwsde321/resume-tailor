@@ -141,7 +141,7 @@ export default function ResumePage() {
       resumeText: value,
       resumeConfirmedJson: null,
       companyConfirmedJson: null,
-      introSource: null
+      introSource: prev.introSource
     }));
   };
 
@@ -151,7 +151,7 @@ export default function ResumePage() {
       resumeJsonText: value,
       resumeConfirmedJson: null,
       companyConfirmedJson: null,
-      introSource: null
+      introSource: prev.introSource
     }));
   };
 
@@ -242,7 +242,7 @@ export default function ResumePage() {
         resumeJsonText: JSON.stringify(resume, null, 2),
         resumeConfirmedJson: null,
         companyConfirmedJson: null,
-        introSource: null
+        introSource: prev.introSource
       }));
 
       setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
@@ -281,7 +281,7 @@ export default function ResumePage() {
         resumeJsonText: normalized,
         resumeConfirmedJson: normalized,
         companyConfirmedJson: resumeChanged ? null : prev.companyConfirmedJson,
-        introSource: resumeChanged ? null : prev.introSource
+        introSource: prev.introSource
       };
     });
 
@@ -301,13 +301,6 @@ export default function ResumePage() {
             <h2>이력서 넣기</h2>
           </div>
         </div>
-
-        {isResumeWorking && (
-          <p className="processing-banner">
-            <span className="spinner" />
-            정리 중입니다.
-          </p>
-        )}
 
         <div className="tabs">
           <button
@@ -371,13 +364,6 @@ export default function ResumePage() {
             <span className="inline-badge">아직 없음</span>
           )}
         </div>
-
-        {isResumeWorking && (
-          <p className="processing-banner review">
-            <span className="spinner" />
-            결과 반영 중입니다.
-          </p>
-        )}
 
         <div className="form-grid two">
           <label
