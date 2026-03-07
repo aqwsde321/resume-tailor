@@ -477,9 +477,10 @@ input[type="file"] {
 }
 
 .inline-setting {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 44px;
   padding: 0 12px;
   border-radius: 999px;
@@ -494,37 +495,58 @@ input[type="file"] {
   opacity: 0.64;
 }
 
-.inline-setting-label {
-  font-size: 0.78rem;
+.inline-setting-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(19, 34, 74, 0.94);
+  box-shadow: 0 10px 24px rgba(21, 41, 84, 0.18);
+  color: #fff;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--muted);
   white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 180ms ease;
 }
 
-.inline-select-shell {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 88px;
+.inline-setting-value {
+  color: var(--primary-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  pointer-events: none;
 }
 
 .inline-select {
-  appearance: none;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-width: 88px;
-  min-height: 44px;
-  padding: 0 20px 0 0;
-  border: 0;
-  background: transparent;
-  color: var(--primary-strong);
-  font-weight: 700;
-  font: inherit;
-  text-align: right;
+  height: 100%;
+  appearance: none;
+  opacity: 0;
   cursor: pointer;
 }
 
 .inline-select:focus {
   outline: none;
+}
+
+.inline-setting:hover,
+.inline-setting:focus-within {
+  border-color: rgba(44, 88, 221, 0.26);
+  background: rgba(245, 249, 255, 0.98);
+}
+
+.inline-setting:hover .inline-setting-hint,
+.inline-setting:focus-within .inline-setting-hint {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .inline-setting:focus-within {
@@ -535,14 +557,12 @@ input[type="file"] {
 }
 
 .inline-select-caret {
-  position: absolute;
-  right: 2px;
-  top: 50%;
+  margin-top: -2px;
   width: 7px;
   height: 7px;
   border-right: 1.5px solid rgba(35, 56, 102, 0.52);
   border-bottom: 1.5px solid rgba(35, 56, 102, 0.52);
-  transform: translateY(-60%) rotate(45deg);
+  transform: rotate(45deg);
   pointer-events: none;
 }
 
@@ -1333,8 +1353,9 @@ textarea:focus-visible {
   }
 
   .inline-setting {
-    width: 100%;
-    justify-content: space-between;
+    width: fit-content;
+    max-width: 100%;
+    justify-content: flex-start;
   }
 
   .action-panel .action-row {
