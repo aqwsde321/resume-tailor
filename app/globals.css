@@ -904,6 +904,25 @@ button:disabled {
   border: 1px solid var(--line);
 }
 
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+}
+
+.copy-btn.success {
+  border-color: rgba(13, 110, 62, 0.24);
+  background: rgba(13, 110, 62, 0.08);
+  color: #0a5d34;
+}
+
+.copy-btn.error {
+  border-color: rgba(161, 26, 58, 0.24);
+  background: rgba(161, 26, 58, 0.08);
+  color: #8a1f3a;
+}
+
 .result-card {
   display: grid;
   grid-template-columns: 1fr;

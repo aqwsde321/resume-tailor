@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
@@ -33,6 +33,14 @@ function getIntroInsights(intro: Intro | null) {
   };
 }
 
+type IntroSectionKey = "oneLineIntro" | "shortIntro" | "longIntro";
+
+interface CopyFeedback {
+  key: IntroSectionKey;
+  title: string;
+  status: "success" | "error";
+}
+
 export default function ResultPage() {
   const {
     state,
@@ -50,6 +58,8 @@ export default function ResultPage() {
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
   const introFresh = isIntroFresh(state);
   const isIntroWorking = state.currentTask === "intro";
+  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
+  const copyResetRef = useRef<number | null>(null);
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -103,19 +113,19 @@ export default function ResultPage() {
   const introSections = useMemo(
     () => [
       {
-        key: "oneLineIntro" as const,
+        key: "oneLineIntro" as IntroSectionKey,
         title: "한 줄 소개",
         value: state.intro?.oneLineIntro ?? "",
         emptyText: "아직 만든 소개글이 없어요."
       },
       {
-        key: "shortIntro" as const,
+        key: "shortIntro" as IntroSectionKey,
         title: "짧은 소개",
         value: state.intro?.shortIntro ?? "",
         emptyText: "아직 만든 소개글이 없어요."
       },
       {
-        key: "longIntro" as const,
+        key: "longIntro" as IntroSectionKey,
         title: "긴 소개",
         value: state.intro?.longIntro ?? "",
         emptyText: "아직 만든 소개글이 없어요."
@@ -123,6 +133,14 @@ export default function ResultPage() {
     ],
     [state.intro]
   );
+
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current !== null) {
+        window.clearTimeout(copyResetRef.current);
+      }
+    };
+  }, []);
   const previousIntroSections = useMemo(
     () => [
       {
@@ -215,16 +233,40 @@ export default function ResultPage() {
     }
   };
 
-  const copyText = async (value: string) => {
-    clearStatus();
+  const setCopyFeedbackWithReset = (feedback: CopyFeedback) => {
+    if (copyResetRef.current !== null) {
+      window.clearTimeout(copyResetRef.current);
+    }
 
+    setCopyFeedback(feedback);
+    copyResetRef.current = window.setTimeout(() => {
+      setCopyFeedback(null);
+      copyResetRef.current = null;
+    }, 1800);
+  };
+
+  const copyText = async (section: { key: IntroSectionKey; title: string; value: string }) => {
     try {
-      await navigator.clipboard.writeText(value);
-      setMessage("복사했어요.");
+      await navigator.clipboard.writeText(section.value);
+      setCopyFeedbackWithReset({
+        key: section.key,
+        title: section.title,
+        status: "success"
+      });
     } catch {
-      setError("복사하지 못했어요. 브라우저 권한을 확인해 주세요.");
+      setCopyFeedbackWithReset({
+        key: section.key,
+        title: section.title,
+        status: "error"
+      });
     }
   };
+
+  const copyAnnouncement = copyFeedback
+    ? copyFeedback.status === "success"
+      ? `${copyFeedback.title} 복사 완료`
+      : `${copyFeedback.title} 복사 실패`
+    : "";
 
   return (
     <AppFrame
@@ -343,6 +385,9 @@ export default function ResultPage() {
           <p className="card-copy">
             한 줄 소개, 짧은 소개, 긴 소개를 차례로 볼 수 있게 정리했어요.
           </p>
+          <p className="sr-only" aria-live="polite">
+            {copyAnnouncement}
+          </p>
         </div>
 
         <div className="result-card">
@@ -352,11 +397,17 @@ export default function ResultPage() {
                 <h3>{section.title}</h3>
                 <button
                   type="button"
-                  className="secondary"
-                  onClick={() => void copyText(section.value)}
-                  disabled={isBusy || !state.intro}
+                  className={`secondary copy-btn ${
+                    copyFeedback?.key === section.key ? copyFeedback.status : ""
+                  }`}
+                  onClick={() => void copyText(section)}
+                  disabled={isBusy || !state.intro || !section.value.trim()}
                 >
-                  복사
+                  {copyFeedback?.key === section.key
+                    ? copyFeedback.status === "success"
+                      ? "복사됨"
+                      : "복사 실패"
+                    : "복사"}
                 </button>
               </div>
               <p>{section.value || section.emptyText}</p>
