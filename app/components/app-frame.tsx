@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import type { PipelineLog } from "@/lib/types";
 
 type StepKey = "resume" | "company" | "result";
@@ -88,12 +88,46 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   }, [state.currentTask, state.taskStartedAt]);
 
   const introFresh = isIntroFresh(state);
+  const introRefreshReasons = getIntroRefreshReasons(state);
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
+  const hasIntro = Boolean(state.intro);
   const stepMeta = STEP_META[step];
+  const refreshSummary = introRefreshReasons
+    .map((reason) => {
+      if (reason.key === "resume") {
+        return state.resumeConfirmedJson ? "이력서 변경" : "이력서 다시 저장";
+      }
+
+      return state.companyConfirmedJson ? "공고 변경" : "공고 다시 저장";
+    })
+    .join(" · ");
 
   const steps = useMemo(() => {
     const stepStatusLabel = (key: StepKey, status: StepStatus): string => {
+      if (key === "result") {
+        switch (status) {
+          case "done":
+            return "최신";
+          case "working":
+            return "만드는 중";
+          case "locked":
+            return "잠김";
+          case "blocked":
+            return step === "result" ? "대기" : "먼저 완료";
+          default:
+            if (!hasIntro) {
+              return "만들기";
+            }
+
+            if (introRefreshReasons.length > 0) {
+              return "다시 만들기";
+            }
+
+            return "준비됨";
+        }
+      }
+
       switch (status) {
         case "done":
           return "완료";
@@ -122,11 +156,11 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       ? step === "result"
         ? "blocked"
         : "locked"
+      : state.currentTask === "intro"
+        ? "working"
       : introFresh
         ? "done"
-        : step === "result"
-          ? "working"
-          : "ready";
+        : "ready";
 
     return [
       {
@@ -154,7 +188,7 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
         statusLabel: stepStatusLabel("result", resultStatus)
       }
     ];
-  }, [hasResume, hasCompany, introFresh, step]);
+  }, [hasResume, hasCompany, hasIntro, introFresh, introRefreshReasons.length, state.currentTask, step]);
 
   const logs = useMemo(() => [...state.logs].slice(-100).reverse(), [state.logs]);
   const liveLogs = logs.slice(0, 6);
@@ -247,14 +281,21 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
             ))}
           </ol>
 
-          {state.currentTask && (
-            <section className="busy-banner" aria-live="polite">
-              <span className="spinner" />
-              <strong>{TASK_LABEL[state.currentTask]} 중</strong>
-              <span>{elapsedSeconds}초 지남</span>
-            </section>
-          )}
-        </section>
+        {state.currentTask && (
+          <section className="busy-banner" aria-live="polite">
+            <span className="spinner" />
+            <strong>{TASK_LABEL[state.currentTask]} 중</strong>
+            <span>{elapsedSeconds}초 지남</span>
+          </section>
+        )}
+
+        {!state.currentTask && introRefreshReasons.length > 0 && (
+          <p className="sticky-note warn">
+            <strong>소개글 다시 만들기 필요</strong>
+            <span>{refreshSummary} 반영이 아직 남아 있어요.</span>
+          </p>
+        )}
+      </section>
 
         {state.error && <p className="status error">{state.error}</p>}
         {state.message && <p className="status success">{state.message}</p>}

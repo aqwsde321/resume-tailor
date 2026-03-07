@@ -216,6 +216,30 @@ body {
   box-shadow: 0 10px 28px rgba(34, 56, 112, 0.08);
 }
 
+.sticky-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 36, 58, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sticky-note strong {
+  font-size: 0.88rem;
+}
+
+.sticky-note.warn {
+  border-color: rgba(169, 90, 22, 0.24);
+  background: rgba(169, 90, 22, 0.08);
+  color: #7b4b0b;
+}
+
 .support-shell {
   display: grid;
   gap: 12px;
@@ -1264,9 +1288,18 @@ button:disabled {
 
 .fresh-badge {
   margin: 0;
+  display: grid;
+  gap: 6px;
   border-radius: 10px;
   padding: 10px 12px;
-  font-weight: 600;
+}
+
+.fresh-badge strong {
+  font-size: 0.95rem;
+}
+
+.fresh-badge span {
+  line-height: 1.55;
 }
 
 .fresh-badge.ok {
@@ -1275,10 +1308,42 @@ button:disabled {
   border: 1px solid rgba(13, 110, 62, 0.2);
 }
 
+.fresh-badge.info {
+  background: rgba(44, 88, 221, 0.08);
+  color: var(--primary-strong);
+  border: 1px solid rgba(44, 88, 221, 0.18);
+}
+
 .fresh-badge.warn {
   background: rgba(161, 104, 26, 0.1);
   color: #78450a;
   border: 1px solid rgba(161, 104, 26, 0.24);
+}
+
+.reason-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reason-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.54);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.reason-chip.resume {
+  color: #0b5d72;
+}
+
+.reason-chip.company {
+  color: #915517;
 }
 
 .live-log-modal {

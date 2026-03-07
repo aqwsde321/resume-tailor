@@ -29,6 +29,11 @@ interface IntroSource {
   companyConfirmedJson: string;
 }
 
+export interface IntroRefreshReason {
+  key: "resume" | "company";
+  message: string;
+}
+
 export interface PipelineState {
   agentSettings: AgentSettings;
   resumeInputMode: InputMode;
@@ -271,6 +276,40 @@ export function isIntroFresh(state: PipelineState): boolean {
     state.introSource.resumeConfirmedJson === state.resumeConfirmedJson &&
     state.introSource.companyConfirmedJson === state.companyConfirmedJson
   );
+}
+
+export function getIntroRefreshReasons(state: PipelineState): IntroRefreshReason[] {
+  if (!state.intro || !state.introSource) {
+    return [];
+  }
+
+  const reasons: IntroRefreshReason[] = [];
+
+  if (!state.resumeConfirmedJson) {
+    reasons.push({
+      key: "resume",
+      message: "이력서를 다시 저장해 주세요."
+    });
+  } else if (state.introSource.resumeConfirmedJson !== state.resumeConfirmedJson) {
+    reasons.push({
+      key: "resume",
+      message: "이력서가 바뀌었어요."
+    });
+  }
+
+  if (!state.companyConfirmedJson) {
+    reasons.push({
+      key: "company",
+      message: "공고를 다시 저장해 주세요."
+    });
+  } else if (state.introSource.companyConfirmedJson !== state.companyConfirmedJson) {
+    reasons.push({
+      key: "company",
+      message: "공고가 바뀌었어요."
+    });
+  }
+
+  return reasons;
 }
 
 export function hasCompanyConfirmed(state: PipelineState): state is PipelineState & {

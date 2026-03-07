@@ -6,11 +6,14 @@
 - 채용공고 URL 불러오기 지원: `/company`에서 붙여넣기, `txt`, URL 입력을 같은 분석 흐름으로 연결
 - 채용공고 불러오기 가이드 문서 추가: [COMPANY_FETCH_GUIDE.md](/Users/jino/study/project/resumeMake/docs/COMPANY_FETCH_GUIDE.md)
 - 상세 본문이 이미지인 공고를 위한 macOS Vision OCR fallback 추가
+- 채용공고 정규화 회귀 테스트 5개와 소개글 stale 이유 헬퍼 테스트 추가
 
 ### Changed
 - 사람인 relay 공고는 `view -> view-ajax -> view-detail` 순서로 현재 공고 상세를 우선 추출하도록 개선
 - 잡코리아 `GI_Read` 공고는 `GI_Read_Comt_Ifrm` 상세 iframe을 직접 읽도록 개선
 - 잡코리아/사람인 공고 추출 시 추천공고, 하단 안내, footer 문구가 본문에 섞이지 않도록 정제 규칙 강화
+- `company` API 응답 전에 `normalizeCompany()` 후처리를 적용해 복지/추천공고/중복 bullet 노이즈를 정리
+- 결과 단계에서 `이력서 변경`, `공고 변경` 기준으로 다시 만들기 이유와 배지를 표시
 
 ### Verified
 - `npm run lint`

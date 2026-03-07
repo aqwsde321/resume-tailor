@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { normalizeCompany } from "@/lib/company-normalize";
 import { runSkillJson } from "@/lib/codex-client";
 import { apiErrorResponse, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       ...body.agent
     });
 
-    const validated = CompanySchema.parse(generated);
+    const validated = normalizeCompany(CompanySchema.parse(generated));
 
     const payload: ApiSuccess<Company> = {
       ok: true,

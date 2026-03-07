@@ -38,4 +38,38 @@ describe("POST /api/company", () => {
     expect(body.data.companyName).toBe("Acme");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("company-to-json");
   });
+
+  it("공고 결과의 중복과 노이즈를 정리해서 반환한다", async () => {
+    const mockedRunSkillJson = vi.mocked(runSkillJson);
+    mockedRunSkillJson.mockResolvedValue({
+      companyName: " Alpha Pay ",
+      companyDescription:
+        "결제 플랫폼을 운영합니다. 로그인하고 비슷한 조건의 AI추천공고를 확인해 보세요!",
+      jobTitle: "Backend Engineer",
+      jobDescription:
+        "모집요강 결제 API를 개발합니다. 본 채용정보는 잡코리아의 동의없이 무단전재할 수 없습니다.",
+      requirements: ["필수 조건: Java 기반 서버 개발 경험", "식대 지원"],
+      preferredSkills: ["우대 사항: Spring Boot 경험", "복지 포인트 지급"],
+      techStack: ["Java, Spring Boot, Oracle", "Java"]
+    });
+
+    const request = new Request("http://localhost/api/company", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "채용공고 원문" })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyName).toBe("Alpha Pay");
+    expect(body.data.companyDescription).toBe("결제 플랫폼을 운영합니다.");
+    expect(body.data.jobDescription).toContain("결제 API를 개발합니다.");
+    expect(body.data.jobDescription).not.toContain("무단전재");
+    expect(body.data.requirements).toEqual(["Java 기반 서버 개발 경험"]);
+    expect(body.data.preferredSkills).toEqual(["Spring Boot 경험"]);
+    expect(body.data.techStack).toEqual(["Java", "Spring Boot", "Oracle"]);
+  });
 });

@@ -8,7 +8,7 @@ import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { buildMatchInsights } from "@/lib/intro-insights";
-import { isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
 import type { Intro } from "@/lib/types";
@@ -57,9 +57,52 @@ export default function ResultPage() {
   const isBusy = state.currentTask !== null;
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
   const introFresh = isIntroFresh(state);
+  const refreshReasons = getIntroRefreshReasons(state);
   const isIntroWorking = state.currentTask === "intro";
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const copyResetRef = useRef<number | null>(null);
+  const refreshReasonBadges = useMemo(
+    () =>
+      refreshReasons.map((reason) => ({
+        key: reason.key,
+        label:
+          reason.key === "resume"
+            ? state.resumeConfirmedJson
+              ? "이력서 변경"
+              : "이력서 다시 저장"
+            : state.companyConfirmedJson
+              ? "공고 변경"
+              : "공고 다시 저장"
+      })),
+    [refreshReasons, state.companyConfirmedJson, state.resumeConfirmedJson]
+  );
+  const freshnessTone = !state.intro ? "info" : introFresh ? "ok" : "warn";
+  const freshnessHeading = !state.intro
+    ? "아직 만든 소개글이 없어요."
+    : introFresh
+      ? "지금 결과가 최신이에요."
+      : "최신 내용으로 다시 만들 차례예요.";
+  const freshnessBody = !canGenerate
+    ? "이력서와 공고를 먼저 저장해 주세요."
+    : !state.intro
+      ? "저장한 이력서와 공고로 세 가지 버전을 바로 만들 수 있어요."
+      : introFresh
+        ? "현재 저장된 이력서와 공고 기준과 결과가 같습니다."
+        : refreshReasons.length > 0
+          ? `${refreshReasons.map((reason) => reason.message).join(" ")} 최신 내용으로 다시 만들면 바로 반영돼요.`
+          : "저장한 내용을 다시 확인한 뒤 새 소개글을 만들면 됩니다.";
+  const actionHeading = !canGenerate
+    ? "소개글을 만들 준비를 해요"
+    : !state.intro
+      ? "소개글을 만들어요"
+      : refreshReasons.length > 0
+        ? "바뀐 내용으로 다시 만들어요"
+        : "필요하면 다시 만들어요";
+  const actionDescription = !canGenerate
+    ? "이력서와 공고를 저장하면 버튼이 활성화돼요."
+    : refreshReasonBadges.length > 0
+      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")} 반영이 필요해요.`
+      : "공고를 바꾸고 싶다면 위쪽 단계 버튼에서 공고를 다시 열 수 있어요.";
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -309,20 +352,24 @@ export default function ResultPage() {
           </p>
         )}
 
-        <p className={`fresh-badge ${introFresh ? "ok" : "warn"}`}>
-          {introFresh
-            ? "지금 결과가 최신이에요."
-            : "내용이 바뀌었어요. 수정이 필요하면 위쪽 공고 단계로 이동한 뒤 다시 만들면 됩니다."}
-        </p>
+        <div className={`fresh-badge ${freshnessTone}`}>
+          <strong>{freshnessHeading}</strong>
+          <span>{freshnessBody}</span>
+          {refreshReasonBadges.length > 0 && (
+            <div className="reason-chip-row" aria-label="다시 만들기 이유">
+              {refreshReasonBadges.map((badge) => (
+                <span key={badge.key} className={`reason-chip ${badge.key}`}>
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="action-panel">
           <div className="action-copy">
-            <strong>{introFresh ? "필요하면 다시 만들어요" : "소개글을 만들어요"}</strong>
-            <span>
-              {canGenerate
-                ? "공고를 바꾸고 싶다면 위쪽 단계 버튼에서 공고를 다시 열 수 있어요."
-                : "이력서와 공고를 저장하면 버튼이 활성화돼요."}
-            </span>
+            <strong>{actionHeading}</strong>
+            <span>{actionDescription}</span>
           </div>
           <div className="action-controls">
             <ReasoningInline disabled={isBusy || !canGenerate} />

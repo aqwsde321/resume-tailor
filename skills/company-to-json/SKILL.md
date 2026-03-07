@@ -30,10 +30,12 @@ description: 채용공고 텍스트를 구조화된 company.json으로 변환하
 `output/company.json`으로 저장한다.
 
 **규칙:**
-- requirements는 채용공고에서 "필수" 기술·역량 키워드만
-- preferredSkills는 "우대" 기술·경험 목록
-- jobDescription은 핵심 업무 1~2문장 요약
-- companyDescription은 회사 성격·목표 간략화
+- requirements는 채용공고에서 "필수" 기술·역량 키워드만 넣고, 복지·문화·지원 안내 문구는 제외
+- preferredSkills는 "우대" 기술·경험 목록만 넣고, 혜택 문구와 중복 항목은 제거
+- techStack은 기술명만 짧게 분리하고, 쉼표/줄바꿈/슬래시로 붙은 항목은 나눠서 배열로 넣기
+- jobDescription은 핵심 업무 1~2문장 요약만 남기고, 추천공고/지원방법/footer 문구는 제외
+- companyDescription은 회사 성격·목표만 간략화하고 채용 사이트 안내문은 제외
+- 같은 의미의 bullet이 반복되면 1개만 남기기
 - 설명문·주석 없이 유효한 JSON만 출력
 
 **스키마:**

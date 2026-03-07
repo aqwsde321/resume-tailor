@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { normalizeCompany } from "@/lib/company-normalize";
 import { runSkillJsonStream } from "@/lib/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
 import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
           onLog: (payload) => send("log", payload)
         });
 
-        const validated = CompanySchema.parse(generated);
+        const validated = normalizeCompany(CompanySchema.parse(generated));
 
         send("result", {
           data: validated
