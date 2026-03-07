@@ -8,10 +8,10 @@ import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
+import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
-import type { Company } from "@/lib/types";
 
 const EMPTY_COMPANY: Company = {
   companyName: "",
@@ -22,6 +22,22 @@ const EMPTY_COMPANY: Company = {
   preferredSkills: [],
   techStack: []
 };
+
+interface CompanyUrlFetchData {
+  url: string;
+  title: string;
+  companyNameHint: string;
+  jobTitleHint: string;
+  text: string;
+}
+
+interface UrlPreview {
+  title: string;
+  companyName: string;
+  jobTitle: string;
+  sourceHost: string;
+  textLength: number;
+}
 
 function formatIssueDetails(errorMessage: string): string {
   return errorMessage.length > 180 ? `${errorMessage.slice(0, 180)}...` : errorMessage;
@@ -72,6 +88,9 @@ export default function CompanyPage() {
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
   const isCompanyWorking = state.currentTask === "company";
+  const [isUrlLoading, setIsUrlLoading] = useState(false);
+  const [urlPreview, setUrlPreview] = useState<UrlPreview | null>(null);
+  const uiBusy = isBusy || isUrlLoading;
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
   const [requirementsText, setRequirementsText] = useState("");
@@ -110,6 +129,24 @@ export default function CompanyPage() {
     }));
   };
 
+  const setCompanyUrl = (value: string) => {
+    patch((prev) => ({
+      ...prev,
+      companyUrl: value
+    }));
+  };
+
+  const setCompanyInputMode = (mode: "text" | "file" | "url") => {
+    if (mode !== "url") {
+      setUrlPreview(null);
+    }
+
+    patch((prev) => ({
+      ...prev,
+      companyInputMode: mode
+    }));
+  };
+
   const setCompanyJsonText = (value: string) => {
     patch((prev) => ({
       ...prev,
@@ -137,6 +174,7 @@ export default function CompanyPage() {
     }
 
     const text = await file.text();
+    setUrlPreview(null);
     setCompanyText(text);
     setMessage("파일 내용을 입력칸에 넣었어요.");
   };
@@ -181,6 +219,67 @@ export default function CompanyPage() {
       setError(error instanceof Error ? error.message : "공고를 읽는 중 문제가 생겼어요.");
     } finally {
       finishTask();
+    }
+  };
+
+  const handleFetchUrl = async () => {
+    clearStatus();
+
+    if (!canEdit) {
+      setError("먼저 이력서를 저장해 주세요.");
+      return;
+    }
+
+    if (!state.companyUrl.trim()) {
+      setError("공고 URL을 먼저 넣어 주세요.");
+      return;
+    }
+
+    setIsUrlLoading(true);
+    setUrlPreview(null);
+
+    try {
+      const response = await fetch("/api/company/fetch-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          url: state.companyUrl.trim()
+        })
+      });
+
+      const payload = (await response.json()) as ApiSuccess<CompanyUrlFetchData> | ApiFailure;
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.ok ? "공고 URL을 불러오지 못했어요." : payload.error.message);
+      }
+
+      let sourceHost = payload.data.url;
+      try {
+        sourceHost = new URL(payload.data.url).hostname.replace(/^www\./, "");
+      } catch {
+        sourceHost = payload.data.url;
+      }
+
+      setCompanyUrl(payload.data.url);
+      setCompanyText(payload.data.text);
+      setUrlPreview({
+        title: payload.data.title || "공고 페이지",
+        companyName: payload.data.companyNameHint,
+        jobTitle: payload.data.jobTitleHint,
+        sourceHost,
+        textLength: payload.data.text.length
+      });
+      setMessage(
+        payload.data.title
+          ? `${payload.data.title} 내용을 입력칸에 넣었어요. 필요하면 아래에서 다듬어 주세요.`
+          : "URL에서 공고 내용을 불러왔어요. 필요하면 아래에서 다듬어 주세요."
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "공고 URL을 불러오지 못했어요.");
+    } finally {
+      setIsUrlLoading(false);
     }
   };
 
@@ -241,7 +340,9 @@ export default function CompanyPage() {
         </div>
 
         <p className="card-copy">
-          채용 공고를 붙여넣으면 회사명, 역할, 조건을 정리해 줍니다.
+          {state.companyInputMode === "url"
+            ? "공고 URL을 불러와 본문을 채운 뒤, 기존 흐름대로 정리할 수 있어요."
+            : "채용 공고를 붙여넣거나 파일로 넣으면 회사명, 역할, 조건을 정리해 줍니다."}
         </p>
 
         {isCompanyWorking && (
@@ -255,18 +356,26 @@ export default function CompanyPage() {
           <button
             type="button"
             className={state.companyInputMode === "text" ? "tab active" : "tab"}
-            onClick={() => patch((prev) => ({ ...prev, companyInputMode: "text" }))}
-            disabled={isBusy || !canEdit}
+            onClick={() => setCompanyInputMode("text")}
+            disabled={uiBusy || !canEdit}
           >
             붙여넣기
           </button>
           <button
             type="button"
             className={state.companyInputMode === "file" ? "tab active" : "tab"}
-            onClick={() => patch((prev) => ({ ...prev, companyInputMode: "file" }))}
-            disabled={isBusy || !canEdit}
+            onClick={() => setCompanyInputMode("file")}
+            disabled={uiBusy || !canEdit}
           >
             파일 업로드
+          </button>
+          <button
+            type="button"
+            className={state.companyInputMode === "url" ? "tab active" : "tab"}
+            onClick={() => setCompanyInputMode("url")}
+            disabled={uiBusy || !canEdit}
+          >
+            URL 불러오기
           </button>
         </div>
 
@@ -275,15 +384,68 @@ export default function CompanyPage() {
             type="file"
             accept=".txt,text/plain"
             onChange={(event) => void handleTxtUpload(event.target.files?.[0])}
-            disabled={isBusy || !canEdit}
+            disabled={uiBusy || !canEdit}
           />
+        )}
+
+        {state.companyInputMode === "url" && (
+          <div className="url-fetch-panel">
+            <div className="url-fetch-row">
+              <input
+                type="url"
+                value={state.companyUrl}
+                onChange={(event) => {
+                  setUrlPreview(null);
+                  setCompanyUrl(event.target.value);
+                }}
+                placeholder="https://회사-채용페이지-주소"
+                disabled={uiBusy || !canEdit}
+              />
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => void handleFetchUrl()}
+                disabled={uiBusy || !canEdit}
+              >
+                {isUrlLoading ? "불러오는 중..." : "URL 불러오기"}
+              </button>
+            </div>
+            <p className="input-helper">
+              정적 HTML 공고 페이지를 먼저 지원합니다. 불러오면 아래 입력칸에서 바로 수정할 수 있어요.
+            </p>
+
+            {urlPreview && (
+              <div className="url-preview" aria-live="polite">
+                <div className="url-preview-head">
+                  <strong>읽어온 정보</strong>
+                  <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
+                </div>
+                <p className="url-preview-title">{urlPreview.title}</p>
+                <div className="url-preview-meta">
+                  <span className="url-preview-chip">
+                    <span>회사</span>
+                    <strong>{urlPreview.companyName || "확인 필요"}</strong>
+                  </span>
+                  <span className="url-preview-chip">
+                    <span>포지션</span>
+                    <strong>{urlPreview.jobTitle || "확인 필요"}</strong>
+                  </span>
+                </div>
+                <p className="input-helper">출처 {urlPreview.sourceHost} · 아래 입력칸에서 바로 수정할 수 있어요.</p>
+              </div>
+            )}
+          </div>
         )}
 
         <textarea
           value={state.companyText}
           onChange={(event) => setCompanyText(event.target.value)}
-          placeholder="채용 공고 내용을 붙여넣어 주세요."
-          disabled={isBusy || !canEdit}
+          placeholder={
+            state.companyInputMode === "url"
+              ? "URL에서 불러온 공고 내용이 여기에 채워집니다."
+              : "채용 공고 내용을 붙여넣어 주세요."
+          }
+          disabled={uiBusy || !canEdit}
         />
 
         <div className="action-panel">
@@ -292,12 +454,12 @@ export default function CompanyPage() {
             <span>입력한 공고를 읽고 회사명, 포지션, 조건을 정리합니다.</span>
           </div>
           <div className="action-controls">
-            <ReasoningInline disabled={isBusy || !canEdit} />
+            <ReasoningInline disabled={uiBusy || !canEdit} />
             <button
               type="button"
               className="primary"
               onClick={handleAnalyze}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             >
               {state.currentTask === "company" ? "정리 중..." : "내용 정리"}
             </button>
@@ -338,7 +500,7 @@ export default function CompanyPage() {
               className="form-input"
               value={draft.companyName}
               onChange={(event) => syncDraft({ ...draft, companyName: event.target.value })}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -348,7 +510,7 @@ export default function CompanyPage() {
               className="form-input"
               value={draft.jobTitle}
               onChange={(event) => syncDraft({ ...draft, jobTitle: event.target.value })}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -359,7 +521,7 @@ export default function CompanyPage() {
               onChange={(event) =>
                 syncDraft({ ...draft, companyDescription: event.target.value })
               }
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -368,7 +530,7 @@ export default function CompanyPage() {
             <AutoGrowTextarea
               value={draft.jobDescription}
               onChange={(event) => syncDraft({ ...draft, jobDescription: event.target.value })}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -384,7 +546,7 @@ export default function CompanyPage() {
                 setRequirementsText(value);
                 syncDraft({ ...draft, requirements: parseCsv(value) });
               }}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -398,7 +560,7 @@ export default function CompanyPage() {
                 setPreferredSkillsText(value);
                 syncDraft({ ...draft, preferredSkills: parseCsv(value) });
               }}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
 
@@ -412,7 +574,7 @@ export default function CompanyPage() {
                 setTechStackText(value);
                 syncDraft({ ...draft, techStack: parseCsv(value) });
               }}
-              disabled={isBusy || !canEdit}
+              disabled={uiBusy || !canEdit}
             />
           </label>
         </div>
@@ -435,10 +597,11 @@ export default function CompanyPage() {
               className="primary"
               onClick={handleConfirmCompany}
               disabled={
-                isBusy ||
-                !canEdit ||
-                !state.companyJsonText.trim() ||
-                hasMissingCompanyRequired
+                  isBusy ||
+                  isUrlLoading ||
+                  !canEdit ||
+                  !state.companyJsonText.trim() ||
+                  hasMissingCompanyRequired
               }
             >
               공고 저장

@@ -696,6 +696,7 @@ textarea {
 textarea,
 input[type="file"],
 input[type="text"],
+input[type="url"],
 input[type="number"] {
   width: 100%;
   border: 1px solid var(--line);
@@ -711,6 +712,80 @@ textarea {
   min-height: 220px;
   resize: vertical;
   line-height: 1.45;
+}
+
+.url-fetch-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.url-fetch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-helper {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.url-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(44, 88, 221, 0.14);
+  background: linear-gradient(135deg, rgba(244, 248, 255, 0.94), rgba(255, 255, 255, 0.9));
+}
+
+.url-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.url-preview-head strong {
+  font-size: 0.88rem;
+}
+
+.url-preview-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.url-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.url-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 56, 102, 0.12);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.url-preview-chip span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.url-preview-chip strong {
+  font-weight: 700;
 }
 
 .form-grid {
@@ -1393,6 +1468,10 @@ textarea:focus-visible {
   .action-panel button,
   .action-panel .nav-btn {
     width: 100%;
+  }
+
+  .url-fetch-row {
+    grid-template-columns: 1fr;
   }
 
   .agent-config-field {

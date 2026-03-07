@@ -34,6 +34,7 @@ export interface PipelineState {
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
+  companyUrl: string;
   companyText: string;
   resumeJsonText: string;
   companyJsonText: string;
@@ -57,6 +58,7 @@ const initialState: PipelineState = {
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
+  companyUrl: "",
   companyText: "",
   resumeJsonText: "",
   companyJsonText: "",
@@ -109,6 +111,7 @@ function normalizeState(raw: unknown): PipelineState {
     ...initialState,
     ...value,
     agentSettings: normalizeAgentSettings(value.agentSettings),
+    companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
     intro: normalizeIntro(value.intro),
     previousIntro: normalizeIntro(value.previousIntro),
     logs: Array.isArray(value.logs)

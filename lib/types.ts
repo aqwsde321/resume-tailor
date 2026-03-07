@@ -1,5 +1,5 @@
 export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro";
-export type InputMode = "text" | "file";
+export type InputMode = "text" | "file" | "url";
 export type TaskKind = "resume" | "company" | "intro";
 export type LogLevel = "info" | "success" | "error";
 export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
