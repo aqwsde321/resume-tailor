@@ -15,7 +15,7 @@ import { parseListText, stringifyLineList } from "@/lib/list-input";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
 import { postSseJson } from "@/lib/stream-client";
-import type { Resume, ResumeExperienceItem, ResumeProjectItem } from "@/lib/types";
+import type { ApiFailure, ApiSuccess, Resume, ResumeExperienceItem, ResumeProjectItem } from "@/lib/types";
 
 const EMPTY_RESUME: Resume = {
   name: "",
@@ -70,6 +70,22 @@ function makeEmptyProject(): ResumeProjectItem {
 
 type ResumeRequiredFieldKey = "desiredPosition" | "techStack";
 
+interface ResumeUrlFetchData {
+  url: string;
+  title: string;
+  nameHint: string;
+  desiredPositionHint: string;
+  text: string;
+}
+
+interface UrlPreview {
+  title: string;
+  name: string;
+  desiredPosition: string;
+  sourceHost: string;
+  textLength: number;
+}
+
 export default function ResumePage() {
   const {
     state,
@@ -85,6 +101,9 @@ export default function ResumePage() {
 
   const isBusy = state.currentTask !== null;
   const isResumeWorking = state.currentTask === "resume";
+  const [isUrlLoading, setIsUrlLoading] = useState(false);
+  const [urlPreview, setUrlPreview] = useState<UrlPreview | null>(null);
+  const uiBusy = isBusy || isUrlLoading;
   const requiredFieldRefs = useRef<Partial<Record<ResumeRequiredFieldKey, HTMLElement | null>>>({});
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
@@ -145,6 +164,24 @@ export default function ResumePage() {
       resumeConfirmedJson: null,
       companyConfirmedJson: null,
       introSource: prev.introSource
+    }));
+  };
+
+  const setResumeUrl = (value: string) => {
+    patch((prev) => ({
+      ...prev,
+      resumeUrl: value
+    }));
+  };
+
+  const setResumeInputMode = (mode: "text" | "file" | "url") => {
+    if (mode !== "url") {
+      setUrlPreview(null);
+    }
+
+    patch((prev) => ({
+      ...prev,
+      resumeInputMode: mode
     }));
   };
 
@@ -213,8 +250,66 @@ export default function ResumePage() {
     }
 
     const text = await file.text();
+    setUrlPreview(null);
     setResumeText(text);
     setMessage("파일 내용을 입력칸에 넣었어요.");
+  };
+
+  const handleFetchUrl = async () => {
+    clearStatus();
+
+    if (!state.resumeUrl.trim()) {
+      setError("이력서 URL을 먼저 넣어 주세요.");
+      return;
+    }
+
+    setIsUrlLoading(true);
+    setUrlPreview(null);
+
+    try {
+      // URL에서 읽은 본문을 먼저 채워 두고, 기존 정리 단계를 그대로 재사용한다.
+      const response = await fetch("/api/resume/fetch-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          url: state.resumeUrl.trim()
+        })
+      });
+
+      const payload = (await response.json()) as ApiSuccess<ResumeUrlFetchData> | ApiFailure;
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.ok ? "이력서 URL을 불러오지 못했어요." : payload.error.message);
+      }
+
+      let sourceHost = payload.data.url;
+      try {
+        sourceHost = new URL(payload.data.url).hostname.replace(/^www\./, "");
+      } catch {
+        sourceHost = payload.data.url;
+      }
+
+      setResumeUrl(payload.data.url);
+      setResumeText(payload.data.text);
+      setUrlPreview({
+        title: payload.data.title || "이력서 페이지",
+        name: payload.data.nameHint,
+        desiredPosition: payload.data.desiredPositionHint,
+        sourceHost,
+        textLength: payload.data.text.length
+      });
+      setMessage(
+        payload.data.title
+          ? `${payload.data.title} 내용을 입력칸에 넣었어요. 필요하면 아래에서 정리해 주세요.`
+          : "URL에서 이력서 내용을 불러왔어요. 필요하면 아래에서 정리해 주세요."
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "이력서 URL을 불러오지 못했어요.");
+    } finally {
+      setIsUrlLoading(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -312,18 +407,26 @@ export default function ResumePage() {
           <button
             type="button"
             className={state.resumeInputMode === "text" ? "tab active" : "tab"}
-            onClick={() => patch((prev) => ({ ...prev, resumeInputMode: "text" }))}
-            disabled={isBusy}
+            onClick={() => setResumeInputMode("text")}
+            disabled={uiBusy}
           >
             붙여넣기
           </button>
           <button
             type="button"
             className={state.resumeInputMode === "file" ? "tab active" : "tab"}
-            onClick={() => patch((prev) => ({ ...prev, resumeInputMode: "file" }))}
-            disabled={isBusy}
+            onClick={() => setResumeInputMode("file")}
+            disabled={uiBusy}
           >
             파일 업로드
+          </button>
+          <button
+            type="button"
+            className={state.resumeInputMode === "url" ? "tab active" : "tab"}
+            onClick={() => setResumeInputMode("url")}
+            disabled={uiBusy}
+          >
+            URL 불러오기
           </button>
         </div>
 
@@ -332,15 +435,64 @@ export default function ResumePage() {
             type="file"
             accept=".txt,text/plain"
             onChange={(event) => void handleTxtUpload(event.target.files?.[0])}
-            disabled={isBusy}
+            disabled={uiBusy}
           />
+        )}
+
+        {state.resumeInputMode === "url" && (
+          <div className="url-fetch-panel">
+            <div className="url-fetch-row">
+              <input
+                type="url"
+                value={state.resumeUrl}
+                onChange={(event) => {
+                  setUrlPreview(null);
+                  setResumeUrl(event.target.value);
+                }}
+                placeholder="https://노션-이력서-또는-포트폴리오-주소"
+                disabled={uiBusy}
+              />
+              <button type="button" className="secondary" onClick={() => void handleFetchUrl()} disabled={uiBusy}>
+                {isUrlLoading ? "불러오는 중..." : "URL 불러오기"}
+              </button>
+            </div>
+            {urlPreview && (
+              <div className="url-preview" aria-live="polite">
+                <div className="url-preview-head">
+                  <strong>읽어온 정보</strong>
+                  <div className="url-preview-badges">
+                    <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
+                  </div>
+                </div>
+                <p className="url-preview-title">{urlPreview.title}</p>
+                <div className="url-preview-meta">
+                  <span className="url-preview-chip">
+                    <span>이름</span>
+                    <strong>{urlPreview.name || "확인 필요"}</strong>
+                  </span>
+                  <span className="url-preview-chip">
+                    <span>직무</span>
+                    <strong>{urlPreview.desiredPosition || "확인 필요"}</strong>
+                  </span>
+                  <span className="url-preview-chip">
+                    <span>출처</span>
+                    <strong>{urlPreview.sourceHost}</strong>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <textarea
           value={state.resumeText}
           onChange={(event) => setResumeText(event.target.value)}
-          placeholder="이력서 내용을 붙여넣어 주세요."
-          disabled={isBusy}
+          placeholder={
+            state.resumeInputMode === "url"
+              ? "URL에서 불러온 이력서 내용이 여기에 채워집니다."
+              : "이력서 내용을 붙여넣어 주세요."
+          }
+          disabled={uiBusy}
         />
 
         <div className="action-panel">
@@ -348,8 +500,8 @@ export default function ResumePage() {
             <strong>초안 만들기</strong>
           </div>
           <div className="action-controls">
-            <ReasoningInline disabled={isBusy} />
-            <button type="button" className="primary" onClick={handleAnalyze} disabled={isBusy}>
+            <ReasoningInline disabled={uiBusy} />
+            <button type="button" className="primary" onClick={handleAnalyze} disabled={uiBusy}>
               {state.currentTask === "resume" ? "정리 중..." : "내용 정리"}
             </button>
           </div>
@@ -383,7 +535,7 @@ export default function ResumePage() {
               className="form-input"
               value={draft.desiredPosition}
               onChange={(event) => syncDraft({ ...draft, desiredPosition: event.target.value })}
-              disabled={isBusy}
+              disabled={uiBusy}
             />
           </label>
 
@@ -402,7 +554,7 @@ export default function ResumePage() {
                     : Math.max(0, Number(event.target.value))
                 })
               }
-              disabled={isBusy}
+              disabled={uiBusy}
             />
           </label>
 
@@ -411,7 +563,7 @@ export default function ResumePage() {
             <AutoGrowTextarea
               value={draft.summary}
               onChange={(event) => syncDraft({ ...draft, summary: event.target.value })}
-              disabled={isBusy}
+              disabled={uiBusy}
             />
           </label>
 
@@ -427,7 +579,7 @@ export default function ResumePage() {
               values={draft.techStack}
               onChange={(values) => syncDraft({ ...draft, techStack: values })}
               placeholder="입력 후 Enter로 추가"
-              disabled={isBusy}
+              disabled={uiBusy}
             />
           </div>
 
@@ -442,7 +594,7 @@ export default function ResumePage() {
                 syncDraft({ ...draft, achievements: parseListText(value) });
               }}
               placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 결제 전환율 18% 개선"}
-              disabled={isBusy}
+              disabled={uiBusy}
             />
             <ListPreview items={draft.achievements} label="지금 들어간 성과" />
           </label>
@@ -458,7 +610,7 @@ export default function ResumePage() {
                 syncDraft({ ...draft, strengths: parseListText(value) });
               }}
               placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 복잡한 요구사항을 구조화해 정리하는 편"}
-              disabled={isBusy}
+              disabled={uiBusy}
             />
             <ListPreview items={draft.strengths} label="지금 들어간 강점" />
           </label>
@@ -471,7 +623,7 @@ export default function ResumePage() {
               type="button"
               className="secondary"
               onClick={() => syncDraft({ ...draft, experience: [...draft.experience, makeEmptyExperience()] })}
-              disabled={isBusy}
+              disabled={uiBusy}
             >
               추가
             </button>
@@ -492,7 +644,7 @@ export default function ResumePage() {
                       experience: draft.experience.filter((_, itemIndex) => itemIndex !== index)
                     })
                   }
-                  disabled={isBusy}
+                  disabled={uiBusy}
                 >
                   삭제
                 </button>
@@ -505,7 +657,7 @@ export default function ResumePage() {
                     className="form-input"
                     value={item.company}
                     onChange={(event) => updateExperience(index, "company", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
                 <label className="field">
@@ -514,7 +666,7 @@ export default function ResumePage() {
                     className="form-input"
                     value={item.role}
                     onChange={(event) => updateExperience(index, "role", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
                 <label className="field field-full">
@@ -523,7 +675,7 @@ export default function ResumePage() {
                     className="form-input"
                     value={item.period}
                     onChange={(event) => updateExperience(index, "period", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
                 <label className="field field-full">
@@ -531,7 +683,7 @@ export default function ResumePage() {
                   <AutoGrowTextarea
                     value={item.description}
                     onChange={(event) => updateExperience(index, "description", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
               </div>
@@ -546,7 +698,7 @@ export default function ResumePage() {
               type="button"
               className="secondary"
               onClick={() => syncDraft({ ...draft, projects: [...draft.projects, makeEmptyProject()] })}
-              disabled={isBusy}
+              disabled={uiBusy}
             >
               추가
             </button>
@@ -567,7 +719,7 @@ export default function ResumePage() {
                       projects: draft.projects.filter((_, itemIndex) => itemIndex !== index)
                     })
                   }
-                  disabled={isBusy}
+                  disabled={uiBusy}
                 >
                   삭제
                 </button>
@@ -580,7 +732,7 @@ export default function ResumePage() {
                     className="form-input"
                     value={item.name}
                     onChange={(event) => updateProject(index, "name", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
                 <label className="field field-full project-description-field">
@@ -589,7 +741,7 @@ export default function ResumePage() {
                     className="project-description-textarea"
                     value={item.description}
                     onChange={(event) => updateProject(index, "description", event.target.value)}
-                    disabled={isBusy}
+                    disabled={uiBusy}
                   />
                 </label>
                 <div className="project-stack-panel field-full">
@@ -600,7 +752,7 @@ export default function ResumePage() {
                       values={item.techStack}
                       onChange={(values) => updateProjectTechStack(index, values)}
                       placeholder="입력 후 Enter로 추가"
-                      disabled={isBusy}
+                      disabled={uiBusy}
                     />
                   </div>
                 </div>
@@ -623,7 +775,7 @@ export default function ResumePage() {
                       type="button"
                       className="action-note-link"
                       onClick={() => focusRequiredField(item.key)}
-                      disabled={isBusy}
+                      disabled={uiBusy}
                     >
                       {item.label}
                     </button>
@@ -637,7 +789,7 @@ export default function ResumePage() {
               type="button"
               className="primary"
               onClick={handleConfirmResume}
-              disabled={isBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
+              disabled={uiBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
             >
               이력서 저장
             </button>

@@ -8,10 +8,12 @@
 ### Added
 
 - GitHub Actions Docker publish 워크플로 추가: `main` push 시 검증 후 Docker Hub에 이미지 업로드
+- 이력서 URL 불러오기 지원: `/resume`에서 노션, GitHub Pages 같은 공개 이력서/포트폴리오 URL 본문을 읽어 textarea에 채우는 흐름 추가
 
 ### Changed
 
 - `docker-compose.yml` 기본 실행 방식을 로컬 build에서 Docker Hub 공개 이미지 pull 기반으로 변경
+- 결과 비교 UI를 문장 단위 하이라이트와 추가/삭제/유지 요약 배지 중심으로 재구성
 - Docker 실행 안내를 `docker pull`/`docker run`, 저장소 clone 후 `docker compose`, 로컬 개발 실행 세 경로로 재정리
 - `README`에 Docker 직접 실행과 `docker compose` 실행 각각의 종료 절차와 volume 정리 절차를 추가
 - `README`의 Docker 직접 실행 예시에서 `종료(stop)`와 `삭제(rm)` 의미를 분리해 명령 설명을 더 정확하게 정리

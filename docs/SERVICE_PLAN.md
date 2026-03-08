@@ -21,7 +21,7 @@
 - 소규모 지인 사용자(인증/DB 없이 로컬 실행 가능한 환경)
 
 대표 시나리오:
-1. 사용자가 `/resume`에서 이력서를 입력/업로드하고 `resume.json`을 확정한다.
+1. 사용자가 `/resume`에서 이력서를 입력하거나 `txt`, URL로 불러온 뒤 `resume.json`을 확정한다.
 2. 사용자가 `/company`에서 채용공고를 입력/업로드하고 `company.json`을 확정한다.
 3. 사용자가 `/result`에서 자기소개를 생성한다.
 4. 이후 채용공고만 바꾸는 경우 `/company`만 다시 확정 후 `/result` 재생성한다.
@@ -32,8 +32,9 @@
 MVP 포함:
 - 페이지 분리 3단계 플로우(`/resume` -> `/company` -> `/result`)
 - JSON 확정 상태 관리(`resumeConfirmedJson`, `companyConfirmedJson`)
-- API 7개(일반 4개 + SSE 스트림 3개)
+- API 8개(일반 5개 + SSE 스트림 3개)
 - txt 업로드 -> textarea 반영
+- 이력서 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
 - 공고 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
 - 작업 중 상태 표시(스피너/경과시간)
 - AI 분석 로그 실시간 표시(SSE)
@@ -56,7 +57,7 @@ MVP 제외(후순위):
 ## 4. 기능 요구사항
 
 STEP 1 `/resume`:
-- 이력서: textarea / txt 업로드 탭 전환
+- 이력서: textarea / txt 업로드 / URL 불러오기 탭 전환
 - 구조화 결과 생성
 - 한글 폼 기반 인라인 수정
 - 필수 항목(`희망 직무`, `기술 스택`) 강조 표시
@@ -130,6 +131,13 @@ STEP 3 `/result`:
 4. `generate-intro`가 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant` 생성
 5. 결과를 후처리해 실제 근거 범위 안으로 다시 정규화
 
+이력서 URL 보조 흐름:
+1. `/resume`에서 URL 입력
+2. `POST /api/resume/fetch-url`
+3. 서버가 정적 HTML, 공개 포트폴리오 레이아웃, 브라우저 렌더링 결과를 기준으로 본문 추출
+4. 추출된 텍스트를 textarea에 채움
+5. 이후 `POST /api/resume` 또는 `/api/resume/stream`으로 동일 분석 플로우 진행
+
 공고 URL 보조 흐름:
 1. `/company`에서 URL 입력
 2. `POST /api/company/fetch-url`
@@ -141,6 +149,7 @@ STEP 3 `/result`:
 
 일반 API:
 - `POST /api/resume` -> `Resume`
+- `POST /api/resume/fetch-url` -> `FetchedResumePage`
 - `POST /api/company` -> `Company`
 - `POST /api/company/fetch-url` -> `FetchedCompanyPage`
 - `POST /api/intro` -> `Intro`

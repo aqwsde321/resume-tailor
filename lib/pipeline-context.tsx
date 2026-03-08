@@ -43,6 +43,7 @@ export interface PipelineState {
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
+  resumeUrl: string;
   companyUrl: string;
   companyText: string;
   resumeJsonText: string;
@@ -71,6 +72,7 @@ const initialState: PipelineState = {
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
+  resumeUrl: "",
   companyUrl: "",
   companyText: "",
   resumeJsonText: "",
@@ -130,6 +132,7 @@ function normalizeState(raw: unknown): PipelineState {
     ...value,
     agentSettings: normalizeAgentSettings(value.agentSettings),
     introTone: isIntroTone(value.introTone) ? value.introTone : "balanced",
+    resumeUrl: typeof value.resumeUrl === "string" ? value.resumeUrl : "",
     companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
     resumeSavedAt: typeof value.resumeSavedAt === "string" ? value.resumeSavedAt : null,
     companySavedAt: typeof value.companySavedAt === "string" ? value.companySavedAt : null,

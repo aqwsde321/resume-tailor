@@ -61,14 +61,14 @@ resume-tailor/
 `app/`은 사용자 진입점과 HTTP API를 포함합니다.
 
 - `app/resume/page.tsx`
-  - 이력서 입력, 분석, 폼 수정, 확정
+  - 이력서 입력, URL 불러오기, 분석, 폼 수정, 확정
 - `app/company/page.tsx`
   - 채용공고 입력, URL 불러오기, 분석, 폼 수정, 확정
 - `app/result/page.tsx`
   - 자기소개 생성, 비교, 복사, 재생성
   - `공고와 연결한 내 경험`, `더 살릴 수 있는 점` 같은 결과 근거 섹션 표시
 - `app/api/resume/*`
-  - 이력서 구조화 API와 스트림 API
+  - 이력서 구조화 API, URL 불러오기 API, 스트림 API
 - `app/api/company/*`
   - 공고 구조화 API, URL 불러오기 API, 스트림 API
 - `app/api/intro/*`

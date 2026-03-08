@@ -15,6 +15,7 @@ const baseState: PipelineState = {
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
+  resumeUrl: "",
   companyUrl: "",
   companyText: "",
   resumeJsonText: "",
