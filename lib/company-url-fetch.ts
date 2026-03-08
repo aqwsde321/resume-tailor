@@ -837,6 +837,7 @@ function stripHtmlTags(value: string): string {
 function normalizeTitleSegment(value: string): string {
   return normalizeLine(stripHtmlTags(value))
     .replace(/\b(hiring|recruiting)\b/gi, "")
+    .replace(/\s*\(D-\d+\)\s*$/gi, "")
     .replace(/\s*채용\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -868,30 +869,117 @@ function getSelectors(hostname: string): string[] {
 function looksLikeJobTitle(value: string): boolean {
   const lowered = value.toLowerCase();
 
-  return /engineer|developer|designer|manager|analyst|scientist|intern|backend|frontend|fullstack|product|mobile|data|ai/.test(
+  return /engineer|developer|designer|manager|analyst|scientist|intern|backend|frontend|fullstack|mobile|data|ai|software|devops|qa|pm/.test(
     lowered
-  ) || /개발자|엔지니어|디자이너|매니저|분석가|인턴|백엔드|프론트엔드|풀스택|프로덕트|모바일|데이터|채용/.test(value);
+  ) || /개발자|개발|엔지니어|디자이너|매니저|분석가|인턴|백엔드|프론트엔드|풀스택|모바일|데이터|담당|사원|연구원/.test(value);
 }
 
 function hostnameToLabel(hostname: string): string {
   return hostname.replace(/^www\./, "").split(".").slice(0, 2).join(".");
 }
 
-function guessHints(title: string, siteName: string, hostname: string) {
-  const segments = title
-    .split(/\s*[|·\-–:]\s*/g)
+function splitTitleSegments(title: string): string[] {
+  return title
+    .split(/\s*\|\s*|\s*·\s*|\s*–\s*|\s*:\s*|\s+-\s+/g)
     .map((segment) => normalizeTitleSegment(segment))
+    .filter(Boolean);
+}
+
+function normalizeHintToken(value: string): string {
+  return normalizeTitleSegment(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, "");
+}
+
+function isGenericSiteName(value: string, hostname: string): boolean {
+  const normalized = normalizeHintToken(value);
+  if (!normalized) {
+    return false;
+  }
+
+  return new Set([
+    normalizeHintToken(hostnameToLabel(hostname)),
+    "사람인",
+    "잡코리아",
+    "원티드",
+    "점핏",
+    "saramin",
+    "jobkorea",
+    "wanted",
+    "jumpit",
+    "greenhouse",
+    "lever",
+    "workable"
+  ]).has(normalized);
+}
+
+function extractCompanyPrefixFromSegment(segment: string): string {
+  const normalized = normalizeTitleSegment(segment);
+  const match = normalized.match(/^\[([^\]]+)\]\s*(.+)$/);
+  if (!match) {
+    return "";
+  }
+
+  const [, prefix, rest] = match;
+  if (looksLikeJobTitle(prefix) || !looksLikeJobTitle(rest)) {
+    return "";
+  }
+
+  return normalizeTitleSegment(prefix);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripCompanyPrefixFromTitle(segment: string, companyCandidates: string[]): string {
+  let cleaned = normalizeTitleSegment(segment);
+
+  const normalizedCandidates = [...new Set(companyCandidates.map((candidate) => normalizeTitleSegment(candidate)).filter(Boolean))]
+    .sort((left, right) => right.length - left.length);
+
+  for (const candidate of normalizedCandidates) {
+    const escaped = escapeRegExp(candidate);
+    cleaned = cleaned
+      .replace(new RegExp(`^\\[${escaped}\\]\\s*`, "i"), "")
+      .replace(new RegExp(`^${escaped}\\s*채용\\s*[-:：]?\\s*`, "i"), "")
+      .replace(new RegExp(`^${escaped}\\s*[-:：]\\s*`, "i"), "")
+      .replace(new RegExp(`^${escaped}\\s+`, "i"), "")
+      .trim();
+  }
+
+  return normalizeTitleSegment(cleaned);
+}
+
+function guessHints(title: string, siteName: string, hostname: string) {
+  const normalizedTitle = normalizeTitleSegment(title);
+  const normalizedSiteName = normalizeTitleSegment(siteName);
+  const segments = splitTitleSegments(title);
+  const companyFromBracket = segments.map((segment) => extractCompanyPrefixFromSegment(segment)).find(Boolean) || "";
+  const companyFromSeparatedSegment =
+    segments.find((segment, index) => {
+      if (looksLikeJobTitle(segment) || isGenericSiteName(segment, hostname)) {
+        return false;
+      }
+
+      return segments
+        .slice(index + 1)
+        .map((nextSegment) => stripCompanyPrefixFromTitle(nextSegment, [segment]))
+        .some((nextSegment) => looksLikeJobTitle(nextSegment));
+    }) || "";
+  const companyNameHint =
+    companyFromSeparatedSegment ||
+    (isGenericSiteName(normalizedSiteName, hostname) ? "" : normalizedSiteName) ||
+    companyFromBracket ||
+    hostnameToLabel(hostname);
+  const cleanedSegments = segments
+    .map((segment) => stripCompanyPrefixFromTitle(segment, [companyNameHint]))
     .filter(Boolean);
 
   const jobTitleHint =
-    segments.find((segment) => looksLikeJobTitle(segment)) ||
-    normalizeTitleSegment(title).replace(/\s+채용$/, "") ||
+    cleanedSegments.find((segment) => looksLikeJobTitle(segment)) ||
+    stripCompanyPrefixFromTitle(normalizedTitle, [companyNameHint]) ||
     "공고 포지션";
-
-  const companyNameHint =
-    segments.find((segment) => segment !== jobTitleHint && !looksLikeJobTitle(segment)) ||
-    normalizeTitleSegment(siteName) ||
-    hostnameToLabel(hostname);
 
   return {
     jobTitleHint,

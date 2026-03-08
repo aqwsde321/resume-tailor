@@ -111,6 +111,110 @@ describe("POST /api/company/fetch-url", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
+  it("제목 앞의 회사 prefix와 마감 표기를 분리해 힌트를 잡는다", async () => {
+    const html = `
+      <html>
+        <head>
+          <meta property="og:site_name" content="사람인" />
+          <meta property="og:title" content="[인스피언(주)] [청년디지털일자리]2026년 상반기 Java개발 신입/경력 사원(D-9) - 사람인" />
+          <title>[인스피언(주)] [청년디지털일자리]2026년 상반기 Java개발 신입/경력 사원(D-9) - 사람인</title>
+        </head>
+        <body>
+          <main>
+            <section>
+              <h2>주요 업무</h2>
+              <p>Java 기반 연계 서비스를 개발합니다.</p>
+            </section>
+            <section>
+              <h2>자격 요건</h2>
+              <p>Spring 경험, 협업 경험, 문제 해결 역량</p>
+            </section>
+          </main>
+        </body>
+      </html>
+    `;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(html, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        })
+      )
+    );
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://jobs.example.com/java-backend"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("인스피언(주)");
+    expect(body.data.jobTitleHint).toBe("[청년디지털일자리]2026년 상반기 Java개발 신입/경력 사원");
+  });
+
+  it("회사명 채용 - 포지션 형식 제목도 회사와 포지션을 분리한다", async () => {
+    const html = `
+      <html>
+        <head>
+          <meta property="og:site_name" content="잡코리아" />
+          <meta property="og:title" content="Product Metrics 채용 - Frontend Engineer | 잡코리아" />
+          <title>Product Metrics 채용 - Frontend Engineer | 잡코리아</title>
+        </head>
+        <body>
+          <main>
+            <section>
+              <h2>주요 업무</h2>
+              <p>대시보드 성능을 개선하고 실험 화면을 개발합니다.</p>
+            </section>
+            <section>
+              <h2>자격 요건</h2>
+              <p>TypeScript 경험, 협업 경험</p>
+            </section>
+          </main>
+        </body>
+      </html>
+    `;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(html, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        })
+      )
+    );
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://jobs.example.com/frontend-metrics"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyNameHint).toBe("Product Metrics");
+    expect(body.data.jobTitleHint).toBe("Frontend Engineer");
+  });
+
   it("숨겨진 JSON 데이터가 있으면 브라우저 없이 공고 본문을 추출한다", async () => {
     const html = `
       <html>
