@@ -160,6 +160,7 @@ function cleanupTechStack(items: string[]) {
 }
 
 export function normalizeCompany(company: Company): Company {
+  // 모델 출력에는 필수/우대/복지 문장이 섞여 들어오기 쉬워 저장 전에 한 번 더 정리한다.
   const rawRequirements = splitSentenceChunks(company.requirements);
   const rawPreferred = splitSentenceChunks(company.preferredSkills);
   const nextRequirements: string[] = [];
@@ -200,6 +201,7 @@ export function normalizeCompany(company: Company): Company {
     jobDescription: normalizeDescription(company.jobDescription),
     requirements: dedupe(nextRequirements).filter(Boolean),
     preferredSkills: dedupe(nextPreferred).filter(Boolean),
+    // 기술 스택은 문장형 설명보다 짧은 키워드만 남기도록 별도 정리한다.
     techStack: cleanupTechStack(company.techStack)
   };
 }

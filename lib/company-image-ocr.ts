@@ -18,6 +18,7 @@ export interface CompanyImageOcrInput {
   sourceUrl?: string;
 }
 
+// Docker/Linux에서는 macOS Vision을 쓸 수 없으므로 tesseract 바이너리를 직접 찾는다.
 function getTesseractBinaryPath() {
   if (process.platform !== "linux") {
     return null;
@@ -40,6 +41,7 @@ export function isImageOcrAvailable() {
   return process.platform === "darwin" || getTesseractBinaryPath() !== null;
 }
 
+// OCR 도구는 파일 경로를 기대하므로 메모리 버퍼를 임시 이미지 파일로 내려서 전달한다.
 async function writeTempImages(tempDir: string, images: CompanyImageOcrInput[]) {
   return Promise.all(
     images.map(async (image, index) => {
@@ -66,6 +68,7 @@ async function extractTextWithVision(imagePaths: string[]) {
     .filter(Boolean);
 }
 
+// 이미지별 OCR 실패를 허용해 일부 이미지가 깨져도 다른 이미지 텍스트는 최대한 살린다.
 async function extractTextWithTesseract(imagePaths: string[], tesseractBinaryPath: string) {
   const outputs = await Promise.all(
     imagePaths.map(async (imagePath) => {
@@ -156,6 +159,7 @@ export async function extractTextFromImages(
   try {
     const imagePaths = await writeTempImages(tempDir, images);
 
+    // 로컬 macOS는 Vision OCR, Docker/Linux는 Tesseract로 같은 인터페이스를 유지한다.
     if (process.platform === "darwin") {
       return await extractTextWithVision(imagePaths);
     }

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    # Docker 이미지에 영향 있는 파일이 바뀔 때만 실행한다.
+    # 문서-only 변경은 새 run을 만들지 않으므로, 진행 중인 기존 run도 그대로 유지된다.
     paths:
       - "app/**"
       - "lib/**"
@@ -20,9 +22,11 @@ on:
       - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/docker-publish.yml"
-  workflow_dispatch:
+workflow_dispatch:
 
 concurrency:
+  # 같은 브랜치에서 이 워크플로의 새 run이 시작되면 이전 run을 취소한다.
+  # 새 run이 생기지 않는 문서-only push는 기존 run을 취소하지 않는다.
   group: docker-publish-${{ github.ref }}
   cancel-in-progress: true
 
@@ -49,6 +53,8 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
+            # verify는 테스트/설정 변경도 포함해 넓게 잡고,
+            # publish는 실제 이미지 결과물이 달라지는 변경만 포함한다.
             verify:
               - "app/**"
               - "lib/**"

@@ -94,6 +94,7 @@ export default function ResumePage() {
   const resumeNeedsConfirm =
     state.resumeJsonText.trim().length > 0 && state.resumeConfirmedJson !== normalizedDraftJson;
 
+  // 저장 직전 실패하면 첫 번째 누락 필드로 이동시켜 사용자가 바로 보완할 수 있게 한다.
   const focusRequiredField = (key: ResumeRequiredFieldKey) => {
     const root = requiredFieldRefs.current[key];
     if (!root) {
@@ -130,6 +131,7 @@ export default function ResumePage() {
 
   const hasMissingResumeRequired = missingResumeRequired.length > 0;
   useEffect(() => {
+    // 스트림 결과나 저장된 JSON이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toResumeDraft(state.resumeJsonText);
     setDraft(next);
     setAchievementsText(stringifyLineList(next.achievements));
@@ -283,6 +285,7 @@ export default function ResumePage() {
         resumeJsonText: normalized,
         resumeConfirmedJson: normalized,
         resumeSavedAt: savedAt,
+        // 이력서가 바뀌면 공고 확인본과 소개글 최신성 판단도 다시 맞춰야 한다.
         companyConfirmedJson: resumeChanged ? null : prev.companyConfirmedJson,
         introSource: prev.introSource
       };

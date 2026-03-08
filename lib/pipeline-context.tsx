@@ -124,6 +124,7 @@ function normalizeState(raw: unknown): PipelineState {
 
   const value = raw as Partial<PipelineState>;
 
+  // 저장 포맷이 일부 달라졌거나 손상돼도 화면이 깨지지 않도록 안전한 기본값으로 복원한다.
   return {
     ...initialState,
     ...value,
@@ -165,6 +166,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      // 현재 키를 우선 읽고, 예전 앱 이름으로 저장된 데이터는 한 번만 마이그레이션한다.
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
         setState(normalizeState(JSON.parse(stored)));
@@ -187,6 +189,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // 초기 hydration 전에 덮어쓰지 않도록, 브라우저 상태를 읽은 뒤부터만 저장한다.
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [hydrated, state]);
 
@@ -296,6 +299,7 @@ export function isIntroFresh(state: PipelineState): boolean {
     return false;
   }
 
+  // 소개글 생성 시점의 저장본 스냅샷과 현재 저장본이 같을 때만 최신으로 본다.
   return (
     state.introSource.resumeConfirmedJson === state.resumeConfirmedJson &&
     state.introSource.companyConfirmedJson === state.companyConfirmedJson

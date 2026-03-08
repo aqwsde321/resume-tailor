@@ -401,6 +401,7 @@ async function extractImageOcrCandidateFromHtml(
   imageHeaders: ImageFetchHeaders,
   scoreBoost: number
 ): Promise<ImageOcrAttemptResult> {
+  // HTML 본문이 약할 때만 이미지 OCR을 보조 후보로 붙인다.
   const imageUrls = collectImageUrlsFromHtml(html, baseUrl, selectors);
   if (imageUrls.length === 0) {
     return NO_IMAGE_OCR_ATTEMPT;
@@ -458,6 +459,7 @@ async function fetchSaraminRelayCandidate(
   pageUrl: URL,
   cookieHeader: string
 ): Promise<CandidateWithImageOcrResult> {
+  // 사람인 relay는 요약 ajax 응답과 iframe 상세를 합쳐야 실제 공고 본문에 가깝다.
   const recIdx = pageUrl.searchParams.get("rec_idx")?.trim();
   if (!recIdx) {
     return {
@@ -804,6 +806,7 @@ function assertAllowedUrl(rawUrl: string): URL {
   }
 
   const hostname = parsed.hostname.toLowerCase();
+  // 서버가 내부망 자원을 읽는 SSRF 경로를 막기 위해 로컬/사설 주소는 차단한다.
   if (
     BLOCKED_HOSTNAMES.has(hostname) ||
     hostname.endsWith(".local") ||
@@ -908,6 +911,7 @@ function scoreTextQuality(text: string, title: string): number {
   let score = Math.min(text.length, 7000);
   const signalCount = countJobSignals(text);
 
+  // 길이만으로 고르지 않고 채용 공고다운 신호어와 제목 품질을 함께 반영한다.
   score += signalCount * 180;
 
   if (looksLikeJobTitle(title)) {
@@ -1182,6 +1186,7 @@ function collectEmbeddedCandidates(root: unknown): ExtractedCandidate[] {
   const visited = new WeakSet<object>();
   let visitCount = 0;
 
+  // 상태 객체를 넓게 훑되 순회 상한을 둬 큰 payload에서도 안전하게 멈춘다.
   const visit = (value: unknown, depth: number) => {
     if (!value || typeof value !== "object" || depth > 8 || visitCount > 4000) {
       return;
@@ -1364,6 +1369,7 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
     await page.waitForTimeout(1200);
     await page.waitForLoadState("networkidle", { timeout: 2500 }).catch(() => {});
 
+    // SPA 공고는 렌더링된 DOM, 내부 JSON 응답, 이미지 OCR 후보를 함께 비교해 가장 강한 후보를 고른다.
     const resolvedUrl = new URL(page.url());
     const renderedHtml = await page.content();
     const htmlCandidate = extractTextFromHtml(renderedHtml, resolvedUrl, "browser");
@@ -1472,6 +1478,7 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
     const resolved = new URL(resolvedUrl);
     const cookieHeader = extractCookieHeader(response.headers);
 
+    // 특화 도메인 우선 처리 후, 임베디드 JSON/HTML/브라우저 fallback 순서로 후보를 좁힌다.
     if (contentType.includes("text/plain")) {
       const plainTitle = normalizeLine(url.hostname);
       const hints = guessHints(plainTitle, plainTitle, url.hostname);

@@ -45,6 +45,7 @@ export async function POST(request: Request) {
           body.company
         );
 
+        // 소개글 본문과 보조 근거 필드를 함께 정리한 뒤 한 번에 내려 보낸다.
         send("result", {
           data: validated
         });

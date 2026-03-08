@@ -4,6 +4,7 @@ interface PostSseJsonOptions {
   onLog?: (payload: StreamLogPayload) => void;
 }
 
+// SSE는 data: 라인이 여러 줄로 올 수 있어, 한 레코드 안의 data 라인을 다시 합쳐서 파싱한다.
 function parseSseRecord(raw: string): { event: string; payload: unknown } | null {
   const lines = raw
     .split("\n")
@@ -125,6 +126,7 @@ export async function postSseJson<T>(
     const { done, value } = await reader.read();
     buffer += decoder.decode(value, { stream: !done });
 
+    // 네트워크 청크 경계와 SSE 레코드 경계가 다를 수 있어, 완전한 레코드만 잘라 처리한다.
     let boundary = buffer.indexOf("\n\n");
     while (boundary >= 0) {
       const chunk = buffer.slice(0, boundary).replace(/\r/g, "");
@@ -143,6 +145,7 @@ export async function postSseJson<T>(
             if (record.payload && typeof record.payload === "object") {
               const payload = record.payload as { data?: T };
               if (payload.data !== undefined) {
+                // 중간 로그가 더 오더라도 최종 result 이벤트의 데이터를 반환값으로 유지한다.
                 result = payload.data;
               }
             }

@@ -97,6 +97,7 @@ export default function CompanyPage() {
   const companyNeedsConfirm =
     state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
 
+  // 저장 직전 실패하면 첫 번째 누락 필드로 이동시켜 사용자가 바로 수정할 수 있게 한다.
   const focusRequiredField = (key: CompanyRequiredFieldKey) => {
     const root = requiredFieldRefs.current[key];
     if (!root) {
@@ -136,6 +137,7 @@ export default function CompanyPage() {
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
   useEffect(() => {
+    // 스트림 결과나 외부 저장값이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toCompanyDraft(state.companyJsonText);
     setDraft(next);
     setRequirementsText(stringifyLineList(next.requirements));
@@ -261,6 +263,7 @@ export default function CompanyPage() {
     setUrlPreview(null);
 
     try {
+      // URL에서 읽은 원문과 힌트를 먼저 채워 두고, 사용자가 아래 편집 폼에서 바로 다듬게 한다.
       const response = await fetch("/api/company/fetch-url", {
         method: "POST",
         headers: {
@@ -324,6 +327,7 @@ export default function CompanyPage() {
       return;
     }
 
+    // 다음 단계에는 스키마 검증을 통과한 정규화 JSON만 넘긴다.
     const normalized = JSON.stringify(validated.data, null, 2);
     const savedAt = new Date().toISOString();
 

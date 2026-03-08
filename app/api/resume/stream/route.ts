@@ -31,6 +31,7 @@ export async function POST(request: Request) {
 
         const validated = parseTaskResult("이력서", ResumeSchema, generated);
 
+        // 클라이언트는 result 이벤트를 실제 데이터로 쓰고, done은 진행 상태 마무리에만 사용한다.
         send("result", {
           data: validated
         });

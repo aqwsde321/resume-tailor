@@ -20,6 +20,7 @@ export function parseTaskResult<T>(
   generated: unknown
 ): T {
   const normalized = ensureTaskResult(taskLabel, generated);
+  // 모델 응답은 믿지 않고, 각 단계별 스키마로 다시 검증한 뒤에만 다음 화면으로 넘긴다.
   const parsed = schema.safeParse(normalized);
 
   if (parsed.success) {

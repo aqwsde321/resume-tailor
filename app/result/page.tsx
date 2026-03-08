@@ -120,6 +120,7 @@ export default function ResultPage() {
     state.companySavedAt ? `공고 저장 ${formatSavedAt(state.companySavedAt)}` : null,
     state.introSavedAt ? `소개글 생성 ${formatSavedAt(state.introSavedAt)}` : null
   ].filter((item): item is string => Boolean(item));
+  // 소개글 생성은 저장 완료된 스냅샷만 기준으로 삼아, 편집 중 draft가 섞이지 않게 한다.
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
       return null;
@@ -288,6 +289,7 @@ export default function ResultPage() {
     startTask("intro", "소개글을 만들고 있어요.");
 
     try {
+      // 생성은 항상 현재 화면 draft가 아니라 "저장된 이력서/공고" 조합으로만 다시 돌린다.
       const intro = await postSseJson<Intro>(
           "/api/intro/stream",
           {
@@ -303,6 +305,7 @@ export default function ResultPage() {
 
       patch((prev) => ({
         ...prev,
+        // 비교 패널에서 직전 결과를 보여줄 수 있도록 생성 전 결과를 따로 보관한다.
         previousIntro: prev.intro,
         intro,
         introSavedAt: new Date().toISOString(),

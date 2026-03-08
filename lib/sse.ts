@@ -13,6 +13,7 @@ export function createSseResponse(run: (send: SseSend) => Promise<void>): Respon
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send: SseSend = (event, data) => {
+        // SSE는 "event + data + 빈 줄" 형식으로 보내야 클라이언트가 한 레코드로 읽는다.
         const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(payload));
       };

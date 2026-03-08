@@ -32,6 +32,7 @@ export async function POST(request: Request) {
 
         const validated = normalizeCompany(parseTaskResult("공고", CompanySchema, generated));
 
+        // 공고는 저장 전 한 번 더 정규화해 필수/우대/기술 스택을 안정적으로 맞춘다.
         send("result", {
           data: validated
         });

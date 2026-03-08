@@ -38,6 +38,7 @@ function startThread(options?: AgentRunOptions) {
 
 let serialQueue: Promise<void> = Promise.resolve();
 
+// 한 번에 여러 Codex 실행이 겹치면 로그/응답 추적이 꼬일 수 있어 요청을 직렬화한다.
 function enqueue<T>(job: () => Promise<T>): Promise<T> {
   const run = serialQueue.then(job, job);
   serialQueue = run.then(
@@ -47,6 +48,7 @@ function enqueue<T>(job: () => Promise<T>): Promise<T> {
   return run;
 }
 
+// SKILL.md의 파일 입출력 규칙을 실제 파일 대신 프롬프트 안의 가상 입력으로 치환한다.
 function buildPrompt(skillMarkdown: string, inputText: string): string {
   return [
     "당신은 SKILL.md 기반 JSON 파이프라인 엔진입니다.",
@@ -253,6 +255,7 @@ export async function runSkillJsonStream<T>(params: {
       let finalResponse = "";
       let turnFailureMessage: string | null = null;
 
+      // 스트림 이벤트를 사용자 로그로 바꾸고, 마지막 agent_message를 최종 JSON 후보로 잡는다.
       for await (const event of events) {
         switch (event.type) {
           case "thread.started": {

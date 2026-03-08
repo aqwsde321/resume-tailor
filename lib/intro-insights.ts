@@ -116,6 +116,7 @@ function normalizeList(items: string[], maxLength: number): string[] {
 function buildEvidenceEntries(resume: Resume): EvidenceEntry[] {
   const entries: EvidenceEntry[] = [];
 
+  // 이력서 전체를 "공고 요구사항과 연결할 수 있는 근거 조각" 단위로 평탄화한다.
   const push = (label: string, text: string) => {
     const normalized = truncate(text);
     if (!normalized) {
@@ -282,6 +283,7 @@ function buildEvidenceMatches(
 ): EvidenceMatch[] {
   return items
     .map((target) => {
+      // 기술 스택 앵커가 있으면 그쪽을 우선 보고, 없으면 일반 키워드 겹침으로 근거를 찾는다.
       const anchors = findTechAnchors(target, company);
       const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumeKeywords, resumeTech));
       const meaningfulTokens = getMeaningfulTokens(target);
@@ -362,6 +364,7 @@ function buildMissingButRelevantSuggestions(
 }
 
 export function buildIntroGuidance(resume: Resume, company: Company): IntroGuidance {
+  // 소개글 생성 전에 겹치는 강점, 직접 근거, 부족한 항목을 구조화해 프롬프트 힌트로 만든다.
   const resumeKeywords = collectResumeKeywords(resume);
   const resumeTech = collectResumeTech(resume);
   const entries = buildEvidenceEntries(resume);
@@ -582,6 +585,7 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
   );
   const computedMissingButRelevant = buildMissingButRelevantSuggestions(guidance.writingAnchors, intro);
 
+  // 모델이 과하게 넓게 쓴 보조 필드는 실제 매칭 근거 범위 안으로 다시 제한한다.
   return {
     oneLineIntro: intro.oneLineIntro.trim(),
     shortIntro: intro.shortIntro.trim(),
