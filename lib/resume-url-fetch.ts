@@ -10,6 +10,7 @@ const BROWSER_TIMEOUT_MS = 12000;
 const MAX_BODY_LENGTH = 2_000_000;
 const MIN_TEXT_LENGTH = 120;
 const STRONG_TEXT_LENGTH = 260;
+const NOTION_API_BASE = "https://www.notion.so/api/v3";
 const USER_AGENT =
   "Mozilla/5.0 (compatible; ResumeTailorBot/1.0; +https://localhost/resume-tailor)";
 
@@ -64,6 +65,12 @@ const PROFILE_NOISE_KEYWORDS = [
   "이력서",
   "노션",
   "깃허브"
+];
+
+const RESUME_NOISE_LINE_PATTERNS = [
+  /^콘텐츠로 건너뛰기$/i,
+  /^가입 또는 로그인하기$/i,
+  /^거의 다 됐습니다\./i
 ];
 
 const GENERIC_SITE_NAMES = new Set([
@@ -132,6 +139,37 @@ export interface FetchedResumePage {
   nameHint: string;
   desiredPositionHint: string;
   text: string;
+}
+
+interface NotionCursor {
+  stack?: unknown;
+  cellId?: string;
+}
+
+interface NotionBlockValue {
+  id?: string;
+  type?: string;
+  properties?: {
+    title?: unknown;
+  };
+  content?: string[];
+}
+
+interface NotionBlockEntry {
+  value?: NotionBlockValue;
+}
+
+interface NotionPageMetaResponse {
+  pageId?: string;
+  spaceName?: string;
+  requireLogin?: boolean;
+}
+
+interface NotionChunkResponse {
+  cursors?: NotionCursor[];
+  recordMap?: {
+    block?: Record<string, NotionBlockEntry>;
+  };
 }
 
 function isPrivateIpv4(value: string): boolean {
@@ -208,7 +246,8 @@ function normalizeBlock(value: string): string {
     .replace(/\r/g, "\n")
     .split("\n")
     .map((line) => normalizeLine(line))
-    .filter((line) => line.length > 1);
+    .filter((line) => line.length > 1)
+    .filter((line) => !RESUME_NOISE_LINE_PATTERNS.some((pattern) => pattern.test(line)));
 
   const deduped: string[] = [];
   for (const line of lines) {
@@ -219,6 +258,10 @@ function normalizeBlock(value: string): string {
   }
 
   return deduped.join("\n");
+}
+
+function isNotionHostname(hostname: string) {
+  return hostname.includes("notion.so") || hostname.includes("notion.site");
 }
 
 function normalizeTitleSegment(value: string): string {
@@ -238,11 +281,35 @@ function normalizeHintToken(value: string): string {
     .replace(/[^a-z0-9가-힣]+/g, "");
 }
 
+function normalizeNotionPageId(value: string) {
+  const compact = value.replace(/-/g, "").toLowerCase();
+  if (!/^[0-9a-f]{32}$/.test(compact)) {
+    return "";
+  }
+
+  return `${compact.slice(0, 8)}-${compact.slice(8, 12)}-${compact.slice(12, 16)}-${compact.slice(16, 20)}-${compact.slice(20)}`;
+}
+
+function extractNotionPageId(pathname: string) {
+  const match = pathname.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  return match ? normalizeNotionPageId(match[1]) : "";
+}
+
 function splitTitleSegments(title: string): string[] {
   return title
     .split(/\s*\|\s*|\s*·\s*|\s*–\s*|\s*:\s*|\s+-\s+/g)
     .map((segment) => normalizeTitleSegment(segment))
     .filter(Boolean);
+}
+
+function flattenNotionTitle(title: unknown): string {
+  if (!Array.isArray(title)) {
+    return "";
+  }
+
+  return title
+    .map((item) => (Array.isArray(item) ? String(item[0] ?? "") : ""))
+    .join("");
 }
 
 function stripProfileNoise(value: string): string {
@@ -261,7 +328,20 @@ function stripProfileNoise(value: string): string {
 }
 
 function looksLikeDesiredPosition(value: string): boolean {
-  return ROLE_PATTERN.test(stripProfileNoise(value));
+  const cleaned = stripProfileNoise(value);
+  if (!cleaned || cleaned.length > 60) {
+    return false;
+  }
+
+  if (/[.!?。！？]$/.test(cleaned)) {
+    return false;
+  }
+
+  if (/입니다$|했습니다$|합니다$|싶습니다$|해왔습니다$|중입니다$/.test(cleaned)) {
+    return false;
+  }
+
+  return ROLE_PATTERN.test(cleaned);
 }
 
 function looksLikeName(value: string): boolean {
@@ -461,12 +541,28 @@ async function fetchBrowserCandidate(url: string): Promise<ExtractedResumeCandid
   }
 }
 
+function shouldTryBrowserFallback(hostname: string, htmlCandidate: ExtractedResumeCandidate) {
+  return !isUsableCandidate(htmlCandidate);
+}
+
+function pickBetterCandidate(
+  htmlCandidate: ExtractedResumeCandidate,
+  browserCandidate: ExtractedResumeCandidate | null
+) {
+  if (!browserCandidate) {
+    return htmlCandidate;
+  }
+
+  return browserCandidate.score > htmlCandidate.score ? browserCandidate : htmlCandidate;
+}
+
 function takeFirstMatch(values: string[], predicate: (value: string) => boolean): string {
   return values.find((value) => predicate(value)) ?? "";
 }
 
 function guessResumeHints(candidate: ExtractedResumeCandidate, hostname: string) {
   const titleSegments = splitTitleSegments(candidate.title);
+  const primaryHeadingSegments = splitTitleSegments(candidate.primaryHeading);
   const textLines = candidate.text
     .split("\n")
     .map((line) => normalizeTitleSegment(line))
@@ -479,6 +575,7 @@ function guessResumeHints(candidate: ExtractedResumeCandidate, hostname: string)
     siteToken === normalizeHintToken(hostnameToLabel(hostname));
 
   const nameCandidates = [
+    ...primaryHeadingSegments,
     candidate.primaryHeading,
     ...titleSegments,
     ...textLines,
@@ -486,6 +583,7 @@ function guessResumeHints(candidate: ExtractedResumeCandidate, hostname: string)
   ].map((value) => stripProfileNoise(value));
   const desiredPositionCandidates = [
     candidate.secondaryHeading,
+    ...primaryHeadingSegments,
     ...titleSegments,
     ...textLines,
     candidate.primaryHeading
@@ -513,12 +611,168 @@ function toFetchedResumePage(candidate: ExtractedResumeCandidate, resolvedUrl: s
   } satisfies FetchedResumePage;
 }
 
+async function fetchNotionPageMeta(pageId: string): Promise<NotionPageMetaResponse> {
+  const response = await fetch(`${NOTION_API_BASE}/getPublicPageData`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT
+    },
+    body: JSON.stringify({
+      type: "block-space",
+      name: "page",
+      blockId: pageId,
+      requestedOnPublicDomain: false,
+      showMoveTo: false,
+      saveParent: false,
+      shouldDuplicate: false,
+      projectManagementLaunch: false,
+      configureOpenInDesktopApp: false,
+      mobileData: {
+        isPush: false
+      },
+      demoWorkspaceMode: false
+    })
+  });
+
+  if (!response.ok) {
+    throw new HttpError(
+      response.status,
+      "노션 페이지 정보를 읽지 못했어요.",
+      `${response.status} ${response.statusText}`
+    );
+  }
+
+  return (await response.json()) as NotionPageMetaResponse;
+}
+
+async function loadNotionChunk(pageId: string, cursor: NotionCursor | null) {
+  const response = await fetch(`${NOTION_API_BASE}/loadCachedPageChunkV2`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT
+    },
+    body: JSON.stringify({
+      page: {
+        id: pageId
+      },
+      cursor: cursor ?? {
+        stack: []
+      },
+      verticalColumns: false
+    })
+  });
+
+  if (!response.ok) {
+    throw new HttpError(
+      response.status,
+      "노션 페이지 본문을 읽지 못했어요.",
+      `${response.status} ${response.statusText}`
+    );
+  }
+
+  return (await response.json()) as NotionChunkResponse;
+}
+
+function collectNotionTextLines(
+  blockId: string,
+  blocks: Record<string, NotionBlockEntry>,
+  lines: string[],
+  visited: Set<string>
+) {
+  if (visited.has(blockId)) {
+    return;
+  }
+
+  visited.add(blockId);
+  const block = blocks[blockId]?.value;
+  if (!block) {
+    return;
+  }
+
+  const type = block.type ?? "";
+  const title = normalizeBlock(flattenNotionTitle(block.properties?.title));
+
+  if (
+    title &&
+    !["page", "divider", "column", "column_list", "image", "file", "video", "audio", "pdf"].includes(type) &&
+    !RESUME_NOISE_LINE_PATTERNS.some((pattern) => pattern.test(title))
+  ) {
+    lines.push(title);
+  }
+
+  for (const childId of block.content ?? []) {
+    collectNotionTextLines(childId, blocks, lines, visited);
+  }
+}
+
+async function fetchResumeFromNotion(url: URL): Promise<FetchedResumePage | null> {
+  const pageId = extractNotionPageId(url.pathname);
+  if (!pageId) {
+    return null;
+  }
+
+  const pageMeta = await fetchNotionPageMeta(pageId);
+  if (pageMeta.requireLogin) {
+    throw new HttpError(403, "로그인이 필요한 노션 페이지는 읽을 수 없어요.");
+  }
+
+  const blocks: Record<string, NotionBlockEntry> = {};
+  let cursor: NotionCursor | null = null;
+
+  while (true) {
+    const chunk = await loadNotionChunk(pageId, cursor);
+    Object.assign(blocks, chunk.recordMap?.block ?? {});
+
+    const nextCursor = Array.isArray(chunk.cursors) && chunk.cursors.length > 0 ? chunk.cursors[0] : null;
+    if (!nextCursor) {
+      break;
+    }
+
+    cursor = nextCursor;
+  }
+
+  const pageBlock = blocks[pageId]?.value;
+  const title = normalizeTitleSegment(flattenNotionTitle(pageBlock?.properties?.title) || pageMeta.spaceName || "");
+  const lines: string[] = [];
+  const visited = new Set<string>();
+
+  for (const childId of pageBlock?.content ?? []) {
+    collectNotionTextLines(childId, blocks, lines, visited);
+  }
+
+  const text = normalizeBlock(lines.join("\n"));
+  if (text.length < MIN_TEXT_LENGTH) {
+    return null;
+  }
+
+  const candidate: ExtractedResumeCandidate = {
+    title,
+    siteName: normalizeTitleSegment(pageMeta.spaceName ?? hostnameToLabel(url.hostname)),
+    text,
+    primaryHeading: title,
+    secondaryHeading: lines[0] ?? "",
+    source: "html",
+    score: scoreTextQuality(text, title, title) + 400
+  };
+
+  return toFetchedResumePage(candidate, url.toString(), url.hostname.toLowerCase());
+}
+
 export async function fetchResumePage(rawUrl: string): Promise<FetchedResumePage> {
   const url = assertAllowedUrl(rawUrl);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
+    if (isNotionHostname(url.hostname.toLowerCase())) {
+      const notionResult = await fetchResumeFromNotion(url);
+      if (notionResult) {
+        return notionResult;
+      }
+    }
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": USER_AGENT,
@@ -576,13 +830,10 @@ export async function fetchResumePage(rawUrl: string): Promise<FetchedResumePage
     }
 
     const htmlCandidate = extractTextFromHtml(body, resolved, "html");
-    const browserCandidate = isUsableCandidate(htmlCandidate)
-      ? null
-      : await fetchBrowserCandidate(resolvedUrl);
-    const candidate =
-      [htmlCandidate, browserCandidate]
-        .filter((entry): entry is ExtractedResumeCandidate => Boolean(entry))
-        .sort((left, right) => right.score - left.score)[0] ?? null;
+    const browserCandidate = shouldTryBrowserFallback(resolved.hostname.toLowerCase(), htmlCandidate)
+      ? await fetchBrowserCandidate(resolvedUrl)
+      : null;
+    const candidate = pickBetterCandidate(htmlCandidate, browserCandidate);
 
     if (!isUsableCandidate(candidate)) {
       throw new HttpError(422, "이력서 본문을 충분히 읽지 못했어요.");

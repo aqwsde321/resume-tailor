@@ -30,6 +30,162 @@ function mockBrowser(renderedHtml: string, url = "https://portfolio.example.com"
   return { browser, page };
 }
 
+function mockNotionApi(pageId: string) {
+  const pageIdWithDashes = pageId;
+  const fetchMock = vi.fn(async (input: string | URL) => {
+    const url = input.toString();
+
+    if (url.includes("/api/v3/getPublicPageData")) {
+      return new Response(
+        JSON.stringify({
+          pageId: pageIdWithDashes,
+          spaceName: "개발자 포트폴리오",
+          requireLogin: false
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    }
+
+    if (url.includes("/api/v3/loadCachedPageChunkV2")) {
+      return new Response(
+        JSON.stringify({
+          cursors: [],
+          recordMap: {
+            block: {
+              [pageIdWithDashes]: {
+                value: {
+                  id: pageIdWithDashes,
+                  type: "page",
+                  properties: {
+                    title: [["김지원 | Backend Developer"]]
+                  },
+                  content: [
+                    "summary",
+                    "tech-header",
+                    "career-header",
+                    "project-header",
+                    "project-item"
+                  ]
+                }
+              },
+              summary: {
+                value: {
+                  id: "summary",
+                  type: "text",
+                  properties: {
+                    title: [[
+                      "서비스 안정성과 데이터 흐름을 함께 고민하는 백엔드 개발자입니다. Java와 Spring을 중심으로 API 설계와 자동화 작업을 경험했습니다."
+                    ]]
+                  }
+                }
+              },
+              "tech-header": {
+                value: {
+                  id: "tech-header",
+                  type: "sub_header",
+                  properties: {
+                    title: [["🛠 Tech Stack"]]
+                  },
+                  content: ["tech-item-1", "tech-item-2"]
+                }
+              },
+              "tech-item-1": {
+                value: {
+                  id: "tech-item-1",
+                  type: "bulleted_list",
+                  properties: {
+                    title: [["Java, Spring Boot, JPA"]]
+                  }
+                }
+              },
+              "tech-item-2": {
+                value: {
+                  id: "tech-item-2",
+                  type: "bulleted_list",
+                  properties: {
+                    title: [["NestJS, TypeScript, PostgreSQL"]]
+                  }
+                }
+              },
+              "career-header": {
+                value: {
+                  id: "career-header",
+                  type: "sub_header",
+                  properties: {
+                    title: [["🛠 Career"]]
+                  },
+                  content: ["career-company", "career-role", "career-bullet"]
+                }
+              },
+              "career-company": {
+                value: {
+                  id: "career-company",
+                  type: "sub_sub_header",
+                  properties: {
+                    title: [["알파데이터"]]
+                  }
+                }
+              },
+              "career-role": {
+                value: {
+                  id: "career-role",
+                  type: "text",
+                  properties: {
+                    title: [["자바 개발자 | 2023.01 ~ 2024.05"]]
+                  }
+                }
+              },
+              "career-bullet": {
+                value: {
+                  id: "career-bullet",
+                  type: "bulleted_list",
+                  properties: {
+                    title: [["대규모 캐시 시스템 구축 프로젝트"]]
+                  }
+                }
+              },
+              "project-header": {
+                value: {
+                  id: "project-header",
+                  type: "sub_header",
+                  properties: {
+                    title: [["🚀 Projects"]]
+                  }
+                }
+              },
+              "project-item": {
+                value: {
+                  id: "project-item",
+                  type: "numbered_list",
+                  properties: {
+                    title: [["포지션 매칭 플랫폼 (NestJS)"]]
+                  }
+                }
+              }
+            }
+          }
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    }
+
+    throw new Error(`Unexpected URL: ${url}`);
+  });
+
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
 describe("POST /api/resume/fetch-url", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -151,6 +307,31 @@ describe("POST /api/resume/fetch-url", () => {
     expect(body.ok).toBe(true);
     expect(body.data.nameHint).toBe("김개발");
     expect(body.data.desiredPositionHint).toBe("Product Engineer");
+  });
+
+  it("노션 pageId URL은 공개 API로 전체 블록을 읽어 본문을 확장한다", async () => {
+    const fetchMock = mockNotionApi("aaaaaaaa-1111-2222-3333-444455556666");
+
+    const request = new Request("http://localhost/api/resume/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://www.notion.so/backend-portfolio-aaaaaaaa111122223333444455556666"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.nameHint).toBe("김지원");
+    expect(body.data.desiredPositionHint).toBe("Backend Developer");
+    expect(body.data.text).toContain("대규모 캐시 시스템 구축 프로젝트");
+    expect(body.data.text).toContain("포지션 매칭 플랫폼 (NestJS)");
+    expect(body.data.text.length).toBeGreaterThan(180);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(launchMock).not.toHaveBeenCalled();
   });
 
   it("초기 HTML이 빈 셸이면 브라우저 렌더 결과로 다시 추출한다", async () => {
