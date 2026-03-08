@@ -46,12 +46,13 @@ describe("intro insight helpers", () => {
     const input = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture, "collaborative");
 
     expect(input).toContain("[분석 힌트]");
+    expect(input).toContain("[핵심 요건]");
     expect(input).toContain("[작성 앵커]");
     expect(input).toContain("[톤 가이드]");
     expect(input).toContain("협업 중심");
     expect(input).toContain("\"matchedSkills\": [");
     expect(input).toContain("React");
-    expect(input).toContain("필수 요건");
+    expect(input).toContain("최우선 필수 요건");
     expect(input).toContain("공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여");
     expect(input).toContain("[출력 제약]");
   });
@@ -87,6 +88,18 @@ describe("intro insight helpers", () => {
     expect(
       reactAnchor?.evidence.some((item) => item.startsWith("프로젝트:") || item.startsWith("경력:"))
     ).toBe(true);
+  });
+
+  it("중요한 필수 요건을 우선순위 높은 작성 앵커로 정렬한다", () => {
+    const guidance = buildIntroGuidance(frontendResumeFixture, frontendCompanyFixture);
+
+    expect(guidance.writingAnchors.slice(0, 3).map((item) => item.target)).toEqual([
+      "React 기반 서비스 개발 경험",
+      "TypeScript 활용 능력",
+      "협업 중심 개발 문화 적응"
+    ]);
+    expect(guidance.writingAnchors[0]?.priorityReason).toContain("필수 요건");
+    expect(guidance.writingAnchors[0]?.priorityReason).toContain("프로젝트 근거 확인");
   });
 
   it("AI 응답의 기술/부족 항목을 분석 힌트 범위로 정규화한다", () => {
@@ -153,6 +166,8 @@ describe("intro insight helpers", () => {
     expect(metricsGuidance.matchedSkills).not.toContain("Next.js");
     expect(hiringGuidance.writingAnchors.map((item) => item.target)).toContain("React 기반 서비스 개발 경험");
     expect(metricsGuidance.writingAnchors.map((item) => item.target)).toContain("대시보드 성능 개선 경험");
+    expect(hiringGuidance.writingAnchors[0]?.target).toBe("React 기반 서비스 개발 경험");
+    expect(metricsGuidance.writingAnchors[0]?.target).toBe("대시보드 성능 개선 경험");
     expect(hiringInput).toContain("React 기반 서비스 개발 경험");
     expect(metricsInput).toContain("대시보드 성능 개선 경험");
     expect(metricsInput).toContain("TanStack Query 경험");

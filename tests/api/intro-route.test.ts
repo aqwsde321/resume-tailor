@@ -72,6 +72,8 @@ describe("POST /api/intro", () => {
     expect(body.data.missingButRelevant).toEqual([]);
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.skillName).toBe("generate-intro");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[분석 힌트]");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[핵심 요건]");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("최우선 필수 요건");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("\"matchedSkills\": [");
   });
 

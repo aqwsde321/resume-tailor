@@ -46,12 +46,16 @@ type EvidenceEntry = {
 type EvidenceMatch = {
   target: string;
   evidence: string[];
+  priorityScore: number;
+  priorityReason: string;
 };
 
 type WritingAnchor = {
   type: "requirement" | "preferred";
   target: string;
   evidence: string[];
+  priorityScore: number;
+  priorityReason: string;
 };
 
 export type IntroGuidance = {
@@ -205,6 +209,83 @@ function findEvidence(entries: EvidenceEntry[], tokens: string[], limit = 2): st
   return unique(scored.slice(0, limit).map((item) => formatEvidence(item.entry)));
 }
 
+function countSharedTokens(tokens: string[], text: string): number {
+  const textTokens = new Set(getMeaningfulTokens(text));
+  return unique(tokens).filter((token) => textTokens.has(token)).length;
+}
+
+function countEvidenceBonus(evidence: string[]): number {
+  let score = evidence.length * 2;
+
+  if (evidence.some((item) => item.startsWith("프로젝트:"))) {
+    score += 6;
+  }
+
+  if (evidence.some((item) => item.startsWith("경력:"))) {
+    score += 5;
+  }
+
+  if (evidence.some((item) => item.startsWith("성과:"))) {
+    score += 4;
+  }
+
+  if (evidence.some((item) => item.startsWith("강점:"))) {
+    score += 2;
+  }
+
+  return score;
+}
+
+function buildPriorityReason(
+  type: "requirement" | "preferred",
+  index: number,
+  anchorMatched: string[],
+  evidence: string[]
+): string {
+  const reasons: string[] = [];
+
+  reasons.push(type === "requirement" ? "필수 요건" : "우대 조건");
+
+  if (anchorMatched.length > 0) {
+    reasons.push(`기술 스택 ${anchorMatched.join(", ")}와 직접 연결`);
+  }
+
+  if (evidence.some((item) => item.startsWith("프로젝트:"))) {
+    reasons.push("프로젝트 근거 확인");
+  } else if (evidence.some((item) => item.startsWith("경력:"))) {
+    reasons.push("경력 근거 확인");
+  } else if (evidence.length > 0) {
+    reasons.push("이력서 근거 확인");
+  }
+
+  if (index === 0) {
+    reasons.push("상단 요구사항");
+  }
+
+  return reasons.slice(0, 3).join(", ");
+}
+
+function scoreEvidenceMatch(
+  target: string,
+  type: "requirement" | "preferred",
+  index: number,
+  anchorMatched: string[],
+  matchedSignalCount: number,
+  evidence: string[],
+  company: Company
+): number {
+  const targetTokens = getMeaningfulTokens(target);
+  const baseScore = type === "requirement" ? 60 : 30;
+  const orderScore = Math.max(0, 16 - index * 3);
+  const anchorScore = anchorMatched.length * 8;
+  const signalScore = matchedSignalCount * 4;
+  const titleScore = countSharedTokens(targetTokens, company.jobTitle) * 3;
+  const descriptionScore = countSharedTokens(targetTokens, company.jobDescription) * 2;
+  const evidenceScore = countEvidenceBonus(evidence);
+
+  return baseScore + orderScore + anchorScore + signalScore + titleScore + descriptionScore + evidenceScore;
+}
+
 function findTechAnchors(target: string, company: Company): string[] {
   const normalizedTarget = normalizePhrase(target);
   const targetTokens = tokenize(target);
@@ -276,13 +357,14 @@ function referencesTarget(text: string, target: string): boolean {
 
 function buildEvidenceMatches(
   items: string[],
+  type: "requirement" | "preferred",
   resumeKeywords: Set<string>,
   resumeTech: Set<string>,
   entries: EvidenceEntry[],
   company: Company
 ): EvidenceMatch[] {
   return items
-    .map((target) => {
+    .map((target, index) => {
       // 기술 스택 앵커가 있으면 그쪽을 우선 보고, 없으면 일반 키워드 겹침으로 근거를 찾는다.
       const anchors = findTechAnchors(target, company);
       const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumeKeywords, resumeTech));
@@ -290,13 +372,26 @@ function buildEvidenceMatches(
       const fallbackTokens = meaningfulTokens.filter((token) => resumeKeywords.has(token));
       const evidenceTokens = anchorMatched.length > 0 ? anchorMatched.flatMap(tokenize) : fallbackTokens;
       const evidence = findEvidence(entries, unique(evidenceTokens));
+      const priorityScore = scoreEvidenceMatch(
+        target,
+        type,
+        index,
+        anchorMatched,
+        unique(evidenceTokens).length,
+        evidence,
+        company
+      );
+      const priorityReason = buildPriorityReason(type, index, anchorMatched, evidence);
 
       return {
         target,
-        evidence
+        evidence,
+        priorityScore,
+        priorityReason
       };
     })
-    .filter((item) => item.evidence.length > 0);
+    .filter((item) => item.evidence.length > 0)
+    .sort((left, right) => right.priorityScore - left.priorityScore || right.evidence.length - left.evidence.length);
 }
 
 function buildWritingAnchors(
@@ -307,14 +402,34 @@ function buildWritingAnchors(
     ...requirementMatches.map((item) => ({
       type: "requirement" as const,
       target: item.target,
-      evidence: item.evidence
+      evidence: item.evidence,
+      priorityScore: item.priorityScore,
+      priorityReason: item.priorityReason
     })),
     ...preferredMatches.map((item) => ({
       type: "preferred" as const,
       target: item.target,
-      evidence: item.evidence
+      evidence: item.evidence,
+      priorityScore: item.priorityScore,
+      priorityReason: item.priorityReason
     }))
-  ].slice(0, 5);
+  ]
+    .sort((left, right) => right.priorityScore - left.priorityScore)
+    .slice(0, 5);
+}
+
+function formatPriorityWritingAnchors(writingAnchors: WritingAnchor[]): string[] {
+  if (writingAnchors.length === 0) {
+    return [
+      "- 직접 연결 가능한 우선 요건이 약하면, 이력서의 프로젝트와 경력 근거를 중심으로만 과장 없이 작성합니다."
+    ];
+  }
+
+  return writingAnchors.slice(0, 3).flatMap((item, index) => [
+    `${index + 1}. ${index === 0 ? "최우선" : "우선"} ${item.type === "requirement" ? "필수 요건" : "우대 조건"}: ${item.target}`,
+    `   - 연결 근거: ${item.evidence.join(" / ")}`,
+    `   - 우선 이유: ${item.priorityReason}`
+  ]);
 }
 
 function formatWritingAnchors(writingAnchors: WritingAnchor[]): string[] {
@@ -327,6 +442,7 @@ function formatWritingAnchors(writingAnchors: WritingAnchor[]): string[] {
   return writingAnchors.flatMap((item, index) => [
     `${index + 1}. ${item.type === "requirement" ? "필수 요건" : "우대 조건"}: ${item.target}`,
     `   - 내 근거: ${item.evidence.join(" / ")}`,
+    `   - 우선 이유: ${item.priorityReason}`,
     `   - 작성 방식: 위 요건을 내 경험·성과·강점 중 하나와 직접 연결해 한 문장 이상에 녹입니다.`
   ]);
 }
@@ -380,6 +496,7 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
   ).slice(0, 6);
   const requirementMatches = buildEvidenceMatches(
     company.requirements,
+    "requirement",
     resumeKeywords,
     resumeTech,
     entries,
@@ -387,6 +504,7 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
   ).slice(0, 4);
   const preferredMatches = buildEvidenceMatches(
     company.preferredSkills,
+    "preferred",
     resumeKeywords,
     resumeTech,
     entries,
@@ -523,6 +641,9 @@ export function buildIntroSkillInput(
     "[분석 힌트]",
     JSON.stringify(guidance, null, 2),
     "",
+    "[핵심 요건]",
+    ...formatPriorityWritingAnchors(guidance.writingAnchors),
+    "",
     "[작성 앵커]",
     ...formatWritingAnchors(guidance.writingAnchors),
     "",
@@ -534,10 +655,13 @@ export function buildIntroSkillInput(
     "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
     "- longIntro는 450~700자, 5~8문장으로 작성합니다.",
     "- longIntro는 shortIntro보다 정보량이 분명히 많아야 하며, 문장을 그대로 반복하지 않습니다.",
+    "- [핵심 요건]의 최우선 필수 요건이 있으면 shortIntro 본문에 직접 반영합니다.",
+    "- [핵심 요건]의 상위 필수 요건 2개까지는 longIntro 본문에서 근거와 함께 직접 연결합니다.",
     "- shortIntro와 longIntro에는 필수 요건 requirementMatches 상위 항목을 최소 1개 이상 자연스럽게 반영합니다.",
     "- preferredMatches에 직접 근거가 있으면 shortIntro 또는 longIntro 후반에 우대 조건을 1개 이상 반영합니다.",
     "- 각 연결은 '공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여' 흐름이 드러나게 작성합니다.",
     "- 자기소개 문장은 resume.json의 프로젝트, 성과, 강점, 경력 설명을 재료로 삼고 요약 문장만 반복하지 않습니다.",
+    "- fitReasons의 첫 항목은 가능하면 [핵심 요건]의 최우선 필수 요건을 기준으로 작성합니다.",
     "- fitReasons에는 requirementMatches 또는 preferredMatches에 있는 근거를 우선 사용합니다.",
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",
     "- gapNotes에는 gapCandidates 중 실제로 공고에서 중요한 항목만 선택합니다.",
