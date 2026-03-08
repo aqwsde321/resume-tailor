@@ -94,9 +94,9 @@ docker run --rm -it \
 docker compose run --rm app codex login status
 ```
 
-3. 이상이 의심되면
+3. 이상이 의심되는 경우
 
-- 먼저 [README](../README.md) 기준으로 이미지를 다시 pull하고 컨테이너를 재실행합니다.
+- 먼저 [README](../README.md)의 절차에 따라 이미지를 다시 pull하고 컨테이너를 재실행합니다.
 - Docker Hub 이미지만 사용하는 사용자는 `npm run test`보다 앱 접속, 핵심 플로우, 로그 확인을 우선합니다.
 
 ## 5. 장애 대응 가이드
@@ -175,7 +175,7 @@ docker compose run --rm app codex login --device-auth
 docker compose run --rm app codex login status
 ```
 
-3. 로그인 후 README 기준으로 앱을 다시 실행합니다.
+3. 로그인 후 [README](../README.md)의 절차에 따라 앱을 다시 실행합니다.
 
 ### E. `Unable to acquire lock ... .next/dev/lock`
 
@@ -227,7 +227,7 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 
 조치:
 
-- 같은 단계의 `내용 정리` 또는 `소개글 만들기`를 한 번 더 실행합니다.
+- 같은 단계의 `내용 정리` 또는 `소개글 만들기`를 다시 실행합니다.
 - 같은 문제가 반복되면 입력 텍스트가 지나치게 짧지 않은지 확인합니다.
 - `npm run test`로 stream 오류 회귀 테스트가 깨지지 않는지 확인합니다.
 

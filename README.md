@@ -6,19 +6,19 @@
 
 ![ResumeTailor 주요 흐름](./docs/images/app-flow-overview.png)
 
-이력서 정리, 공고 정리, 소개글 만들기 흐름을 실제 앱 화면으로 보여주는 미리보기입니다.
+이력서 정리, 공고 정리, 소개글 생성 흐름을 보여주는 실제 앱 화면 예시입니다.
 
 ## 1. 빠른 시작
 
 이 프로젝트는 세 가지 방식으로 실행할 수 있습니다.
 
-- Docker Hub 이미지로 바로 실행: 다른 사용자에게 공유할 때 권장
-- 저장소를 clone해서 `docker compose`로 실행: 반복 실행과 설정 관리가 편할 때 사용
+- Docker Hub 이미지로 실행: 공유용 또는 빠른 실행에 적합
+- 저장소를 clone해서 `docker compose`로 실행: 반복 실행과 설정 관리에 적합
 - 로컬 개발 실행: 개발자가 Node.js와 Codex CLI를 직접 설치해서 실행
 
 ### 1.1 Docker Hub 이미지로 바로 실행
 
-가장 간단한 실행 방식입니다. 기본 이미지는 `qrqr/resume-tailor:latest`입니다.
+가장 단순한 실행 방식입니다. 기본 이미지는 `qrqr/resume-tailor:latest`입니다.
 
 중요:
 
@@ -29,7 +29,7 @@
 - `/resume`과 `/company`의 `URL 불러오기`를 사용할 수 있습니다.
 - 이미지 기반 상세 공고는 macOS에서는 Vision OCR, Docker/Linux에서는 Tesseract OCR로 보강을 시도합니다. 다만 Docker/Linux 결과는 macOS보다 품질 차이가 있을 수 있습니다.
 
-가장 빠른 실행:
+실행 명령:
 
 ```bash
 docker pull qrqr/resume-tailor:latest
@@ -93,7 +93,7 @@ docker run -d \
   qrqr/resume-tailor:latest
 ```
 
-포트를 바꾸고 싶을 때:
+포트 변경:
 
 ```bash
 docker rm -f resume-tailor-app
@@ -105,7 +105,7 @@ docker run -d \
   qrqr/resume-tailor:latest
 ```
 
-로그 보기와 컨테이너 삭제는 아래처럼 합니다.
+로그 확인과 컨테이너 삭제:
 
 ```bash
 docker logs -f resume-tailor-app
@@ -116,7 +116,7 @@ docker rm -f resume-tailor-app
 
 ### 1.2 저장소를 clone해서 `docker compose`로 실행
 
-반복 실행, 포트/볼륨 관리, 커스텀 이미지 override가 필요하면 저장소를 clone한 뒤 `docker compose`를 써도 됩니다.
+반복 실행, 포트/볼륨 관리, 커스텀 이미지 override가 필요하면 저장소를 clone한 뒤 `docker compose`로 실행합니다.
 
 ```bash
 git clone https://github.com/aqwsde321/resume-tailor.git
@@ -232,7 +232,7 @@ npm run dev
 2. `/company`에서 채용공고 텍스트를 붙여넣거나 `txt`, URL로 불러온 뒤 분석하고, 폼을 수정해 확정합니다.
 3. `/result`에서 자기소개를 생성하거나 다시 생성합니다.
 
-추가 메모:
+참고:
 
 - 각 단계 입력 카드에서 `생각 깊이`를 선택할 수 있고, 높을수록 결과 생성 시간이 늘어날 수 있습니다.
 - 화면에는 현재 단계, 작업 중 상태, AI 분석 로그, 이전 결과와 현재 결과 비교가 표시됩니다.
@@ -241,7 +241,7 @@ npm run dev
 
 ## 3. 환경 변수
 
-필수는 아니지만 아래 변수를 알면 실행이 쉬워집니다.
+필수는 아니지만, 아래 변수를 사용하면 실행 환경을 조정할 수 있습니다.
 
 - `CODEX_CLI_PATH`: `codex` 바이너리가 PATH에 없을 때 직접 경로 지정
 - `CODEX_SKILLS_DIR`: 외부 스킬 디렉터리를 우선 탐색하고 싶을 때 지정
@@ -317,7 +317,7 @@ npm run build
 - Repository variable `DOCKERHUB_IMAGE`
   - 기본값은 `qrqr/resume-tailor`이라 필요하면만 override
 
-즉, Docker Hub 저장소와 토큰만 준비하면 사용자는 `docker pull` 또는 `docker compose pull`로 공개 이미지를 바로 받아 쓸 수 있습니다.
+Docker Hub 저장소와 토큰을 준비하면 `docker pull` 또는 `docker compose pull`로 공개 이미지를 사용할 수 있습니다.
 
 문제 해결 절차와 운영 체크리스트는 [운영 런북](./docs/OPS_RUNBOOK.md)을 참고하세요.
 
