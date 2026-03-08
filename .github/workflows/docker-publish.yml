@@ -22,7 +22,7 @@ on:
       - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/docker-publish.yml"
-workflow_dispatch:
+  workflow_dispatch:
 
 concurrency:
   # 같은 브랜치에서 이 워크플로의 새 run이 시작되면 이전 run을 취소한다.
