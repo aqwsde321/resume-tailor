@@ -11,6 +11,7 @@ import {
   backendCompanyFixture,
   backendResumeFixture,
   frontendCompanyFixture,
+  frontendMetricsCompanyFixture,
   frontendResumeFixture,
   introGuidanceCases
 } from "../fixtures/intro-cases";
@@ -53,6 +54,28 @@ describe("intro insight helpers", () => {
     expect(input).toContain("필수 요건");
     expect(input).toContain("공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여");
     expect(input).toContain("[출력 제약]");
+  });
+
+  it("톤이 바뀌면 입력 가이드 문구도 명확히 달라진다", () => {
+    const balancedInput = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture, "balanced");
+    const confidentInput = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture, "confident");
+    const collaborativeInput = buildIntroSkillInput(
+      frontendResumeFixture,
+      frontendCompanyFixture,
+      "collaborative"
+    );
+    const problemSolvingInput = buildIntroSkillInput(
+      frontendResumeFixture,
+      frontendCompanyFixture,
+      "problemSolving"
+    );
+
+    expect(balancedInput).toContain("담백하고 사실 중심");
+    expect(confidentInput).toContain("성과와 강점을 분명하게");
+    expect(collaborativeInput).toContain("협업, 조율, 커뮤니케이션");
+    expect(problemSolvingInput).toContain("문제를 구조화하고 개선한 경험");
+    expect(confidentInput).not.toBe(collaborativeInput);
+    expect(collaborativeInput).not.toBe(problemSolvingInput);
   });
 
   it("작성 앵커는 요약보다 프로젝트/경력 같은 구체 근거를 우선 사용한다", () => {
@@ -116,6 +139,23 @@ describe("intro insight helpers", () => {
         expect.stringContaining("Next.js 경험")
       ])
     );
+  });
+
+  it("같은 이력서라도 공고가 바뀌면 작성 앵커와 핵심 기술이 달라진다", () => {
+    const hiringGuidance = buildIntroGuidance(frontendResumeFixture, frontendCompanyFixture);
+    const metricsGuidance = buildIntroGuidance(frontendResumeFixture, frontendMetricsCompanyFixture);
+    const hiringInput = buildIntroSkillInput(frontendResumeFixture, frontendCompanyFixture);
+    const metricsInput = buildIntroSkillInput(frontendResumeFixture, frontendMetricsCompanyFixture);
+
+    expect(hiringGuidance.matchedSkills).toContain("Next.js");
+    expect(hiringGuidance.matchedSkills).not.toContain("TanStack Query");
+    expect(metricsGuidance.matchedSkills).toContain("TanStack Query");
+    expect(metricsGuidance.matchedSkills).not.toContain("Next.js");
+    expect(hiringGuidance.writingAnchors.map((item) => item.target)).toContain("React 기반 서비스 개발 경험");
+    expect(metricsGuidance.writingAnchors.map((item) => item.target)).toContain("대시보드 성능 개선 경험");
+    expect(hiringInput).toContain("React 기반 서비스 개발 경험");
+    expect(metricsInput).toContain("대시보드 성능 개선 경험");
+    expect(metricsInput).toContain("TanStack Query 경험");
   });
 
   it("결과 화면 fallback용 매칭 인사이트를 생성한다", () => {

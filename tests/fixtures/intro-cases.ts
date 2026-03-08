@@ -56,6 +56,20 @@ export const frontendCompanyFixture: Company = {
   techStack: ["React", "TypeScript", "Next.js", "GraphQL"]
 };
 
+export const frontendMetricsCompanyFixture: Company = {
+  companyName: "Product Metrics",
+  companyDescription: "실험 기반 B2B SaaS 팀",
+  jobTitle: "Frontend Engineer",
+  jobDescription: "전환 지표를 빠르게 실험하고 제품 화면 성능을 개선합니다.",
+  requirements: [
+    "대시보드 성능 개선 경험",
+    "TypeScript 활용 능력",
+    "기획/디자인 협업 경험"
+  ],
+  preferredSkills: ["TanStack Query 경험", "A/B 테스트 경험"],
+  techStack: ["React", "TypeScript", "TanStack Query", "Amplitude"]
+};
+
 export const backendResumeFixture: Resume = {
   name: "박백엔드",
   summary: "Node.js와 TypeScript 기반 API 설계 및 운영 경험이 있는 백엔드 개발자",
@@ -223,6 +237,18 @@ export const introGuidanceCases: IntroGuidanceGoldenCase[] = [
       requiredTargets: ["React 기반 서비스 개발 경험", "TypeScript 활용 능력", "협업 중심 개발 문화 적응"],
       preferredTargets: ["Next.js 경험"],
       gapCandidates: ["GraphQL"]
+    }
+  },
+  {
+    name: "frontend-metrics",
+    resume: frontendResumeFixture,
+    company: frontendMetricsCompanyFixture,
+    expected: {
+      roleOverlap: ["frontend"],
+      matchedSkills: ["React", "TypeScript", "TanStack Query"],
+      requiredTargets: ["대시보드 성능 개선 경험", "TypeScript 활용 능력", "기획/디자인 협업 경험"],
+      preferredTargets: ["TanStack Query 경험"],
+      gapCandidates: ["Amplitude", "A/B 테스트 경험"]
     }
   },
   {
