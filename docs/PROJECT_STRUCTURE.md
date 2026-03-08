@@ -155,7 +155,7 @@ resume-tailor/
 
 외부 도구나 플랫폼 종속 로직을 담는 보조 스크립트 폴더입니다.
 
-현재는 OCR 보조용 `vision_ocr.swift`가 있습니다.
+현재는 macOS Vision OCR 보조용 `vision_ocr.swift`가 있고, Linux OCR은 `lib/company-image-ocr.ts`에서 `tesseract` CLI를 직접 호출합니다.
 
 ## 4. 주요 실행 흐름
 

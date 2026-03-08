@@ -26,7 +26,7 @@
 - Codex 로그인 가능한 계정
 - ChatGPT 설정 `보안`에서 `Codex용 장치 코드 인증 활성화`
 - Docker에서는 브라우저 리다이렉트보다 `--device-auth` 사용 권장
-- `/company`의 `URL 불러오기`는 동작하지만, 이미지 기반 상세 공고 OCR fallback은 macOS 로컬 실행 기준이라 Docker/Linux에서는 이미지 본문 추출이 약할 수 있습니다.
+- `/company`의 `URL 불러오기`는 동작합니다. 이미지 기반 상세 공고는 macOS에서는 Vision OCR, Docker/Linux에서는 Tesseract OCR로 보강을 시도합니다. 다만 Docker/Linux 결과는 macOS보다 품질 차이가 있을 수 있습니다.
 
 가장 빠른 실행:
 

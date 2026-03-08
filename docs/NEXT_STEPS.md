@@ -157,7 +157,7 @@
 
 - [~] 공고 URL 불러오기와 사이트별 상세 추출 1차 도입
 - [ ] `pdf-parse` 기반 PDF 텍스트 추출 프로토타입
-- [ ] macOS Vision OCR fallback의 대체 경로 조사(Linux/배포 환경)
+- [~] macOS Vision OCR fallback의 Linux 대체 경로 보강
 - [ ] 로컬 인증 의존성을 제거할 수 있는 구조 조사
 - [ ] 원격 배포 시 인증 전략과 비밀 관리 방식 문서화
 
@@ -170,6 +170,7 @@
 - [x] 숨겨진 JSON 추출과 브라우저 fallback
 - [x] 내부 주소 차단
 - [x] 이미지 상세 공고 OCR fallback
+- [x] Docker/Linux용 Tesseract OCR fallback 1차 추가
 
 완료 기준:
 

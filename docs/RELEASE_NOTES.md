@@ -15,6 +15,7 @@
 - Docker 실행 안내를 `docker pull`/`docker run`, 저장소 clone 후 `docker compose`, 로컬 개발 실행 세 경로로 재정리
 - `README`에 Docker 직접 실행과 `docker compose` 실행 각각의 종료 절차와 volume 정리 절차를 추가
 - `README`의 Docker 직접 실행 예시에서 `종료(stop)`와 `삭제(rm)` 의미를 분리해 명령 설명을 더 정확하게 정리
+- Docker/Linux 실행에도 `tesseract` 기반 OCR fallback을 추가하고, 이미지 기반 상세 공고는 더 구체적인 경고/실패 안내를 반환하도록 개선
 - Docker Hub 기본 이미지 경로를 실제 공개 저장소 `qrqr/resume-tailor` 기준으로 정정하고, Docker publish 워크플로를 `linux/amd64`와 `linux/arm64` 멀티아키 이미지 빌드로 확장
 - 프로젝트 표시 이름과 내부 식별자를 `ResumeTailor` / `resume-tailor` 기준으로 정리하고, 기존 localStorage 키를 자동 마이그레이션하도록 조정
 - Docker 이미지 override 환경 변수를 `RESUME_TAILOR_IMAGE` 기준으로 정리하고, 기존 `RESUME_MAKE_IMAGE`는 fallback으로 유지

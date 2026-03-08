@@ -2,7 +2,7 @@ import { isIP } from "node:net";
 
 import { load } from "cheerio";
 
-import { extractTextFromImages } from "@/lib/company-image-ocr";
+import { extractTextFromImages, isImageOcrAvailable } from "@/lib/company-image-ocr";
 import { HttpError } from "@/lib/http";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -139,6 +139,7 @@ interface ExtractedCandidate {
 
 interface BrowserFallbackResult {
   candidate: ExtractedCandidate | null;
+  imageOcr: ImageOcrAttemptResult;
   failure?: string;
 }
 
@@ -146,6 +147,32 @@ interface ImageFetchHeaders {
   cookieHeader?: string;
   refererUrl?: string;
 }
+
+interface ImageOcrAttemptResult {
+  candidate: ExtractedCandidate | null;
+  detectedImageCount: number;
+  ocrUnsupported: boolean;
+}
+
+interface CandidateWithImageOcrResult {
+  candidate: ExtractedCandidate | null;
+  imageOcr: ImageOcrAttemptResult;
+}
+
+const NO_IMAGE_OCR_ATTEMPT: ImageOcrAttemptResult = {
+  candidate: null,
+  detectedImageCount: 0,
+  ocrUnsupported: false
+};
+
+const IMAGE_OCR_WARNING =
+  "상세 본문 이미지가 감지돼 현재 실행 환경에서는 일부 내용이 누락될 수 있어요. macOS 로컬 실행에서 다시 시도하거나 공고 본문을 직접 붙여넣어 주세요.";
+
+const IMAGE_OCR_ERROR_MESSAGE =
+  "상세 본문 이미지가 감지됐지만 현재 실행 환경에서는 자동으로 읽지 못했어요.";
+
+const IMAGE_OCR_ERROR_DETAILS =
+  "macOS 로컬 실행에서 다시 시도하거나 공고 본문을 직접 붙여넣어 주세요.";
 
 function splitSetCookieHeader(value: string): string[] {
   return value
@@ -373,10 +400,18 @@ async function extractImageOcrCandidateFromHtml(
   siteName: string,
   imageHeaders: ImageFetchHeaders,
   scoreBoost: number
-): Promise<ExtractedCandidate | null> {
+): Promise<ImageOcrAttemptResult> {
   const imageUrls = collectImageUrlsFromHtml(html, baseUrl, selectors);
   if (imageUrls.length === 0) {
-    return null;
+    return NO_IMAGE_OCR_ATTEMPT;
+  }
+
+  if (!isImageOcrAvailable()) {
+    return {
+      candidate: null,
+      detectedImageCount: imageUrls.length,
+      ocrUnsupported: true
+    };
   }
 
   const images = (
@@ -384,30 +419,51 @@ async function extractImageOcrCandidateFromHtml(
   ).filter((image): image is NonNullable<typeof image> => !!image);
 
   if (images.length === 0) {
-    return null;
+    return {
+      candidate: null,
+      detectedImageCount: imageUrls.length,
+      ocrUnsupported: false
+    };
   }
 
   const ocrText = mergeTextBlocks(...(await extractTextFromImages(images)));
   if (!ocrText || ocrText.length < MIN_OCR_TEXT_LENGTH) {
-    return null;
+    return {
+      candidate: null,
+      detectedImageCount: imageUrls.length,
+      ocrUnsupported: false
+    };
   }
 
   return {
-    title,
-    siteName,
-    text: ocrText,
-    source: "ocr",
-    score: scoreTextQuality(ocrText, title) + scoreBoost + images.length * 60
+    candidate: {
+      title,
+      siteName,
+      text: ocrText,
+      source: "ocr",
+      score: scoreTextQuality(ocrText, title) + scoreBoost + images.length * 60
+    },
+    detectedImageCount: imageUrls.length,
+    ocrUnsupported: false
   };
+}
+
+function buildImageOcrWarning(...results: ImageOcrAttemptResult[]): string | undefined {
+  return results.some((result) => result.ocrUnsupported && result.detectedImageCount > 0)
+    ? IMAGE_OCR_WARNING
+    : undefined;
 }
 
 async function fetchSaraminRelayCandidate(
   pageUrl: URL,
   cookieHeader: string
-): Promise<ExtractedCandidate | null> {
+): Promise<CandidateWithImageOcrResult> {
   const recIdx = pageUrl.searchParams.get("rec_idx")?.trim();
   if (!recIdx) {
-    return null;
+    return {
+      candidate: null,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const viewType = pageUrl.searchParams.get("view_type") || "avatar";
@@ -444,12 +500,18 @@ async function fetchSaraminRelayCandidate(
   });
 
   if (!ajaxResponse.ok) {
-    return null;
+    return {
+      candidate: null,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const ajaxHtml = await ajaxResponse.text();
   if (!ajaxHtml.trim() || isSaraminNotFoundHtml(ajaxHtml)) {
-    return null;
+    return {
+      candidate: null,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const $ajax = load(ajaxHtml);
@@ -464,7 +526,10 @@ async function fetchSaraminRelayCandidate(
 
   const detailSrc = $ajax("iframe.iframe_content").attr("src");
   if (!detailSrc) {
-    return ajaxCandidate;
+    return {
+      candidate: ajaxCandidate,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const detailUrl = new URL(detailSrc, pageUrl);
@@ -477,12 +542,18 @@ async function fetchSaraminRelayCandidate(
   });
 
   if (!detailResponse.ok) {
-    return ajaxCandidate;
+    return {
+      candidate: ajaxCandidate,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const detailHtml = await detailResponse.text();
   if (!detailHtml.trim() || isSaraminNotFoundHtml(detailHtml)) {
-    return ajaxCandidate;
+    return {
+      candidate: ajaxCandidate,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const detailCandidate = createHtmlResponseCandidate(
@@ -497,10 +568,13 @@ async function fetchSaraminRelayCandidate(
   const detailSiteName = detailCandidate?.siteName || ajaxCandidate?.siteName || "사람인";
 
   if (isStrongCandidate(detailCandidate)) {
-    return pickBestCandidate([detailCandidate, ajaxCandidate]);
+    return {
+      candidate: pickBestCandidate([detailCandidate, ajaxCandidate]),
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
-  const detailImageCandidate = await extractImageOcrCandidateFromHtml(
+  const detailImageResult = await extractImageOcrCandidateFromHtml(
     detailHtml,
     detailUrl,
     [".user_content", "main.job-posting", ".job-content"],
@@ -513,9 +587,17 @@ async function fetchSaraminRelayCandidate(
     1240
   );
 
-  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageCandidate, "ocr", 280);
+  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageResult.candidate, "ocr", 280);
 
-  return pickBestCandidate([mergedDetailCandidate, detailImageCandidate, detailCandidate, ajaxCandidate]);
+  return {
+    candidate: pickBestCandidate([
+      mergedDetailCandidate,
+      detailImageResult.candidate,
+      detailCandidate,
+      ajaxCandidate
+    ]),
+    imageOcr: detailImageResult
+  };
 }
 
 function trimTextBetweenMarkers(
@@ -592,10 +674,13 @@ async function fetchJobkoreaGiReadCandidate(
   pageUrl: URL,
   pageHtml: string,
   cookieHeader: string
-): Promise<ExtractedCandidate | null> {
+): Promise<CandidateWithImageOcrResult> {
   const jobId = pageUrl.pathname.match(/\/Recruit\/GI_Read\/(\d+)/)?.[1];
   if (!jobId) {
-    return null;
+    return {
+      candidate: null,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const summaryCandidate = extractJobkoreaSummaryCandidate(pageHtml);
@@ -615,12 +700,18 @@ async function fetchJobkoreaGiReadCandidate(
   });
 
   if (!detailResponse.ok) {
-    return summaryCandidate;
+    return {
+      candidate: summaryCandidate,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const detailHtml = await detailResponse.text();
   if (!detailHtml.trim()) {
-    return summaryCandidate;
+    return {
+      candidate: summaryCandidate,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT
+    };
   }
 
   const extractedDetail = extractTextFromHtml(detailHtml, detailUrl, "html");
@@ -638,8 +729,8 @@ async function fetchJobkoreaGiReadCandidate(
         }
       : null;
 
-  const detailImageCandidate = isStrongCandidate(detailCandidate)
-    ? null
+  const detailImageResult = isStrongCandidate(detailCandidate)
+    ? NO_IMAGE_OCR_ATTEMPT
     : await extractImageOcrCandidateFromHtml(
         detailHtml,
         detailUrl,
@@ -653,16 +744,19 @@ async function fetchJobkoreaGiReadCandidate(
         1360
       );
 
-  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageCandidate, "ocr", 260);
+  const mergedDetailCandidate = mergeCandidates(detailCandidate, detailImageResult.candidate, "ocr", 260);
   const mergedCandidate = mergeCandidates(mergedDetailCandidate, summaryCandidate, "html", 220);
 
-  return pickBestCandidate([
-    mergedCandidate,
-    mergedDetailCandidate,
-    detailImageCandidate,
-    detailCandidate,
-    summaryCandidate
-  ]);
+  return {
+    candidate: pickBestCandidate([
+      mergedCandidate,
+      mergedDetailCandidate,
+      detailImageResult.candidate,
+      detailCandidate,
+      summaryCandidate
+    ]),
+    imageOcr: detailImageResult
+  };
 }
 
 function isPrivateIpv4(value: string): boolean {
@@ -1281,7 +1375,7 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
       resolvedUrl,
       browserSiteName
     );
-    const imageOcrCandidate = browserNeedsImageOcr
+    const imageOcrResult = browserNeedsImageOcr
       ? await extractImageOcrCandidateFromHtml(
           renderedHtml,
           resolvedUrl,
@@ -1293,15 +1387,17 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
           },
           920
         )
-      : null;
-    const mergedCandidate = mergeCandidates(htmlCandidate, imageOcrCandidate, "browser", 220);
+      : NO_IMAGE_OCR_ATTEMPT;
+    const mergedCandidate = mergeCandidates(htmlCandidate, imageOcrResult.candidate, "browser", 220);
 
     return {
-      candidate: pickBestCandidate([embeddedCandidate, mergedCandidate, imageOcrCandidate, htmlCandidate])
+      candidate: pickBestCandidate([embeddedCandidate, mergedCandidate, imageOcrResult.candidate, htmlCandidate]),
+      imageOcr: imageOcrResult
     };
   } catch (error) {
     return {
       candidate: null,
+      imageOcr: NO_IMAGE_OCR_ATTEMPT,
       failure: formatBrowserFailure(error)
     };
   } finally {
@@ -1309,7 +1405,12 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
   }
 }
 
-function toFetchedCompanyPage(candidate: ExtractedCandidate, resolvedUrl: string, hostname: string) {
+function toFetchedCompanyPage(
+  candidate: ExtractedCandidate,
+  resolvedUrl: string,
+  hostname: string,
+  warning?: string
+) {
   const title = candidate.title || hostnameToLabel(hostname);
   const siteName = candidate.siteName || hostnameToLabel(hostname);
   const hints = guessHints(title, siteName, hostname);
@@ -1319,7 +1420,8 @@ function toFetchedCompanyPage(candidate: ExtractedCandidate, resolvedUrl: string
     title,
     companyNameHint: hints.companyNameHint,
     jobTitleHint: hints.jobTitleHint,
-    text: candidate.text
+    text: candidate.text,
+    ...(warning ? { warning } : {})
   };
 }
 
@@ -1329,6 +1431,7 @@ export interface FetchedCompanyPage {
   companyNameHint: string;
   jobTitleHint: string;
   text: string;
+  warning?: string;
 }
 
 export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPage> {
@@ -1409,18 +1512,33 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
     }
 
     if (isSaraminRelayUrl(resolved)) {
-      const saraminCandidate = await fetchSaraminRelayCandidate(resolved, cookieHeader);
+      const saraminResult = await fetchSaraminRelayCandidate(resolved, cookieHeader);
+      const saraminWarning = buildImageOcrWarning(saraminResult.imageOcr);
 
-      if (isUsableCandidate(saraminCandidate)) {
-        return toFetchedCompanyPage(saraminCandidate, resolvedUrl, resolved.hostname);
+      if (isUsableCandidate(saraminResult.candidate)) {
+        return toFetchedCompanyPage(saraminResult.candidate, resolvedUrl, resolved.hostname, saraminWarning);
+      }
+
+      if (saraminWarning) {
+        throw new HttpError(422, IMAGE_OCR_ERROR_MESSAGE, IMAGE_OCR_ERROR_DETAILS);
       }
     }
 
     if (isJobkoreaGiReadUrl(resolved)) {
-      const jobkoreaCandidate = await fetchJobkoreaGiReadCandidate(resolved, body, cookieHeader);
+      const jobkoreaResult = await fetchJobkoreaGiReadCandidate(resolved, body, cookieHeader);
+      const jobkoreaWarning = buildImageOcrWarning(jobkoreaResult.imageOcr);
 
-      if (isUsableCandidate(jobkoreaCandidate)) {
-        return toFetchedCompanyPage(jobkoreaCandidate, resolvedUrl, resolved.hostname);
+      if (isUsableCandidate(jobkoreaResult.candidate)) {
+        return toFetchedCompanyPage(
+          jobkoreaResult.candidate,
+          resolvedUrl,
+          resolved.hostname,
+          jobkoreaWarning
+        );
+      }
+
+      if (jobkoreaWarning) {
+        throw new HttpError(422, IMAGE_OCR_ERROR_MESSAGE, IMAGE_OCR_ERROR_DETAILS);
       }
     }
 
@@ -1429,7 +1547,7 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
     const staticTitle = htmlCandidate.title;
     const staticSiteName = htmlCandidate.siteName;
     const staticNeedsImageOcr = !isStrongCandidate(htmlCandidate);
-    const staticImageCandidate = staticNeedsImageOcr
+    const staticImageResult = staticNeedsImageOcr
       ? await extractImageOcrCandidateFromHtml(
           body,
           resolved,
@@ -1442,23 +1560,29 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
           },
           760
         )
-      : null;
-    const staticMergedCandidate = mergeCandidates(htmlCandidate, staticImageCandidate, "html", 180);
+      : NO_IMAGE_OCR_ATTEMPT;
+    const staticMergedCandidate = mergeCandidates(htmlCandidate, staticImageResult.candidate, "html", 180);
     const staticBest = pickBestCandidate([
       embeddedCandidate,
       staticMergedCandidate,
-      staticImageCandidate,
+      staticImageResult.candidate,
       htmlCandidate
     ]);
+    const staticWarning = buildImageOcrWarning(staticImageResult);
 
     if (isStrongCandidate(staticBest)) {
-      return toFetchedCompanyPage(staticBest, resolvedUrl, resolved.hostname);
+      return toFetchedCompanyPage(staticBest, resolvedUrl, resolved.hostname, staticWarning);
     }
 
     const browserResult = await extractCandidateWithBrowser(resolved);
     const best = pickBestCandidate([browserResult.candidate, staticBest]);
+    const warning = buildImageOcrWarning(staticImageResult, browserResult.imageOcr);
 
     if (!isUsableCandidate(best)) {
+      if (warning) {
+        throw new HttpError(422, IMAGE_OCR_ERROR_MESSAGE, IMAGE_OCR_ERROR_DETAILS);
+      }
+
       throw new HttpError(
         422,
         "자동으로 공고 본문을 충분히 읽지 못했어요.",
@@ -1466,7 +1590,7 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
       );
     }
 
-    return toFetchedCompanyPage(best, resolvedUrl, resolved.hostname);
+    return toFetchedCompanyPage(best, resolvedUrl, resolved.hostname, warning);
   } catch (error) {
     if (error instanceof HttpError) {
       throw error;

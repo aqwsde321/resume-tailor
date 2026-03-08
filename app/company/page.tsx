@@ -33,6 +33,7 @@ interface CompanyUrlFetchData {
   companyNameHint: string;
   jobTitleHint: string;
   text: string;
+  warning?: string;
 }
 
 interface UrlPreview {
@@ -41,6 +42,7 @@ interface UrlPreview {
   jobTitle: string;
   sourceHost: string;
   textLength: number;
+  warning?: string;
 }
 
 function formatIssueDetails(errorMessage: string): string {
@@ -289,7 +291,8 @@ export default function CompanyPage() {
         companyName: payload.data.companyNameHint,
         jobTitle: payload.data.jobTitleHint,
         sourceHost,
-        textLength: payload.data.text.length
+        textLength: payload.data.text.length,
+        warning: payload.data.warning
       });
       setMessage(
         payload.data.title
@@ -423,9 +426,13 @@ export default function CompanyPage() {
               <div className="url-preview" aria-live="polite">
                 <div className="url-preview-head">
                   <strong>읽어온 정보</strong>
-                  <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
+                  <div className="url-preview-badges">
+                    <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
+                    {urlPreview.warning && <span className="inline-badge warn">이미지 본문 감지</span>}
+                  </div>
                 </div>
                 <p className="url-preview-title">{urlPreview.title}</p>
+                {urlPreview.warning && <p className="url-preview-note">{urlPreview.warning}</p>}
                 <div className="url-preview-meta">
                   <span className="url-preview-chip">
                     <span>회사</span>

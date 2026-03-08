@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const launchMock = vi.hoisted(() => vi.fn());
 const extractTextFromImagesMock = vi.hoisted(() => vi.fn());
+const isImageOcrAvailableMock = vi.hoisted(() => vi.fn());
 
 vi.mock("playwright", () => ({
   chromium: {
@@ -10,7 +11,8 @@ vi.mock("playwright", () => ({
 }));
 
 vi.mock("@/lib/company-image-ocr", () => ({
-  extractTextFromImages: extractTextFromImagesMock
+  extractTextFromImages: extractTextFromImagesMock,
+  isImageOcrAvailable: isImageOcrAvailableMock
 }));
 
 import { POST } from "@/app/api/company/fetch-url/route";
@@ -40,7 +42,9 @@ describe("POST /api/company/fetch-url", () => {
     vi.restoreAllMocks();
     launchMock.mockReset();
     extractTextFromImagesMock.mockReset();
+    isImageOcrAvailableMock.mockReset();
     extractTextFromImagesMock.mockResolvedValue([]);
+    isImageOcrAvailableMock.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -470,6 +474,69 @@ describe("POST /api/company/fetch-url", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
+  it("OCR 미지원 환경에서도 이미지 본문 감지를 warning으로 돌려준다", async () => {
+    isImageOcrAvailableMock.mockReturnValue(false);
+
+    const html = `
+      <html>
+        <head>
+          <meta property="og:site_name" content="테스트랩" />
+          <title>백엔드 개발자 채용</title>
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "JobPosting",
+              "title": "백엔드 개발자",
+              "hiringOrganization": { "name": "테스트랩" },
+              "description": "주요 업무\\nSpring Boot 기반 API 개발\\n자격 요건\\nJava 실무 경험\\n우대 사항\\nDocker 운영 경험"
+            }
+          </script>
+        </head>
+        <body>
+          <main>
+            <p>상세 내용은 이미지를 확인해 주세요.</p>
+            <img src="/recruit-images/detail-2.png" />
+          </main>
+        </body>
+      </html>
+    `;
+
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url === "https://jobs.example.com/image-warning") {
+        return new Response(html, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://jobs.example.com/image-warning"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.text).toContain("Spring Boot 기반 API 개발");
+    expect(body.data.warning).toContain("상세 본문 이미지가 감지돼");
+    expect(extractTextFromImagesMock).not.toHaveBeenCalled();
+    expect(launchMock).not.toHaveBeenCalled();
+  });
+
   it("잡코리아 GI_Read 공고는 상세 iframe 본문을 우선 읽고 추천공고를 제외한다", async () => {
     const baseHtml = `
       <html>
@@ -693,6 +760,56 @@ describe("POST /api/company/fetch-url", () => {
     expect(body.data.text).toContain("Java 또는 Kotlin 기반 서버 개발 경험");
     expect(body.data.text).toContain("Kafka 운영 경험");
     expect(launchMock).not.toHaveBeenCalled();
+  });
+
+  it("이미지 본문만 감지되고 OCR 미지원 환경이면 구체적인 안내로 실패한다", async () => {
+    isImageOcrAvailableMock.mockReturnValue(false);
+
+    const weakHtml = `
+      <html>
+        <head>
+          <title>이미지 공고</title>
+        </head>
+        <body>
+          <main>
+            <p>상세 내용은 아래 이미지를 확인해 주세요.</p>
+            <img src="/recruit-images/detail-only.png" />
+          </main>
+        </body>
+      </html>
+    `;
+
+    mockBrowser(weakHtml);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(weakHtml, {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8"
+          }
+        })
+      )
+    );
+
+    const request = new Request("http://localhost/api/company/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: "https://jobs.example.com/image-only"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.ok).toBe(false);
+    expect(body.error.message).toBe("상세 본문 이미지가 감지됐지만 현재 실행 환경에서는 자동으로 읽지 못했어요.");
+    expect(body.error.details).toContain("macOS 로컬 실행");
+    expect(extractTextFromImagesMock).not.toHaveBeenCalled();
+    expect(launchMock).toHaveBeenCalledTimes(1);
   });
 
   it("내부 주소는 차단한다", async () => {

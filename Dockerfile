@@ -5,7 +5,12 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates git \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-kor \
   && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @openai/codex

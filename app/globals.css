@@ -821,6 +821,13 @@ textarea {
   gap: 10px;
 }
 
+.url-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .url-preview-head strong {
   font-size: 0.88rem;
 }
@@ -830,6 +837,17 @@ textarea {
   font-size: 0.98rem;
   font-weight: 700;
   line-height: 1.45;
+}
+
+.url-preview-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(161, 104, 26, 0.22);
+  background: rgba(161, 104, 26, 0.08);
+  color: #7b4b0b;
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 .url-preview-meta {

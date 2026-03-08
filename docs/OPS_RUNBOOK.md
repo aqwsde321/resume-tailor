@@ -209,10 +209,11 @@ lsof -iTCP -sTCP:LISTEN -nP | rg node
 원인:
 
 - 상세 본문이 이미지이거나 OCR 품질이 낮음
-- 현재 OCR fallback은 macOS Vision 기준
+- 현재 OCR fallback은 macOS에서는 Vision, Docker/Linux에서는 Tesseract 기준
 
 조치:
 
+- Docker/Linux에서는 이미지 본문 감지 시 Tesseract OCR을 먼저 시도하고, 결과가 약하면 경고나 직접 붙여넣기 안내가 먼저 보일 수 있습니다.
 - macOS 로컬 실행인지 확인합니다.
 - 가능하면 공고 본문을 직접 붙여넣어 비교합니다.
 - 이미지가 너무 흐리거나 작은 경우 붙여넣기 또는 `txt` 입력으로 우회합니다.
@@ -260,4 +261,4 @@ curl -N -sS -X POST http://localhost:3000/api/resume/stream \
 현재 문서 범위는 로컬 MVP입니다.
 
 - 서버리스나 원격 배포 시 Codex 인증과 세션 정책을 별도로 재설계해야 합니다.
-- 공고 이미지 OCR fallback도 현재는 macOS 로컬 실행 기준입니다.
+- 공고 이미지 OCR fallback은 macOS Vision과 Linux Tesseract의 품질 차이를 고려해야 합니다.
