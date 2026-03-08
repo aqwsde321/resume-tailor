@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
@@ -46,11 +46,122 @@ function getIntroInsights(intro: Intro | null) {
 }
 
 type IntroSectionKey = "oneLineIntro" | "shortIntro" | "longIntro";
+type CompareChunkStatus = "same" | "added" | "removed";
 
 interface CopyFeedback {
   key: IntroSectionKey;
   title: string;
   status: "success" | "error";
+}
+
+interface CompareChunk {
+  id: string;
+  text: string;
+  status: CompareChunkStatus;
+}
+
+interface CompareSection {
+  key: IntroSectionKey;
+  title: string;
+  previousTitle: string;
+  currentTitle: string;
+  previousChunks: CompareChunk[];
+  currentChunks: CompareChunk[];
+  addedCount: number;
+  removedCount: number;
+  unchangedCount: number;
+  changed: boolean;
+}
+
+const SENTENCE_CHUNK_PATTERN = /[^.!?。！？\n]+[.!?。！？]?/g;
+
+function splitCompareChunks(text: string) {
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return [];
+  }
+
+  return normalized.split(/\n+/).flatMap((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    const chunks = trimmed.match(SENTENCE_CHUNK_PATTERN) ?? [trimmed];
+    return chunks.map((chunk) => chunk.trim()).filter(Boolean);
+  });
+}
+
+function normalizeCompareChunk(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/^[\u2022•\-*]+\s*/, "")
+    .replace(/[.!?。！？]+$/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function countCompareSignatures(chunks: string[]) {
+  const counts = new Map<string, number>();
+
+  for (const chunk of chunks) {
+    const signature = normalizeCompareChunk(chunk);
+    if (!signature) {
+      continue;
+    }
+
+    counts.set(signature, (counts.get(signature) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+function markCompareChunks(chunks: string[], otherCounts: Map<string, number>, missingStatus: CompareChunkStatus) {
+  const seen = new Map<string, number>();
+
+  return chunks.map((chunk, index) => {
+    const signature = normalizeCompareChunk(chunk);
+    const seenCount = seen.get(signature) ?? 0;
+    seen.set(signature, seenCount + 1);
+
+    return {
+      id: `${signature || "chunk"}-${index}`,
+      text: chunk,
+      status: signature && seenCount < (otherCounts.get(signature) ?? 0) ? "same" : missingStatus
+    } satisfies CompareChunk;
+  });
+}
+
+function buildCompareSection(
+  key: IntroSectionKey,
+  title: string,
+  previousTitle: string,
+  currentTitle: string,
+  previousValue: string,
+  currentValue: string
+) {
+  const previousSource = splitCompareChunks(previousValue);
+  const currentSource = splitCompareChunks(currentValue);
+  const previousCounts = countCompareSignatures(previousSource);
+  const currentCounts = countCompareSignatures(currentSource);
+  const previousChunks = markCompareChunks(previousSource, currentCounts, "removed");
+  const currentChunks = markCompareChunks(currentSource, previousCounts, "added");
+  const addedCount = currentChunks.filter((chunk) => chunk.status === "added").length;
+  const removedCount = previousChunks.filter((chunk) => chunk.status === "removed").length;
+  const unchangedCount = currentChunks.filter((chunk) => chunk.status === "same").length;
+
+  return {
+    key,
+    title,
+    previousTitle,
+    currentTitle,
+    previousChunks,
+    currentChunks,
+    addedCount,
+    removedCount,
+    unchangedCount,
+    changed: addedCount > 0 || removedCount > 0
+  } satisfies CompareSection;
 }
 
 export default function ResultPage() {
@@ -227,29 +338,32 @@ export default function ResultPage() {
       }
     };
   }, []);
-  const previousIntroSections = useMemo(
+  const compareSections = useMemo(
     () => [
-      {
-        key: "oneLineIntro" as const,
-        previousTitle: "이전 한 줄 소개",
-        currentTitle: "지금 한 줄 소개",
-        previousValue: state.previousIntro?.oneLineIntro ?? "",
-        currentValue: state.intro?.oneLineIntro ?? ""
-      },
-      {
-        key: "shortIntro" as const,
-        previousTitle: "이전 짧은 소개",
-        currentTitle: "지금 짧은 소개",
-        previousValue: state.previousIntro?.shortIntro ?? "",
-        currentValue: state.intro?.shortIntro ?? ""
-      },
-      {
-        key: "longIntro" as const,
-        previousTitle: "이전 긴 소개",
-        currentTitle: "지금 긴 소개",
-        previousValue: state.previousIntro?.longIntro ?? state.previousIntro?.shortIntro ?? "",
-        currentValue: state.intro?.longIntro ?? state.intro?.shortIntro ?? ""
-      }
+      buildCompareSection(
+        "oneLineIntro",
+        "한 줄 소개",
+        "이전 한 줄 소개",
+        "지금 한 줄 소개",
+        state.previousIntro?.oneLineIntro ?? "",
+        state.intro?.oneLineIntro ?? ""
+      ),
+      buildCompareSection(
+        "shortIntro",
+        "짧은 소개",
+        "이전 짧은 소개",
+        "지금 짧은 소개",
+        state.previousIntro?.shortIntro ?? "",
+        state.intro?.shortIntro ?? ""
+      ),
+      buildCompareSection(
+        "longIntro",
+        "긴 소개",
+        "이전 긴 소개",
+        "지금 긴 소개",
+        state.previousIntro?.longIntro ?? state.previousIntro?.shortIntro ?? "",
+        state.intro?.longIntro ?? state.intro?.shortIntro ?? ""
+      )
     ],
     [state.previousIntro, state.intro]
   );
@@ -543,27 +657,81 @@ export default function ResultPage() {
       </section>
 
       {state.previousIntro && state.intro && (
-        <section className="card">
+        <section className="card compare-shell">
           <div className="card-head">
-            <h2>이전 결과와 비교</h2>
+            <div>
+              <p className="card-kicker">비교</p>
+              <h2>이전 결과와 지금 결과를 한눈에 확인</h2>
+              <p className="anchor-note">빠진 문장은 왼쪽, 새로 들어간 문장은 오른쪽에서 바로 강조합니다.</p>
+            </div>
           </div>
 
-          <div className="compare-grid">
-            {previousIntroSections.map((section) => (
-              <Fragment key={section.key}>
-                <article className="result-block compare-old">
-                  <div className="result-head">
-                    <h3>{section.previousTitle}</h3>
+          <div className="compare-legend" aria-hidden="true">
+            <span className="compare-summary-chip removed">이전에서 빠진 문장</span>
+            <span className="compare-summary-chip added">새로 들어간 문장</span>
+            <span className="compare-summary-chip same">그대로 유지된 문장</span>
+          </div>
+
+          <div className="compare-section-list">
+            {compareSections.map((section) => (
+              <article key={section.key} className="compare-section">
+                <div className="compare-section-head">
+                  <div className="compare-section-copy">
+                    <p className="compare-section-kicker">{section.title}</p>
+                    <h3>{section.changed ? "표현 변화가 보이는 구간" : "큰 변화 없이 유지된 구간"}</h3>
                   </div>
-                  <p>{section.previousValue}</p>
-                </article>
-                <article className="result-block compare-new">
-                  <div className="result-head">
-                    <h3>{section.currentTitle}</h3>
+                  <div className="compare-summary" aria-label={`${section.title} 변경 요약`}>
+                    {section.removedCount > 0 && (
+                      <span className="compare-summary-chip removed">삭제 {section.removedCount}</span>
+                    )}
+                    {section.addedCount > 0 && (
+                      <span className="compare-summary-chip added">추가 {section.addedCount}</span>
+                    )}
+                    {section.unchangedCount > 0 && (
+                      <span className="compare-summary-chip same">유지 {section.unchangedCount}</span>
+                    )}
+                    {!section.changed && <span className="compare-summary-chip same">변경 없음</span>}
                   </div>
-                  <p>{section.currentValue}</p>
-                </article>
-              </Fragment>
+                </div>
+
+                <div className="compare-grid">
+                  <article className="result-block compare-column compare-old">
+                    <div className="compare-column-head">
+                      <p className="compare-column-title">{section.previousTitle}</p>
+                      <p className="compare-column-note">이 버전에서 빠지거나 유지된 표현입니다.</p>
+                    </div>
+                    <div className="compare-body" aria-label={section.previousTitle}>
+                      {section.previousChunks.length > 0 ? (
+                        section.previousChunks.map((chunk) => (
+                          <span key={chunk.id} className={`compare-chunk ${chunk.status}`}>
+                            {chunk.text}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="compare-empty">이전 내용이 없습니다.</p>
+                      )}
+                    </div>
+                  </article>
+
+                  <article className="result-block compare-column compare-new">
+                    <div className="compare-column-head">
+                      <p className="compare-column-title">{section.currentTitle}</p>
+                      <p className="compare-column-note">이번 생성에서 새로 들어오거나 유지된 표현입니다.</p>
+                    </div>
+                    <div className="compare-body" aria-label={section.currentTitle}>
+                      {section.currentChunks.length > 0 ? (
+                        section.currentChunks.map((chunk) => (
+                          <span key={chunk.id} className={`compare-chunk ${chunk.status}`}>
+                            {chunk.text}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="compare-empty">현재 내용이 없습니다.</p>
+                      )}
+                    </div>
+                  </article>
+                </div>
+              </article>
             ))}
           </div>
         </section>
