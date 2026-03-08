@@ -97,7 +97,7 @@ docker compose run --rm app codex login status
 3. 이상이 의심되는 경우
 
 - 먼저 [README](../README.md)의 절차에 따라 이미지를 다시 pull하고 컨테이너를 재실행합니다.
-- Docker Hub 이미지만 사용하는 사용자는 `npm run test`보다 앱 접속, 핵심 플로우, 로그 확인을 우선합니다.
+- Docker Hub 이미지만 사용하는 환경에서는 `npm run test`보다 앱 접속, 핵심 플로우, 로그 확인을 먼저 점검합니다.
 
 ## 5. 장애 대응 가이드
 

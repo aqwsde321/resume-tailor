@@ -52,7 +52,7 @@ resume-tailor/
 - 모델 프롬프트와 작업 절차는 `skills/`의 `SKILL.md`로 분리합니다.
 - 테스트는 `tests/`에서 API, lib, E2E 기준으로 나눕니다.
 
-현재 구조는 로컬 MVP 확장 단계에 적합합니다. 기능 수가 더 커지기 전까지는 feature 폴더 체계로 재배치할 필요가 크지 않습니다.
+이 문서는 현재의 `Next.js route-first + shared lib` 구조를 기준으로 설명합니다.
 
 ## 3. 폴더별 역할
 
@@ -76,8 +76,6 @@ resume-tailor/
 - `app/components/*`
   - 여러 페이지에서 재사용하는 UI 컴포넌트
   - `reasoning-inline.tsx`는 단계별 `생각 깊이` 선택 UI를 담당합니다.
-
-요약하면 `app/`은 라우트와 UI 조립에 집중하고, 실제 분석 로직은 최대한 `lib/`로 분리합니다.
 
 ### `lib/`
 
@@ -155,7 +153,7 @@ resume-tailor/
 
 외부 도구나 플랫폼 종속 로직을 담는 보조 스크립트 폴더입니다.
 
-현재는 macOS Vision OCR 보조용 `vision_ocr.swift`가 있고, Linux OCR은 `lib/company-image-ocr.ts`에서 `tesseract` CLI를 직접 호출합니다.
+macOS Vision OCR 보조용 `vision_ocr.swift`가 있고, Linux OCR은 `lib/company-image-ocr.ts`에서 `tesseract` CLI를 직접 호출합니다.
 
 ## 4. 주요 실행 흐름
 
@@ -194,14 +192,10 @@ resume-tailor/
 - 제품과 운영 문서는 `docs/` 아래에 둡니다.
 - 회귀 방지용 검증은 `tests/` 아래 책임별 폴더에 둡니다.
 
-이 규칙을 유지하면 현재 규모에서는 파일을 찾기 쉽고, 라우트와 도메인 로직의 경계도 비교적 선명하게 유지됩니다.
-
-## 6. 구조 재편을 다시 볼 시점
+## 6. 구조 재편 검토 조건
 
 아래 조건이 생기면 구조 재편을 검토할 수 있습니다.
 
 - `lib/` 아래 파일 수가 크게 늘어나 feature 경계가 흐려질 때
 - `resume`, `company`, `intro` 각각에 전용 컴포넌트와 유틸이 과도하게 많아질 때
 - 로컬 MVP를 넘어서 배포형 서비스 구조로 확장할 때
-
-그 전까지는 현재 구조를 유지하고, 필요한 경우에만 `lib/<feature>`처럼 점진적으로 세분화하는 편이 안전합니다.
