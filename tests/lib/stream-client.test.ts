@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { postSseJson } from "@/lib/stream-client";
+import { isAbortError, postSseJson } from "@/lib/stream-client";
 
 function toSse(events: Array<{ event: string; data: unknown }>) {
   return events
@@ -83,5 +83,21 @@ describe("postSseJson", () => {
     await expect(postSseJson("/api/test", {})).rejects.toThrow(
       "요청 처리에 실패했어요. 다시 시도해 주세요. (502)"
     );
+  });
+
+  it("abort signal을 그대로 전달하고 중단 오류를 구분할 수 있다", async () => {
+    const controller = new AbortController();
+    const abortError = new DOMException("The operation was aborted.", "AbortError");
+
+    global.fetch = vi.fn().mockRejectedValue(abortError);
+
+    await expect(postSseJson("/api/test", {}, { signal: controller.signal })).rejects.toBe(abortError);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/test",
+      expect.objectContaining({
+        signal: controller.signal
+      })
+    );
+    expect(isAbortError(abortError)).toBe(true);
   });
 });

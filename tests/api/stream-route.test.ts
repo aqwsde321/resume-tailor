@@ -95,7 +95,9 @@ describe("stream API error handling", () => {
             experience: [],
             projects: [],
             achievements: [],
-            strengths: []
+            pdfHighlights: [],
+            strengths: [],
+            pdfStrengths: []
           },
           company: {
             companyName: "Acme",

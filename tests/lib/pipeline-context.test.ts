@@ -5,6 +5,7 @@ import {
   isIntroFresh,
   type PipelineState
 } from "@/lib/pipeline-context";
+import { serializeResume, serializeResumeIntroSnapshot } from "@/lib/resume-utils";
 
 const baseState: PipelineState = {
   agentSettings: {
@@ -29,6 +30,7 @@ const baseState: PipelineState = {
   previousIntro: null,
   introSource: null,
   currentTask: null,
+  isCancellingTask: false,
   taskStartedAt: null,
   message: "",
   error: "",
@@ -102,5 +104,71 @@ describe("pipeline intro freshness helpers", () => {
         message: "공고를 다시 저장해 주세요."
       }
     ]);
+  });
+
+  it("PDF 전용 이력서 필드만 바뀌면 소개글은 여전히 최신으로 본다", () => {
+    const baseResume = {
+      name: "홍길동",
+      headline: "",
+      summary: "백엔드 개발자",
+      desiredPosition: "Backend Engineer",
+      careerYears: 3,
+      careerDurationText: "",
+      contacts: [],
+      techStack: ["TypeScript", "Node.js"],
+      experience: [],
+      projects: [
+        {
+          name: "프로젝트",
+          description: "설명",
+          subtitle: "",
+          link: "",
+          linkLabel: "",
+          techStack: ["TypeScript"],
+          highlights: []
+        }
+      ],
+      achievements: [],
+      pdfHighlights: [],
+      strengths: [],
+      pdfStrengths: []
+    };
+
+    const pdfEditedResume = {
+      ...baseResume,
+      headline: "원인을 구조적으로 해결하는 개발자",
+      contacts: [{ label: "GitHub", value: "github.com/example", url: "https://github.com/example" }],
+      projects: [
+        {
+          ...baseResume.projects[0],
+          subtitle: "채용 공고 통합 플랫폼",
+          link: "https://github.com/example/project",
+          linkLabel: "github.com/example/project",
+          highlights: ["확장 가능한 구조로 크롤러를 분리했습니다."]
+        }
+      ]
+    };
+
+    const state: PipelineState = {
+      ...baseState,
+      resumeConfirmedJson: serializeResume(pdfEditedResume),
+      companyConfirmedJson: '{"companyName":"saved"}',
+      intro: {
+        oneLineIntro: "한 줄",
+        shortIntro: "짧은 소개",
+        longIntro: "긴 소개",
+        fitReasons: [],
+        matchedSkills: [],
+        gapNotes: [],
+        missingButRelevant: []
+      },
+      introSource: {
+        resumeConfirmedJson: serializeResumeIntroSnapshot(baseResume),
+        companyConfirmedJson: '{"companyName":"saved"}'
+      }
+    };
+
+    expect(isIntroFresh(state)).toBe(true);
+    expect(getIntroRefreshReasons(state)).toEqual([]);
   });
 });

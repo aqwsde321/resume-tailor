@@ -2,6 +2,7 @@ import type { ApiFailure, StreamLogPayload } from "@/lib/types";
 
 interface PostSseJsonOptions {
   onLog?: (payload: StreamLogPayload) => void;
+  signal?: AbortSignal;
 }
 
 // SSE는 data: 라인이 여러 줄로 올 수 있어, 한 레코드 안의 data 라인을 다시 합쳐서 파싱한다.
@@ -106,7 +107,8 @@ export async function postSseJson<T>(
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: options?.signal
   });
 
   if (!response.ok) {
@@ -172,4 +174,11 @@ export async function postSseJson<T>(
   }
 
   return result;
+}
+
+export function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  );
 }

@@ -8,8 +8,8 @@ import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import type { PipelineLog } from "@/lib/types";
 
-type StepKey = "resume" | "company" | "result";
-type StepRoute = "/resume" | "/company" | "/result";
+type StepKey = "resume" | "company" | "result" | "pdf";
+type StepRoute = "/resume" | "/company" | "/result" | "/pdf";
 type StepStatus = "blocked" | "locked" | "ready" | "working" | "done";
 type BusyStageKey = "prepare" | "analyze" | "finalize";
 
@@ -94,11 +94,18 @@ interface AppFrameProps {
   step: StepKey;
   title: string;
   description: string;
+  layout?: "default" | "wide";
   children: ReactNode;
 }
 
-export function AppFrame({ step, title, description, children }: AppFrameProps) {
-  const { hydrated, state } = usePipeline();
+export function AppFrame({
+  step,
+  title,
+  description,
+  layout = "default",
+  children
+}: AppFrameProps) {
+  const { hydrated, state, cancelCurrentTask } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
   const isWorking = Boolean(state.currentTask);
@@ -163,6 +170,19 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
         }
       }
 
+      if (key === "pdf") {
+        switch (status) {
+          case "working":
+            return "수정 중";
+          case "blocked":
+            return "최신 필요";
+          case "locked":
+            return "잠김";
+          default:
+            return "내보내기";
+        }
+      }
+
       switch (status) {
         case "done":
           return "완료";
@@ -196,6 +216,17 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
       : introFresh
         ? "done"
         : "ready";
+    const pdfStatus: StepStatus = !hasResume || !hasCompany || !hasIntro
+      ? step === "pdf"
+        ? "blocked"
+        : "locked"
+      : !introFresh
+        ? step === "pdf"
+          ? "blocked"
+          : "locked"
+        : step === "pdf"
+          ? "working"
+          : "ready";
 
     return [
       {
@@ -221,6 +252,14 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
         enabled: resultStatus !== "locked",
         status: resultStatus,
         statusLabel: stepStatusLabel("result", resultStatus)
+      },
+      {
+        key: "pdf" as const,
+        label: "PDF",
+        href: "/pdf" as StepRoute,
+        enabled: pdfStatus !== "locked",
+        status: pdfStatus,
+        statusLabel: stepStatusLabel("pdf", pdfStatus)
       }
     ];
   }, [hasResume, hasCompany, hasIntro, introFresh, introRefreshReasons.length, state.currentTask, step]);
@@ -252,9 +291,9 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
 
   if (!hydrated) {
     return (
-      <main className="page">
+      <main className="page" data-step={step}>
         <div className="backdrop" />
-        <div className="container">
+        <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
           <section className="card">
             <h2>불러오는 중...</h2>
             <p>저장된 내용을 읽고 있어요.</p>
@@ -265,10 +304,14 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
   }
 
   return (
-    <main className={`page ${isWorking ? "page-busy" : ""}`} aria-busy={isWorking}>
+    <main
+      className={`page ${isWorking ? "page-busy" : ""}`}
+      aria-busy={isWorking}
+      data-step={step}
+    >
       <div className="backdrop" />
       {isWorking && <div className="busy-overlay" aria-hidden="true" />}
-      <div className="container">
+      <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
         <header className="hero">
           <p className="eyebrow">ResumeTailor</p>
           <h1>{title}</h1>
@@ -359,12 +402,24 @@ export function AppFrame({ step, title, description, children }: AppFrameProps) 
                 <h2>{TASK_LABEL[state.currentTask]}</h2>
               </div>
               <p className="live-log-copy">
-                {busyStage && busyStageLabels
+                {state.isCancellingTask
+                  ? "현재 실행을 중단하고 있어요. Codex 호출이 멈추면 화면도 바로 정리됩니다."
+                  : busyStage && busyStageLabels
                   ? `${busyStageLabels[busyStage]} 단계예요. 입력과 확인 영역은 잠시 멈춰두고 있어요.`
                   : "입력과 확인 영역은 잠시 멈춰두고 있어요."}
               </p>
             </div>
-            <span className="live-log-timer">{elapsedSeconds}초</span>
+            <div className="live-log-actions">
+              <span className="live-log-timer">{elapsedSeconds}초</span>
+              <button
+                type="button"
+                className="secondary"
+                onClick={cancelCurrentTask}
+                disabled={state.isCancellingTask}
+              >
+                {state.isCancellingTask ? "중단 중..." : "작업 중지"}
+              </button>
+            </div>
           </div>
 
           {busyStage && busyStageLabels && (

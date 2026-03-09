@@ -64,31 +64,33 @@
 
 목표:
 
-- 현재 `/result`에서 생성한 자기소개와 확정된 이력서를 바로 제출 가능한 PDF로 연결합니다.
+- 현재 `/result`에서 생성한 자기소개와 확정된 이력서를 step 4 `/pdf`에서 바로 제출 가능한 PDF로 연결합니다.
 - 외부 `resume-typst` 프로젝트의 템플릿과 빌드 방식을 현재 프로젝트 안으로 가져와, 단일 앱 안에서 PDF를 생성합니다.
 
 작업:
 
-- [ ] `resume-typst`의 Typst 템플릿과 빌드 경로를 현재 프로젝트 내부로 이식
-- [ ] `Resume + Intro`를 Typst 전용 view model로 변환하는 어댑터 추가
-- [ ] 결과 페이지에 `PDF 내보내기` 버튼과 다운로드 흐름 추가
-- [ ] 로컬/도커 환경에서 Typst 실행 경로 추가
-- [ ] 임시 작업 디렉터리와 산출물 정리 규칙 추가
+- [x] `resume-typst`의 Typst 템플릿과 빌드 경로를 현재 프로젝트 내부로 이식
+- [x] `Resume + Intro`를 Typst 전용 view model로 변환하는 어댑터 추가
+- [x] 결과 페이지에서 `PDF` step 4로 이동하는 흐름과 다운로드 연결 추가
+- [x] 로컬/도커 환경에서 Typst 실행 경로 추가
+- [x] 임시 작업 디렉터리와 산출물 정리 규칙 추가
 - [ ] PDF 출력 smoke test 또는 렌더링 검증 절차 추가
 
 필드 설계:
 
 - [ ] 1차 필수 또는 권장 필드 추가
-  - [ ] `headline`
-  - [ ] `careerDurationText`
-  - [ ] `contacts[]`
-    - [ ] `label`
-    - [ ] `value`
-    - [ ] `url`
-  - [ ] `projects[].subtitle`
-  - [ ] `projects[].link`
-  - [ ] `projects[].linkLabel`
-  - [ ] `projects[].highlights[]`
+  - [x] `headline`
+  - [x] `careerDurationText`
+  - [x] `contacts[]`
+    - [x] `label`
+    - [x] `value`
+    - [x] `url`
+  - [x] `projects[].subtitle`
+  - [x] `projects[].link`
+  - [x] `projects[].linkLabel`
+  - [x] `projects[].highlights[]`
+  - [x] `pdfHighlights[]`
+  - [x] `pdfStrengths[]`
 - [ ] 2차 확장 필드 검토
   - [ ] `experience[].highlights[]`
   - [ ] `experience[].projects[]`
@@ -97,9 +99,10 @@
 
 UX 방침:
 
-- [ ] 1차에서는 `자기소개 작성` 단계를 새로 만들지 않고, 기존 `/result`에서 만든 `shortIntro` 또는 `longIntro`를 PDF 소개 섹션에 재사용
-- [ ] `/resume` 단계에는 PDF용 프로필 메타 필드를 추가하고, 회사 맞춤 자기소개는 계속 `/result`에서 생성
-- [ ] 1차 PDF 내보내기 버튼은 기본적으로 `/result`에서 제공
+- [x] 1차에서는 `자기소개 작성` 단계를 새로 만들지 않고, 기존 `/result`에서 만든 `shortIntro` 또는 `longIntro`를 PDF 소개 섹션에 재사용
+- [x] `/resume`은 소개글 생성용 입력에 집중하고, PDF용 프로필 메타는 step 4 `/pdf`에서 편집
+- [x] 1차 PDF 내보내기는 별도 step 4 `/pdf`에서 제공
+- [x] step 4에서는 왼쪽 편집과 오른쪽 HTML 미리보기를 동시에 제공
 - [ ] 이후 필요하면 `intro` 없이도 일반 이력서 PDF만 내보내는 흐름을 별도 검토
 
 누락 필드 fallback 규칙:

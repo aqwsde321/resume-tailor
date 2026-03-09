@@ -25,6 +25,7 @@ export async function POST(request: Request) {
           skillName: "resume-to-json",
           inputText: `input/resume.txt 내용:\n${body.text}`,
           outputSchema: resumeOutputSchema,
+          signal: request.signal,
           ...body.agent,
           onLog: (payload) => send("log", payload)
         });
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
           elapsedMs: Date.now() - startedAt
         });
       }
-    });
+    }, { signal: request.signal });
   } catch (error) {
     if (error instanceof HttpError) {
       return apiErrorResponse(error);

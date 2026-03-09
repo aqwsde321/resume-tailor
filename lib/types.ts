@@ -22,22 +22,37 @@ export interface ResumeExperienceItem {
   description: string;
 }
 
+export interface ResumeContactItem {
+  label: string;
+  value: string;
+  url: string;
+}
+
 export interface ResumeProjectItem {
   name: string;
   description: string;
+  subtitle: string;
+  link: string;
+  linkLabel: string;
   techStack: string[];
+  highlights: string[];
 }
 
 export interface Resume {
   name: string;
+  headline: string;
   summary: string;
   desiredPosition: string;
   careerYears: number;
+  careerDurationText: string;
+  contacts: ResumeContactItem[];
   techStack: string[];
   experience: ResumeExperienceItem[];
   projects: ResumeProjectItem[];
   achievements: string[];
+  pdfHighlights: string[];
   strengths: string[];
+  pdfStrengths: string[];
 }
 
 export interface Company {

@@ -6,12 +6,18 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
 
 import { normalizeAgentSettings } from "@/lib/agent-settings";
 import { isIntroTone } from "@/lib/intro-tone";
+import {
+  matchesResumeIntroSnapshot,
+  parseResumeJson,
+  serializeResumeIntroSnapshotFromJson
+} from "@/lib/resume-utils";
 import type {
   AgentSettings,
   Company,
@@ -57,6 +63,7 @@ export interface PipelineState {
   previousIntro: Intro | null;
   introSource: IntroSource | null;
   currentTask: TaskKind | null;
+  isCancellingTask: boolean;
   taskStartedAt: number | null;
   message: string;
   error: string;
@@ -86,6 +93,7 @@ const initialState: PipelineState = {
   previousIntro: null,
   introSource: null,
   currentTask: null,
+  isCancellingTask: false,
   taskStartedAt: null,
   message: "",
   error: "",
@@ -139,6 +147,7 @@ function normalizeState(raw: unknown): PipelineState {
     introSavedAt: typeof value.introSavedAt === "string" ? value.introSavedAt : null,
     intro: normalizeIntro(value.intro),
     previousIntro: normalizeIntro(value.previousIntro),
+    isCancellingTask: value.isCancellingTask === true,
     logs: Array.isArray(value.logs)
       ? value.logs.filter(
           (item): item is PipelineLog =>
@@ -159,6 +168,8 @@ interface PipelineContextValue {
   startTask: (task: TaskKind, message?: string) => void;
   finishTask: () => void;
   addLog: (task: TaskKind, payload: StreamLogPayload) => void;
+  setTaskAborter: (aborter: (() => void) | null) => void;
+  cancelCurrentTask: () => void;
 }
 
 const PipelineContext = createContext<PipelineContextValue | undefined>(undefined);
@@ -166,6 +177,7 @@ const PipelineContext = createContext<PipelineContextValue | undefined>(undefine
 export function PipelineProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PipelineState>(initialState);
   const [hydrated, setHydrated] = useState(false);
+  const taskAbortRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     try {
@@ -235,6 +247,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({
       ...prev,
       currentTask: task,
+      isCancellingTask: false,
       taskStartedAt: Date.now(),
       error: "",
       message: message ?? prev.message
@@ -242,9 +255,11 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const finishTask = useCallback(() => {
+    taskAbortRef.current = null;
     setState((prev) => ({
       ...prev,
       currentTask: null,
+      isCancellingTask: false,
       taskStartedAt: null
     }));
   }, []);
@@ -270,6 +285,25 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setTaskAborter = useCallback((aborter: (() => void) | null) => {
+    taskAbortRef.current = aborter;
+  }, []);
+
+  const cancelCurrentTask = useCallback(() => {
+    const aborter = taskAbortRef.current;
+    if (!aborter) {
+      return;
+    }
+
+    aborter();
+    setState((prev) => ({
+      ...prev,
+      isCancellingTask: true,
+      error: "",
+      message: "작업을 중단하고 있어요."
+    }));
+  }, []);
+
   const value = useMemo<PipelineContextValue>(
     () => ({
       state,
@@ -281,9 +315,24 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       clearLogs,
       startTask,
       finishTask,
-      addLog
+      addLog,
+      setTaskAborter,
+      cancelCurrentTask
     }),
-    [state, hydrated, patch, clearStatus, setMessage, setError, clearLogs, startTask, finishTask, addLog]
+    [
+      state,
+      hydrated,
+      patch,
+      clearStatus,
+      setMessage,
+      setError,
+      clearLogs,
+      startTask,
+      finishTask,
+      addLog,
+      setTaskAborter,
+      cancelCurrentTask
+    ]
   );
 
   return <PipelineContext.Provider value={value}>{children}</PipelineContext.Provider>;
@@ -304,7 +353,7 @@ export function isIntroFresh(state: PipelineState): boolean {
 
   // 소개글 생성 시점의 저장본 스냅샷과 현재 저장본이 같을 때만 최신으로 본다.
   return (
-    state.introSource.resumeConfirmedJson === state.resumeConfirmedJson &&
+    matchesResumeIntroSnapshot(state.resumeConfirmedJson, state.introSource.resumeConfirmedJson) &&
     state.introSource.companyConfirmedJson === state.companyConfirmedJson
   );
 }
@@ -321,7 +370,7 @@ export function getIntroRefreshReasons(state: PipelineState): IntroRefreshReason
       key: "resume",
       message: "이력서를 다시 저장해 주세요."
     });
-  } else if (state.introSource.resumeConfirmedJson !== state.resumeConfirmedJson) {
+  } else if (!matchesResumeIntroSnapshot(state.resumeConfirmedJson, state.introSource.resumeConfirmedJson)) {
     reasons.push({
       key: "resume",
       message: "이력서가 바뀌었어요."
@@ -365,4 +414,12 @@ export function getConfirmedCompany(state: PipelineState): Company | null {
   } catch {
     return null;
   }
+}
+
+export function getResumeIntroSnapshot(state: PipelineState): string | null {
+  return serializeResumeIntroSnapshotFromJson(state.resumeConfirmedJson);
+}
+
+export function getConfirmedResume(state: PipelineState) {
+  return parseResumeJson(state.resumeConfirmedJson);
 }

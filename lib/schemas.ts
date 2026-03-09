@@ -19,25 +19,42 @@ const ResumeExperienceItemSchema = z
   })
   .strict();
 
+const ResumeContactItemSchema = z
+  .object({
+    label: z.string().default(""),
+    value: z.string().default(""),
+    url: z.string().default("")
+  })
+  .strict();
+
 const ResumeProjectItemSchema = z
   .object({
     name: z.string().default(""),
     description: z.string().default(""),
-    techStack: StringArraySchema
+    subtitle: z.string().default(""),
+    link: z.string().default(""),
+    linkLabel: z.string().default(""),
+    techStack: StringArraySchema,
+    highlights: StringArraySchema
   })
   .strict();
 
 export const ResumeSchema = z
   .object({
     name: z.string().default(""),
+    headline: z.string().default(""),
     summary: z.string().default(""),
     desiredPosition: z.string().default(""),
     careerYears: z.number().int().nonnegative().default(0),
+    careerDurationText: z.string().default(""),
+    contacts: z.array(ResumeContactItemSchema).default([]),
     techStack: StringArraySchema,
     experience: z.array(ResumeExperienceItemSchema).default([]),
     projects: z.array(ResumeProjectItemSchema).default([]),
     achievements: StringArraySchema,
-    strengths: StringArraySchema
+    pdfHighlights: StringArraySchema,
+    strengths: StringArraySchema,
+    pdfStrengths: StringArraySchema
   })
   .strict();
 

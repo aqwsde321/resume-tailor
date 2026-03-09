@@ -26,6 +26,7 @@ export async function POST(request: Request) {
           skillName: "company-to-json",
           inputText: `input/company.txt 내용:\n${body.text}`,
           outputSchema: companyOutputSchema,
+          signal: request.signal,
           ...body.agent,
           onLog: (payload) => send("log", payload)
         });
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
           elapsedMs: Date.now() - startedAt
         });
       }
-    });
+    }, { signal: request.signal });
   } catch (error) {
     if (error instanceof HttpError) {
       return apiErrorResponse(error);

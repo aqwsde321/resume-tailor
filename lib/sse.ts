@@ -7,12 +7,29 @@ const SSE_HEADERS = {
   "X-Accel-Buffering": "no"
 } as const;
 
-export function createSseResponse(run: (send: SseSend) => Promise<void>): Response {
+export function createSseResponse(
+  run: (send: SseSend) => Promise<void>,
+  options?: { signal?: AbortSignal }
+): Response {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let closed = false;
+      const close = () => {
+        if (closed) {
+          return;
+        }
+        closed = true;
+        controller.close();
+      };
+
+      options?.signal?.addEventListener("abort", close, { once: true });
+
       const send: SseSend = (event, data) => {
+        if (closed) {
+          return;
+        }
         // SSE는 "event + data + 빈 줄" 형식으로 보내야 클라이언트가 한 레코드로 읽는다.
         const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(payload));
@@ -21,7 +38,8 @@ export function createSseResponse(run: (send: SseSend) => Promise<void>): Respon
       try {
         await run(send);
       } finally {
-        controller.close();
+        options?.signal?.removeEventListener("abort", close);
+        close();
       }
     }
   });

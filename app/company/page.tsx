@@ -15,7 +15,7 @@ import { parseListText, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
-import { postSseJson } from "@/lib/stream-client";
+import { isAbortError, postSseJson } from "@/lib/stream-client";
 
 const EMPTY_COMPANY: Company = {
   companyName: "",
@@ -79,7 +79,8 @@ export default function CompanyPage() {
     clearLogs,
     startTask,
     finishTask,
-    addLog
+    addLog,
+    setTaskAborter
   } = usePipeline();
 
   const isBusy = state.currentTask !== null;
@@ -218,6 +219,8 @@ export default function CompanyPage() {
 
     clearLogs();
     startTask("company", "공고를 읽고 있어요.");
+    const controller = new AbortController();
+    setTaskAborter(() => controller.abort());
 
     try {
       const company = await postSseJson<Company>(
@@ -227,7 +230,8 @@ export default function CompanyPage() {
           agent: toAgentRunOptions(state.agentSettings)
         },
         {
-          onLog: (payload) => addLog("company", payload)
+          onLog: (payload) => addLog("company", payload),
+          signal: controller.signal
         }
       );
 
@@ -240,8 +244,13 @@ export default function CompanyPage() {
 
       setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "공고를 읽는 중 문제가 생겼어요.");
+      if (isAbortError(error)) {
+        setMessage("공고 정리를 중단했어요.");
+      } else {
+        setError(error instanceof Error ? error.message : "공고를 읽는 중 문제가 생겼어요.");
+      }
     } finally {
+      setTaskAborter(null);
       finishTask();
     }
   };

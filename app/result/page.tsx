@@ -11,9 +11,10 @@ import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
 import { formatIntroToneLabel } from "@/lib/intro-tone";
-import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import { getIntroRefreshReasons, getResumeIntroSnapshot, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import { serializeResumeIntroSnapshot } from "@/lib/resume-utils";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
-import { postSseJson } from "@/lib/stream-client";
+import { isAbortError, postSseJson } from "@/lib/stream-client";
 import type { Intro } from "@/lib/types";
 
 function getIntroInsights(intro: Intro | null) {
@@ -174,7 +175,8 @@ export default function ResultPage() {
     clearLogs,
     startTask,
     finishTask,
-    addLog
+    addLog,
+    setTaskAborter
   } = usePipeline();
 
   const isBusy = state.currentTask !== null;
@@ -256,6 +258,8 @@ export default function ResultPage() {
       return null;
     }
   }, [state.companyConfirmedJson]);
+  const resumeSnapshot = useMemo(() => getResumeIntroSnapshot(state), [state]);
+  const canExportPdf = Boolean(state.intro && introFresh && confirmedResume && confirmedCompany && resumeSnapshot);
   const matchInsights = useMemo(() => {
     if (!confirmedResume || !confirmedCompany) {
       return null;
@@ -401,11 +405,13 @@ export default function ResultPage() {
 
     clearLogs();
     startTask("intro", "소개글을 만들고 있어요.");
+    const controller = new AbortController();
+    setTaskAborter(() => controller.abort());
 
     try {
       // 생성은 항상 현재 화면 draft가 아니라 "저장된 이력서/공고" 조합으로만 다시 돌린다.
       const intro = await postSseJson<Intro>(
-          "/api/intro/stream",
+        "/api/intro/stream",
           {
             resume: resume.data,
             company: company.data,
@@ -413,7 +419,8 @@ export default function ResultPage() {
             agent: toAgentRunOptions(state.agentSettings)
           },
           {
-            onLog: (payload) => addLog("intro", payload)
+            onLog: (payload) => addLog("intro", payload),
+            signal: controller.signal
           }
       );
 
@@ -424,15 +431,20 @@ export default function ResultPage() {
         intro,
         introSavedAt: new Date().toISOString(),
         introSource: {
-          resumeConfirmedJson: prev.resumeConfirmedJson ?? "",
+          resumeConfirmedJson: serializeResumeIntroSnapshot(resume.data),
           companyConfirmedJson: prev.companyConfirmedJson ?? ""
         }
       }));
 
       setMessage("소개글이 준비됐어요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "소개글을 만드는 중 문제가 생겼어요.");
+      if (isAbortError(error)) {
+        setMessage("소개글 생성을 중단했어요.");
+      } else {
+        setError(error instanceof Error ? error.message : "소개글을 만드는 중 문제가 생겼어요.");
+      }
     } finally {
+      setTaskAborter(null);
       finishTask();
     }
   };
@@ -736,6 +748,28 @@ export default function ResultPage() {
           </div>
         </section>
       )}
+
+      <section className="card card-review">
+        <div className="action-panel review">
+          <div className="action-copy">
+            <strong>다음 단계: PDF 마감</strong>
+            <span>
+              최신 소개글이 준비되면 step 4에서 PDF에 들어갈 내용을 마지막으로 다듬고 내려받습니다.
+            </span>
+          </div>
+          <div className="action-row">
+            {canExportPdf ? (
+              <Link href={"/pdf" as Route} className="nav-btn">
+                PDF 단계로 가기
+              </Link>
+            ) : (
+              <button type="button" className="secondary" disabled>
+                최신 소개글이 있어야 열림
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
     </AppFrame>
   );
 }

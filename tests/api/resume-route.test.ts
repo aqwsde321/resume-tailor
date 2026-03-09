@@ -23,7 +23,9 @@ describe("POST /api/resume", () => {
       experience: [],
       projects: [],
       achievements: [],
-      strengths: []
+      pdfHighlights: [],
+      strengths: [],
+      pdfStrengths: []
     });
 
     const request = new Request("http://localhost/api/resume", {
@@ -53,7 +55,9 @@ describe("POST /api/resume", () => {
       experience: [],
       projects: [],
       achievements: [],
-      strengths: []
+      pdfHighlights: [],
+      strengths: [],
+      pdfStrengths: []
     });
 
     const request = new Request("http://localhost/api/resume", {

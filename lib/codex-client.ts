@@ -226,6 +226,7 @@ export async function runSkillJsonStream<T>(params: {
   inputText: string;
   outputSchema: JsonSchema;
   onLog?: (payload: StreamLogPayload) => void;
+  signal?: AbortSignal;
   model?: string;
   modelReasoningEffort?: AgentRunOptions["modelReasoningEffort"];
 }): Promise<T> {
@@ -249,7 +250,8 @@ export async function runSkillJsonStream<T>(params: {
       });
 
       const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {
-        outputSchema: params.outputSchema
+        outputSchema: params.outputSchema,
+        signal: params.signal
       });
 
       let finalResponse = "";

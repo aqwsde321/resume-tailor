@@ -16,7 +16,9 @@ const resumePayload = {
   experience: [],
   projects: [],
   achievements: [],
-  strengths: []
+  pdfHighlights: [],
+  strengths: [],
+  pdfStrengths: []
 };
 
 const companyPayload = {

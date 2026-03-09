@@ -12,60 +12,21 @@ import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
 import { parseListText, stringifyLineList } from "@/lib/list-input";
+import {
+  hasSameResumeIntroData,
+  makeEmptyExperience,
+  makeEmptyProject,
+  normalizeResumeJsonText,
+  serializeResume,
+  toResumeDraft
+} from "@/lib/resume-utils";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
-import { postSseJson } from "@/lib/stream-client";
+import { isAbortError, postSseJson } from "@/lib/stream-client";
 import type { ApiFailure, ApiSuccess, Resume, ResumeExperienceItem, ResumeProjectItem } from "@/lib/types";
-
-const EMPTY_RESUME: Resume = {
-  name: "",
-  summary: "",
-  desiredPosition: "",
-  careerYears: 0,
-  techStack: [],
-  experience: [],
-  projects: [],
-  achievements: [],
-  strengths: []
-};
 
 function formatIssueDetails(errorMessage: string): string {
   return errorMessage.length > 180 ? `${errorMessage.slice(0, 180)}...` : errorMessage;
-}
-
-function toResumeDraft(jsonText: string): Resume {
-  if (!jsonText.trim()) {
-    return EMPTY_RESUME;
-  }
-
-  try {
-    const raw = JSON.parse(jsonText);
-    const parsed = ResumeSchema.safeParse(raw);
-    if (parsed.success) {
-      return parsed.data;
-    }
-  } catch {
-    return EMPTY_RESUME;
-  }
-
-  return EMPTY_RESUME;
-}
-
-function makeEmptyExperience(): ResumeExperienceItem {
-  return {
-    company: "",
-    role: "",
-    period: "",
-    description: ""
-  };
-}
-
-function makeEmptyProject(): ResumeProjectItem {
-  return {
-    name: "",
-    description: "",
-    techStack: []
-  };
 }
 
 type ResumeRequiredFieldKey = "desiredPosition" | "techStack";
@@ -96,7 +57,8 @@ export default function ResumePage() {
     clearLogs,
     startTask,
     finishTask,
-    addLog
+    addLog,
+    setTaskAborter
   } = usePipeline();
 
   const isBusy = state.currentTask !== null;
@@ -109,9 +71,9 @@ export default function ResumePage() {
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
   const [achievementsText, setAchievementsText] = useState("");
   const [strengthsText, setStrengthsText] = useState("");
-  const normalizedDraftJson = JSON.stringify(draft, null, 2);
-  const resumeNeedsConfirm =
-    state.resumeJsonText.trim().length > 0 && state.resumeConfirmedJson !== normalizedDraftJson;
+  const normalizedDraftJson = serializeResume(draft);
+  const normalizedConfirmedResumeJson = normalizeResumeJsonText(state.resumeConfirmedJson);
+  const resumeNeedsConfirm = Boolean(state.resumeSavedAt) && normalizedConfirmedResumeJson !== normalizedDraftJson;
 
   // 저장 직전 실패하면 첫 번째 누락 필드로 이동시켜 사용자가 바로 보완할 수 있게 한다.
   const focusRequiredField = (key: ResumeRequiredFieldKey) => {
@@ -215,7 +177,11 @@ export default function ResumePage() {
     syncDraft(next);
   };
 
-  const updateProject = (index: number, key: keyof ResumeProjectItem, value: string) => {
+  const updateProject = (
+    index: number,
+    key: keyof Pick<ResumeProjectItem, "name" | "description">,
+    value: string
+  ) => {
     const next: Resume = {
       ...draft,
       projects: draft.projects.map((item, itemIndex) =>
@@ -322,6 +288,8 @@ export default function ResumePage() {
 
     clearLogs();
     startTask("resume", "이력서를 읽고 있어요.");
+    const controller = new AbortController();
+    setTaskAborter(() => controller.abort());
 
     try {
       const resume = await postSseJson<Resume>(
@@ -331,7 +299,8 @@ export default function ResumePage() {
           agent: toAgentRunOptions(state.agentSettings)
         },
         {
-          onLog: (payload) => addLog("resume", payload)
+          onLog: (payload) => addLog("resume", payload),
+          signal: controller.signal
         }
       );
 
@@ -345,8 +314,13 @@ export default function ResumePage() {
 
       setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "이력서를 읽는 중 문제가 생겼어요.");
+      if (isAbortError(error)) {
+        setMessage("이력서 정리를 중단했어요.");
+      } else {
+        setError(error instanceof Error ? error.message : "이력서를 읽는 중 문제가 생겼어요.");
+      }
     } finally {
+      setTaskAborter(null);
       finishTask();
     }
   };
@@ -369,11 +343,11 @@ export default function ResumePage() {
       return;
     }
 
-    const normalized = JSON.stringify(validated.data, null, 2);
+    const normalized = serializeResume(validated.data);
     const savedAt = new Date().toISOString();
 
     patch((prev) => {
-      const resumeChanged = prev.resumeConfirmedJson !== normalized;
+      const resumeChanged = !hasSameResumeIntroData(normalized, prev.resumeConfirmedJson);
 
       return {
         ...prev,
@@ -388,6 +362,13 @@ export default function ResumePage() {
 
     setMessage("이력서를 저장했어요. 이제 공고를 정리해 주세요.");
   };
+
+  const completedExperienceCount = draft.experience.filter((item) =>
+    Boolean(item.company.trim() || item.role.trim() || item.description.trim())
+  ).length;
+  const completedProjectCount = draft.projects.filter((item) =>
+    Boolean(item.name.trim() || item.description.trim() || item.techStack.length > 0)
+  ).length;
 
   return (
     <AppFrame
@@ -513,6 +494,10 @@ export default function ResumePage() {
           <div>
             <p className="card-kicker">확인</p>
             <h2>이력서 다듬기</h2>
+            <p className="card-copy">
+              여기서는 소개글 생성에 필요한 정보만 정리합니다. PDF용 헤더, 연락처, 링크, 출력 전용 Highlights는
+              step 4에서 마지막으로 손봅니다.
+            </p>
           </div>
           {resumeNeedsConfirm ? (
             <span className="inline-badge warn">수정됨</span>
@@ -523,7 +508,45 @@ export default function ResumePage() {
           )}
         </div>
 
-        <div className="form-grid two">
+        <div className="mini-grid compact">
+          <div className={`mini-stat ${draft.desiredPosition.trim() && draft.techStack.length > 0 ? "ok" : "warn"}`}>
+            <span>핵심 정보</span>
+            <strong>
+              {draft.desiredPosition.trim()
+                ? `${draft.desiredPosition} · ${draft.techStack.length}개 스택`
+                : "희망 직무와 기술 스택 확인 필요"}
+            </strong>
+          </div>
+          <div className={`mini-stat ${draft.achievements.length > 0 || draft.strengths.length > 0 ? "ok" : "warn"}`}>
+            <span>소개글 근거</span>
+            <strong>{`${draft.achievements.length}개 성과 · ${draft.strengths.length}개 강점`}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>경력 / 프로젝트</span>
+            <strong>{`${completedExperienceCount}개 경력 · ${completedProjectCount}개 프로젝트`}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <p className="card-kicker">1. 핵심 정보</p>
+            <h2>소개글의 뼈대</h2>
+          </div>
+        </div>
+
+        <div className="form-grid resume-core-grid">
+          <label className="field">
+            <span>이름</span>
+            <input
+              className="form-input"
+              value={draft.name}
+              onChange={(event) => syncDraft({ ...draft, name: event.target.value })}
+              disabled={uiBusy}
+            />
+          </label>
+
           <label
             ref={(node) => {
               requiredFieldRefs.current.desiredPosition = node;
@@ -558,15 +581,6 @@ export default function ResumePage() {
             />
           </label>
 
-          <label className="field field-full">
-            <span>요약</span>
-            <AutoGrowTextarea
-              value={draft.summary}
-              onChange={(event) => syncDraft({ ...draft, summary: event.target.value })}
-              disabled={uiBusy}
-            />
-          </label>
-
           <div
             ref={(node) => {
               requiredFieldRefs.current.techStack = node;
@@ -583,6 +597,27 @@ export default function ResumePage() {
             />
           </div>
 
+          <label className="field field-full">
+            <span>요약</span>
+            <AutoGrowTextarea
+              value={draft.summary}
+              onChange={(event) => syncDraft({ ...draft, summary: event.target.value })}
+              disabled={uiBusy}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <p className="card-kicker">2. 소개글 근거</p>
+            <h2>성과와 강점</h2>
+            <p className="card-copy">한 줄씩 정리할수록 소개글이 더 선명해집니다.</p>
+          </div>
+        </div>
+
+        <div className="form-grid two">
           <label className="field field-full">
             <span>성과</span>
             <AutoGrowTextarea
@@ -615,152 +650,190 @@ export default function ResumePage() {
             <ListPreview items={draft.strengths} label="지금 들어간 강점" />
           </label>
         </div>
+      </section>
 
-        <div className="array-section">
-          <div className="array-head">
-            <h3>경력</h3>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => syncDraft({ ...draft, experience: [...draft.experience, makeEmptyExperience()] })}
-              disabled={uiBusy}
-            >
-              추가
-            </button>
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <p className="card-kicker">3. 경력</p>
+            <h2>필요한 카드만 펼쳐서 수정</h2>
           </div>
-
-          {draft.experience.length === 0 && <p className="muted-help">아직 경력이 없어요.</p>}
-
-          {draft.experience.map((item, index) => (
-            <div className="array-item" key={`experience-${index}`}>
-              <div className="array-item-head">
-                <strong>경력 {index + 1}</strong>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() =>
-                    syncDraft({
-                      ...draft,
-                      experience: draft.experience.filter((_, itemIndex) => itemIndex !== index)
-                    })
-                  }
-                  disabled={uiBusy}
-                >
-                  삭제
-                </button>
-              </div>
-
-              <div className="form-grid two">
-                <label className="field">
-                  <span>회사</span>
-                  <input
-                    className="form-input"
-                    value={item.company}
-                    onChange={(event) => updateExperience(index, "company", event.target.value)}
-                    disabled={uiBusy}
-                  />
-                </label>
-                <label className="field">
-                  <span>담당 역할</span>
-                  <input
-                    className="form-input"
-                    value={item.role}
-                    onChange={(event) => updateExperience(index, "role", event.target.value)}
-                    disabled={uiBusy}
-                  />
-                </label>
-                <label className="field field-full">
-                  <span>기간</span>
-                  <input
-                    className="form-input"
-                    value={item.period}
-                    onChange={(event) => updateExperience(index, "period", event.target.value)}
-                    disabled={uiBusy}
-                  />
-                </label>
-                <label className="field field-full">
-                  <span>내용</span>
-                  <AutoGrowTextarea
-                    value={item.description}
-                    onChange={(event) => updateExperience(index, "description", event.target.value)}
-                    disabled={uiBusy}
-                  />
-                </label>
-              </div>
-            </div>
-          ))}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => syncDraft({ ...draft, experience: [...draft.experience, makeEmptyExperience()] })}
+            disabled={uiBusy}
+          >
+            경력 추가
+          </button>
         </div>
 
+        {draft.experience.length === 0 && <p className="muted-help">아직 경력이 없어요.</p>}
+
         <div className="array-section">
-          <div className="array-head">
-            <h3>프로젝트</h3>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => syncDraft({ ...draft, projects: [...draft.projects, makeEmptyProject()] })}
-              disabled={uiBusy}
-            >
-              추가
-            </button>
-          </div>
+          {draft.experience.map((item, index) => (
+            <details key={`experience-${index}`} className="collapsible-section" open={draft.experience.length === 1}>
+              <summary>
+                <div className="resume-item-summary">
+                  <p className="card-kicker">경력 {index + 1}</p>
+                  <strong>{item.company.trim() || item.role.trim() || `경력 ${index + 1}`}</strong>
+                  <p>{item.period.trim() || "기간을 입력해 주세요."}</p>
+                </div>
+                <span className="inline-badge">{item.role.trim() || "역할 입력"}</span>
+              </summary>
 
-          {draft.projects.length === 0 && <p className="muted-help">아직 프로젝트가 없어요.</p>}
-
-          {draft.projects.map((item, index) => (
-            <div className="array-item" key={`project-${index}`}>
-              <div className="array-item-head">
-                <strong>프로젝트 {index + 1}</strong>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() =>
-                    syncDraft({
-                      ...draft,
-                      projects: draft.projects.filter((_, itemIndex) => itemIndex !== index)
-                    })
-                  }
-                  disabled={uiBusy}
-                >
-                  삭제
-                </button>
-              </div>
-
-              <div className="project-grid">
-                <label className="field field-full">
-                  <span>프로젝트 이름</span>
-                  <input
-                    className="form-input"
-                    value={item.name}
-                    onChange={(event) => updateProject(index, "name", event.target.value)}
+              <div className="collapsible-content">
+                <div className="array-item-head">
+                  <span className="muted-help">소개글에 반영할 핵심 역할과 문제 해결 경험만 남기면 충분합니다.</span>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      syncDraft({
+                        ...draft,
+                        experience: draft.experience.filter((_, itemIndex) => itemIndex !== index)
+                      })
+                    }
                     disabled={uiBusy}
-                  />
-                </label>
-                <label className="field field-full project-description-field">
-                  <span>내용</span>
-                  <AutoGrowTextarea
-                    className="project-description-textarea"
-                    value={item.description}
-                    onChange={(event) => updateProject(index, "description", event.target.value)}
-                    disabled={uiBusy}
-                  />
-                </label>
-                <div className="project-stack-panel field-full">
-                  <div className="field">
-                    <span>기술 스택</span>
-                    <TagInput
-                      ariaLabel="프로젝트 기술 스택"
-                      values={item.techStack}
-                      onChange={(values) => updateProjectTechStack(index, values)}
-                      placeholder="입력 후 Enter로 추가"
+                  >
+                    삭제
+                  </button>
+                </div>
+
+                <div className="form-grid two">
+                  <label className="field">
+                    <span>회사</span>
+                    <input
+                      className="form-input"
+                      value={item.company}
+                      onChange={(event) => updateExperience(index, "company", event.target.value)}
                       disabled={uiBusy}
                     />
+                  </label>
+                  <label className="field">
+                    <span>담당 역할</span>
+                    <input
+                      className="form-input"
+                      value={item.role}
+                      onChange={(event) => updateExperience(index, "role", event.target.value)}
+                      disabled={uiBusy}
+                    />
+                  </label>
+                  <label className="field field-full">
+                    <span>기간</span>
+                    <input
+                      className="form-input"
+                      value={item.period}
+                      onChange={(event) => updateExperience(index, "period", event.target.value)}
+                      disabled={uiBusy}
+                    />
+                  </label>
+                  <label className="field field-full">
+                    <span>내용</span>
+                    <AutoGrowTextarea
+                      value={item.description}
+                      onChange={(event) => updateExperience(index, "description", event.target.value)}
+                      disabled={uiBusy}
+                    />
+                  </label>
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <p className="card-kicker">4. 프로젝트</p>
+            <h2>핵심 설명과 사용 기술만 정리</h2>
+          </div>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => syncDraft({ ...draft, projects: [...draft.projects, makeEmptyProject()] })}
+            disabled={uiBusy}
+          >
+            프로젝트 추가
+          </button>
+        </div>
+
+        <p className="card-copy">
+          링크, 부제목, PDF 하이라이트는 step 4에서 최종 출력 직전에 다룹니다. 여기서는 소개글 생성에 필요한 핵심 설명만 다듬으면 됩니다.
+        </p>
+
+        {draft.projects.length === 0 && <p className="muted-help">아직 프로젝트가 없어요.</p>}
+
+        <div className="array-section">
+          {draft.projects.map((item, index) => (
+            <details key={`project-${index}`} className="collapsible-section" open={draft.projects.length === 1}>
+              <summary>
+                <div className="resume-item-summary">
+                  <p className="card-kicker">프로젝트 {index + 1}</p>
+                  <strong>{item.name.trim() || `프로젝트 ${index + 1}`}</strong>
+                  <p>{item.techStack.length > 0 ? item.techStack.join(", ") : "기술 스택을 입력해 주세요."}</p>
+                </div>
+                <span className="inline-badge">{item.techStack.length}개 스택</span>
+              </summary>
+
+              <div className="collapsible-content">
+                <div className="array-item-head">
+                  <span className="muted-help">프로젝트 설명은 문제, 기여, 결과가 한 번에 보이도록 짧게 적는 편이 좋습니다.</span>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      syncDraft({
+                        ...draft,
+                        projects: draft.projects.filter((_, itemIndex) => itemIndex !== index)
+                      })
+                    }
+                    disabled={uiBusy}
+                  >
+                    삭제
+                  </button>
+                </div>
+
+                <div className="project-grid">
+                  <label className="field field-full">
+                    <span>프로젝트 이름</span>
+                    <input
+                      className="form-input"
+                      value={item.name}
+                      onChange={(event) => updateProject(index, "name", event.target.value)}
+                      disabled={uiBusy}
+                    />
+                  </label>
+                  <label className="field field-full project-description-field">
+                    <span>내용</span>
+                    <AutoGrowTextarea
+                      className="project-description-textarea"
+                      value={item.description}
+                      onChange={(event) => updateProject(index, "description", event.target.value)}
+                      disabled={uiBusy}
+                    />
+                  </label>
+                  <div className="project-stack-panel field-full">
+                    <div className="field">
+                      <span>기술 스택</span>
+                      <TagInput
+                        ariaLabel="프로젝트 기술 스택"
+                        values={item.techStack}
+                        onChange={(values) => updateProjectTechStack(index, values)}
+                        placeholder="입력 후 Enter로 추가"
+                        disabled={uiBusy}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </details>
           ))}
         </div>
+      </section>
 
+      <section className="card card-review">
         <div className="action-panel review">
           <div className="action-copy">
             <strong>이력서 저장</strong>
