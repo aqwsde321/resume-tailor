@@ -1,6 +1,6 @@
 # 릴리즈 노트
 
-- 마지막 업데이트: 2026-03-08
+- 마지막 업데이트: 2026-03-10
 - 기준: 버전별 기능, 문서, 검증 기록
 
 ## Unreleased
@@ -9,6 +9,10 @@
 
 - GitHub Actions Docker publish 워크플로 추가: `main` push 시 검증 후 Docker Hub에 이미지 업로드
 - 이력서 URL 불러오기 지원: `/resume`에서 노션, GitHub Pages 같은 공개 이력서/포트폴리오 URL 본문을 읽어 textarea에 채우는 흐름 추가
+- Typst 기반 PDF step 4 추가: `/pdf`에서 export 전용 draft를 수정하고 PDF를 생성하는 흐름 추가
+- 실제 Typst SVG 미리보기 API 추가: `POST /api/pdf/preview`
+- PDF 전용 필드와 override 추가: `headline`, `careerDurationText`, `contacts[]`, `projects[].subtitle/link/linkLabel/highlights[]`, `pdfHighlights[]`, `pdfStrengths[]`
+- PDF export와 preview 관련 API/unit/E2E 테스트 추가
 
 ### Changed
 
@@ -22,6 +26,18 @@
 - 프로젝트 표시 이름과 내부 식별자를 `ResumeTailor` / `resume-tailor` 기준으로 정리하고, 기존 localStorage 키를 자동 마이그레이션하도록 조정
 - Docker 이미지 override 환경 변수를 `RESUME_TAILOR_IMAGE` 기준으로 정리하고, 기존 `RESUME_MAKE_IMAGE`는 fallback으로 유지
 - `README`, 서비스 기획서, 운영 런북, 로드맵의 API/CI/로그인 명령 설명을 현재 코드와 CLI 기준으로 맞추고, 문서 인덱스 중복을 축소
+- `/resume`에서 PDF 전용 입력을 제거하고, step 4 `/pdf`에서만 마감 편집하도록 역할 분리
+- step 4 미리보기를 HTML 중심에서 실제 Typst SVG 렌더 중심으로 변경하고, 실패 시 HTML fallback 유지
+- 작업 중 중앙 모달에 `작업 중지`를 추가하고 클라이언트/서버 AI 호출 abort를 연결
+
+### Verified
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
+- 실제 `POST /api/pdf/preview` 호출로 SVG 미리보기 생성 확인
 
 ## v0.6.0 (2026-03-07)
 
