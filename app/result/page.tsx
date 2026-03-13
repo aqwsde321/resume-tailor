@@ -581,11 +581,24 @@ export default function ResultPage() {
 
       {insightView && (
         <section className="card">
-          <div className="card-head">
-            <div>
+          <div className="card-head insight-head">
+            <div className="insight-head-copy">
               <p className="card-kicker">{insightView.kicker}</p>
               <h2>{insightView.title}</h2>
             </div>
+
+            {insightView.keywords.length > 0 && (
+              <aside className="insight-keyword-panel" aria-label="소개글 키워드">
+                <p className="insight-keyword-title">키워드</p>
+                <div className="keyword-list">
+                  {insightView.keywords.map((item) => (
+                    <span key={item} className="keyword-chip">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </aside>
+            )}
           </div>
 
           <div className="insight-grid">
@@ -618,16 +631,6 @@ export default function ResultPage() {
               </article>
             )}
           </div>
-
-          {insightView.keywords.length > 0 && (
-            <div className="keyword-cloud">
-              {insightView.keywords.map((item) => (
-                <span key={item} className="keyword-chip">
-                  {item}
-                </span>
-              ))}
-            </div>
-          )}
         </section>
       )}
 
@@ -673,45 +676,20 @@ export default function ResultPage() {
           <div className="card-head">
             <div>
               <p className="card-kicker">비교</p>
-              <h2>이전 결과와 지금 결과를 한눈에 확인</h2>
-              <p className="anchor-note">빠진 문장은 왼쪽, 새로 들어간 문장은 오른쪽에서 바로 강조합니다.</p>
+              <h2>이전 / 지금 비교</h2>
             </div>
-          </div>
-
-          <div className="compare-legend" aria-hidden="true">
-            <span className="compare-summary-chip removed">이전에서 빠진 문장</span>
-            <span className="compare-summary-chip added">새로 들어간 문장</span>
-            <span className="compare-summary-chip same">그대로 유지된 문장</span>
           </div>
 
           <div className="compare-section-list">
             {compareSections.map((section) => (
               <article key={section.key} className="compare-section">
                 <div className="compare-section-head">
-                  <div className="compare-section-copy">
-                    <p className="compare-section-kicker">{section.title}</p>
-                    <h3>{section.changed ? "표현 변화가 보이는 구간" : "큰 변화 없이 유지된 구간"}</h3>
-                  </div>
-                  <div className="compare-summary" aria-label={`${section.title} 변경 요약`}>
-                    {section.removedCount > 0 && (
-                      <span className="compare-summary-chip removed">삭제 {section.removedCount}</span>
-                    )}
-                    {section.addedCount > 0 && (
-                      <span className="compare-summary-chip added">추가 {section.addedCount}</span>
-                    )}
-                    {section.unchangedCount > 0 && (
-                      <span className="compare-summary-chip same">유지 {section.unchangedCount}</span>
-                    )}
-                    {!section.changed && <span className="compare-summary-chip same">변경 없음</span>}
-                  </div>
+                  <h3>{section.title}</h3>
                 </div>
 
                 <div className="compare-grid">
-                  <article className="result-block compare-column compare-old">
-                    <div className="compare-column-head">
-                      <p className="compare-column-title">{section.previousTitle}</p>
-                      <p className="compare-column-note">이 버전에서 빠지거나 유지된 표현입니다.</p>
-                    </div>
+                  <article className="compare-column compare-old">
+                    <p className="compare-column-title">이전</p>
                     <div className="compare-body" aria-label={section.previousTitle}>
                       {section.previousChunks.length > 0 ? (
                         section.previousChunks.map((chunk) => (
@@ -725,11 +703,8 @@ export default function ResultPage() {
                     </div>
                   </article>
 
-                  <article className="result-block compare-column compare-new">
-                    <div className="compare-column-head">
-                      <p className="compare-column-title">{section.currentTitle}</p>
-                      <p className="compare-column-note">이번 생성에서 새로 들어오거나 유지된 표현입니다.</p>
-                    </div>
+                  <article className="compare-column compare-new">
+                    <p className="compare-column-title">지금</p>
                     <div className="compare-body" aria-label={section.currentTitle}>
                       {section.currentChunks.length > 0 ? (
                         section.currentChunks.map((chunk) => (

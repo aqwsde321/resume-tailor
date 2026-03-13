@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
@@ -105,9 +105,11 @@ export function AppFrame({
   layout = "default",
   children
 }: AppFrameProps) {
-  const { hydrated, state, cancelCurrentTask } = usePipeline();
+  const { hydrated, state, cancelCurrentTask, clearStatus } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
+  const [visibleMessage, setVisibleMessage] = useState("");
+  const messageTimerRef = useRef<number | null>(null);
   const isWorking = Boolean(state.currentTask);
 
   useEffect(() => {
@@ -124,6 +126,32 @@ export function AppFrame({
       window.clearInterval(timer);
     };
   }, [state.currentTask, state.taskStartedAt]);
+
+  useEffect(() => {
+    if (messageTimerRef.current !== null) {
+      window.clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+
+    if (!state.message) {
+      setVisibleMessage("");
+      return;
+    }
+
+    setVisibleMessage(state.message);
+    messageTimerRef.current = window.setTimeout(() => {
+      setVisibleMessage("");
+      clearStatus();
+      messageTimerRef.current = null;
+    }, 2400);
+
+    return () => {
+      if (messageTimerRef.current !== null) {
+        window.clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+    };
+  }, [clearStatus, state.message]);
 
   const introFresh = isIntroFresh(state);
   const introRefreshReasons = getIntroRefreshReasons(state);
@@ -359,7 +387,11 @@ export function AppFrame({
       </section>
 
         {state.error && <p className="status error">{state.error}</p>}
-        {state.message && <p className="status success">{state.message}</p>}
+        {visibleMessage && (
+          <div className="toast-stack" aria-live="polite">
+            <p className="status success toast">{visibleMessage}</p>
+          </div>
+        )}
 
         {children}
 
