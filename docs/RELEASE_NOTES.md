@@ -1,9 +1,13 @@
 # 릴리즈 노트
 
-- 마지막 업데이트: 2026-03-15
+- 마지막 업데이트: 2026-03-16
 - 기준: 버전별 기능, 문서, 검증 기록
 
 ## Unreleased
+
+- 아직 정리되지 않은 변경 없음
+
+## v0.9.0 (2026-03-16)
 
 ### Added
 
@@ -36,6 +40,10 @@
 - `tests/lib/intro-quality.test.ts`로 frontend/backend/data/AI fixture 품질 회귀 검증
 - `tests/api/intro-route.test.ts`로 반복 문장 제거와 보조 필드 범위 필터링 검증
 - `tests/lib/pdf-build.test.ts`로 템플릿 3종의 실제 Typst SVG/PDF 생성 검증
+
+### Tag
+
+- Git tag: `v0.9.0`
 
 ## v0.8.0 (2026-03-15)
 
