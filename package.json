@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:pdf-visual": "vitest run tests/lib/pdf-visual.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -24,10 +25,12 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "latest",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "pngjs": "^7.0.0",
     "typescript": "latest",
     "vitest": "^3.2.4"
   }

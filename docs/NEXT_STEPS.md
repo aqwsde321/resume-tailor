@@ -22,7 +22,7 @@
 - 사용자 체감 가치는 여전히 `자기소개 결과 품질`과 `공고 구조화 정확도`에 크게 좌우됩니다.
 - step 4 `/pdf`는 템플릿 선택, 색상 프리셋, 사용자 지정 HEX 색상까지 들어가서 기능 밀도가 높아졌으므로, 이제는 “있는 기능을 더 정확하고 빠르게” 다듬는 쪽이 우선입니다.
 - 특히 실제 Typst SVG 미리보기는 사용자 체감 품질이 높지만, 렌더 비용과 시각 회귀를 따로 관리하지 않으면 응답성과 안정성이 같이 흔들릴 수 있습니다.
-- CI는 들어왔지만, 템플릿 3종과 색상 변경까지 포함한 PDF preview/PDF export 시각 회귀를 자동으로 잡는 수준은 아직 아니므로 렌더 검증을 보강할 필요가 있습니다.
+- 템플릿 3종과 대표 색상, 프로필 이미지 케이스까지 baseline PNG 기준 시각 회귀는 들어왔고, 이제 남은 우선 과제는 렌더 성능과 baseline 유지 절차를 더 가볍게 만드는 일입니다.
 
 ## 3. 우선순위별 작업
 
@@ -95,10 +95,10 @@
   - [ ] 동일 입력 해시 기준 preview 캐시
   - [ ] 연속 수정 중 preview compile 병합 또는 rate limit
   - [ ] multi-page preview의 스크롤/줌 UX 검토
-- [ ] 시각 회귀 검증 추가
-  - [ ] fixture 기준 SVG 또는 PNG snapshot smoke test
+- [~] 시각 회귀 검증 추가
+  - [x] fixture 기준 PNG snapshot smoke test
   - [ ] 대표 PDF 1페이지 PNG diff 절차 문서화
-  - [ ] 템플릿 3종과 대표 색상 2종 기준 baseline 이미지 고정
+  - [x] 템플릿 3종과 대표 색상 2종, 프로필 이미지 1종 기준 baseline 이미지 고정
 
 필드 설계:
 
@@ -233,6 +233,7 @@ UX 방침:
 - [x] `pdf/view-model` fallback 규칙 테스트 추가
 - [x] `POST /api/pdf`, `POST /api/pdf/preview` API 테스트 추가
 - [x] `tests/lib/pdf-build.test.ts` 실제 Typst SVG/PDF smoke test 추가
+- [x] `tests/lib/pdf-visual.test.ts` PNG baseline 기반 시각 회귀 테스트 추가
 - [x] step 4의 Enter 기반 Highlights 편집 E2E 추가
 - [x] step 4 모바일 4열 수정 칩과 섹션 모달 viewport 회귀 E2E 추가
 - [x] step 4 섹션 모달 수정값의 Typst 미리보기 반영과 draft 유지 E2E 추가
@@ -241,6 +242,7 @@ UX 방침:
 - [x] PDF preview/export API의 customAccentHex 전달 테스트 추가
 - [x] step 4 프로필 이미지 업로드와 export draft 반영 E2E 추가
 - [ ] 실제 다운로드된 PDF 바이너리의 페이지 수나 제목 메타 smoke test 추가
+- [ ] baseline PNG 갱신 절차를 CI/문서 기준으로 더 가볍게 정리
 
 완료 기준:
 

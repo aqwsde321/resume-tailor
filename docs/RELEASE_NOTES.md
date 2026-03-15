@@ -15,6 +15,7 @@
 - step 4 `/pdf`에 `Onyx`, `Teal`, `Rose`, `Plum` 프리셋과 사용자 지정 HEX 색상 선택 추가
 - step 4 `Header` 모달에 프로필 이미지 업로드/삭제와 `PDF에 표시` 토글 추가
 - `tests/lib/pdf-build.test.ts` 실제 Typst SVG/PDF smoke test 추가
+- `tests/lib/pdf-visual.test.ts` 템플릿 3종, 대표 색상 2종, 프로필 이미지 1종 기준 PNG baseline 시각 회귀 테스트 추가
 
 ### Changed
 
@@ -40,6 +41,7 @@
 - `tests/lib/intro-quality.test.ts`로 frontend/backend/data/AI fixture 품질 회귀 검증
 - `tests/api/intro-route.test.ts`로 반복 문장 제거와 보조 필드 범위 필터링 검증
 - `tests/lib/pdf-build.test.ts`로 템플릿 3종의 실제 Typst SVG/PDF 생성 검증
+- `tests/lib/pdf-visual.test.ts`로 baseline PNG 기준 첫 페이지 레이아웃 시각 회귀 검증
 
 ### Tag
 
