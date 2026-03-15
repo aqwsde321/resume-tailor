@@ -2,6 +2,8 @@
 
 로컬에서 이력서와 채용공고 텍스트를 입력하면 `@openai/codex-sdk`와 `SKILL.md` 파이프라인으로 구조화 JSON을 만들고, 회사 맞춤 자기소개를 생성하는 Next.js 앱입니다.
 
+문의사항이나 오류 제보는 [qrqrq23r@gmail.com](mailto:qrqrq23r@gmail.com) 으로 보내 주세요.
+
 ## 화면 미리보기
 
 전체 step 흐름을 한 장으로 먼저 볼 수 있습니다.
