@@ -13,6 +13,7 @@ import {
 } from "@/app/components/resume-editor/sections";
 import { SaveActionCard } from "@/app/components/workflow/save-action-card";
 import { SourceInputCard } from "@/app/components/workflow/source-input-card";
+import { UrlFetchPanel, type UrlFetchPreview } from "@/app/components/workflow/url-fetch-panel";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
@@ -41,14 +42,6 @@ interface ResumeUrlFetchData {
   text: string;
 }
 
-interface UrlPreview {
-  title: string;
-  name: string;
-  desiredPosition: string;
-  sourceHost: string;
-  textLength: number;
-}
-
 export default function ResumePage() {
   const {
     state,
@@ -62,7 +55,7 @@ export default function ResumePage() {
   const isBusy = state.currentTask !== null;
   const isResumeWorking = state.currentTask === "resume";
   const [isUrlLoading, setIsUrlLoading] = useState(false);
-  const [urlPreview, setUrlPreview] = useState<UrlPreview | null>(null);
+  const [urlPreview, setUrlPreview] = useState<UrlFetchPreview | null>(null);
   const uiBusy = isBusy || isUrlLoading;
   const requiredFieldRefs = useRef<Partial<Record<ResumeRequiredFieldKey, HTMLElement | null>>>({});
 
@@ -267,10 +260,13 @@ export default function ResumePage() {
       setResumeText(payload.data.text);
       setUrlPreview({
         title: payload.data.title || "이력서 페이지",
-        name: payload.data.nameHint,
-        desiredPosition: payload.data.desiredPositionHint,
         sourceHost,
         textLength: payload.data.text.length
+        ,
+        fields: [
+          { label: "이름", value: payload.data.nameHint },
+          { label: "직무", value: payload.data.desiredPositionHint }
+        ]
       });
       setMessage(
         payload.data.title
@@ -390,48 +386,18 @@ export default function ResumePage() {
           />
         }
         urlSlot={
-          <div className="url-fetch-panel">
-            <div className="url-fetch-row">
-              <input
-                type="url"
-                value={state.resumeUrl}
-                onChange={(event) => {
-                  setUrlPreview(null);
-                  setResumeUrl(event.target.value);
-                }}
-                placeholder="https://노션-이력서-또는-포트폴리오-주소"
-                disabled={uiBusy}
-              />
-              <button type="button" className="secondary" onClick={() => void handleFetchUrl()} disabled={uiBusy}>
-                {isUrlLoading ? "불러오는 중..." : "URL 불러오기"}
-              </button>
-            </div>
-            {urlPreview && (
-              <div className="url-preview" aria-live="polite">
-                <div className="url-preview-head">
-                  <strong>읽어온 정보</strong>
-                  <div className="url-preview-badges">
-                    <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
-                  </div>
-                </div>
-                <p className="url-preview-title">{urlPreview.title}</p>
-                <div className="url-preview-meta">
-                  <span className="url-preview-chip">
-                    <span>이름</span>
-                    <strong>{urlPreview.name || "확인 필요"}</strong>
-                  </span>
-                  <span className="url-preview-chip">
-                    <span>직무</span>
-                    <strong>{urlPreview.desiredPosition || "확인 필요"}</strong>
-                  </span>
-                  <span className="url-preview-chip">
-                    <span>출처</span>
-                    <strong>{urlPreview.sourceHost}</strong>
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+          <UrlFetchPanel
+            value={state.resumeUrl}
+            onValueChange={(value) => {
+              setUrlPreview(null);
+              setResumeUrl(value);
+            }}
+            placeholder="https://노션-이력서-또는-포트폴리오-주소"
+            disabled={uiBusy}
+            loading={isUrlLoading}
+            onFetch={() => void handleFetchUrl()}
+            preview={urlPreview}
+          />
         }
         textValue={state.resumeText}
         onTextChange={setResumeText}

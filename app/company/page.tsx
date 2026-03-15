@@ -9,6 +9,7 @@ import { CompanyDetailsSection } from "@/app/components/company-editor/details-s
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { SaveActionCard } from "@/app/components/workflow/save-action-card";
 import { SourceInputCard } from "@/app/components/workflow/source-input-card";
+import { UrlFetchPanel, type UrlFetchPreview } from "@/app/components/workflow/url-fetch-panel";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
@@ -33,15 +34,6 @@ interface CompanyUrlFetchData {
   companyNameHint: string;
   jobTitleHint: string;
   text: string;
-  warning?: string;
-}
-
-interface UrlPreview {
-  title: string;
-  companyName: string;
-  jobTitle: string;
-  sourceHost: string;
-  textLength: number;
   warning?: string;
 }
 
@@ -84,7 +76,7 @@ export default function CompanyPage() {
   const isCompanyWorking = state.currentTask === "company";
   const requiredFieldRefs = useRef<Partial<Record<CompanyRequiredFieldKey, HTMLElement | null>>>({});
   const [isUrlLoading, setIsUrlLoading] = useState(false);
-  const [urlPreview, setUrlPreview] = useState<UrlPreview | null>(null);
+  const [urlPreview, setUrlPreview] = useState<UrlFetchPreview | null>(null);
   const uiBusy = isBusy || isUrlLoading;
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
@@ -286,11 +278,13 @@ export default function CompanyPage() {
       setCompanyText(payload.data.text);
       setUrlPreview({
         title: payload.data.title || "공고 페이지",
-        companyName: payload.data.companyNameHint,
-        jobTitle: payload.data.jobTitleHint,
         sourceHost,
         textLength: payload.data.text.length,
-        warning: payload.data.warning
+        warning: payload.data.warning,
+        fields: [
+          { label: "회사", value: payload.data.companyNameHint },
+          { label: "포지션", value: payload.data.jobTitleHint }
+        ]
       });
       setMessage(
         payload.data.title
@@ -373,55 +367,18 @@ export default function CompanyPage() {
           />
         }
         urlSlot={
-          <div className="url-fetch-panel">
-            <div className="url-fetch-row">
-              <input
-                type="url"
-                value={state.companyUrl}
-                onChange={(event) => {
-                  setUrlPreview(null);
-                  setCompanyUrl(event.target.value);
-                }}
-                placeholder="https://회사-채용페이지-주소"
-                disabled={uiBusy || !canEdit}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void handleFetchUrl()}
-                disabled={uiBusy || !canEdit}
-              >
-                {isUrlLoading ? "불러오는 중..." : "URL 불러오기"}
-              </button>
-            </div>
-            {urlPreview && (
-              <div className="url-preview" aria-live="polite">
-                <div className="url-preview-head">
-                  <strong>읽어온 정보</strong>
-                  <div className="url-preview-badges">
-                    <span className="inline-badge ok">본문 {urlPreview.textLength.toLocaleString()}자</span>
-                    {urlPreview.warning && <span className="inline-badge warn">이미지 본문 감지</span>}
-                  </div>
-                </div>
-                <p className="url-preview-title">{urlPreview.title}</p>
-                {urlPreview.warning && <p className="url-preview-note">{urlPreview.warning}</p>}
-                <div className="url-preview-meta">
-                  <span className="url-preview-chip">
-                    <span>회사</span>
-                    <strong>{urlPreview.companyName || "확인 필요"}</strong>
-                  </span>
-                  <span className="url-preview-chip">
-                    <span>포지션</span>
-                    <strong>{urlPreview.jobTitle || "확인 필요"}</strong>
-                  </span>
-                  <span className="url-preview-chip">
-                    <span>출처</span>
-                    <strong>{urlPreview.sourceHost}</strong>
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+          <UrlFetchPanel
+            value={state.companyUrl}
+            onValueChange={(value) => {
+              setUrlPreview(null);
+              setCompanyUrl(value);
+            }}
+            placeholder="https://회사-채용페이지-주소"
+            disabled={uiBusy || !canEdit}
+            loading={isUrlLoading}
+            onFetch={() => void handleFetchUrl()}
+            preview={urlPreview}
+          />
         }
         textValue={state.companyText}
         onTextChange={setCompanyText}
