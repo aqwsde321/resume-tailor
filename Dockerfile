@@ -49,7 +49,8 @@ RUN npm install -g @openai/codex
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/src/templates ./src/templates
+COPY --from=builder /app/skills ./skills
 
 EXPOSE 3000
 
