@@ -10,6 +10,7 @@ import type { TypstPreviewState } from "./types";
 
 interface UseTypstPreviewArgs {
   company: Company;
+  customAccentHex: string;
   intro: Intro;
   resume: Resume;
   templateId: PdfTemplateId;
@@ -18,6 +19,7 @@ interface UseTypstPreviewArgs {
 
 export function useTypstPreview({
   company,
+  customAccentHex,
   intro,
   resume,
   templateId,
@@ -35,9 +37,10 @@ export function useTypstPreview({
         intro,
         company,
         templateId,
-        themeId
+        themeId,
+        customAccentHex: customAccentHex || undefined
       }),
-    [company, intro, resume, templateId, themeId]
+    [company, customAccentHex, intro, resume, templateId, themeId]
   );
 
   useEffect(() => {

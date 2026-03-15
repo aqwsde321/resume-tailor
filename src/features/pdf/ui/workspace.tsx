@@ -4,21 +4,12 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
   type ReactNode,
   type RefObject
 } from "react";
 
-import {
-  getPdfTemplateOption,
-  PDF_TEMPLATE_OPTIONS,
-  type PdfTemplateId
-} from "@/entities/pdf/model/templates";
-import {
-  getPdfThemeOption,
-  PDF_THEME_OPTIONS,
-  type PdfThemeId
-} from "@/entities/pdf/model/themes";
+import type { PdfTemplateId } from "@/entities/pdf/model/templates";
+import type { PdfThemeId } from "@/entities/pdf/model/themes";
 import { PdfPreviewPane } from "@/features/pdf/ui/preview-pane";
 import {
   ContactsSectionForm,
@@ -41,6 +32,7 @@ import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 interface PdfEditorWorkspaceProps {
   company: Company;
+  customAccentHex: string;
   error: string;
   exporting: boolean;
   intro: Intro;
@@ -50,6 +42,7 @@ interface PdfEditorWorkspaceProps {
   onResumeChange: (nextResume: Resume) => void;
   onTemplateChange: (nextTemplateId: PdfTemplateId) => void;
   onThemeChange: (nextThemeId: PdfThemeId) => void;
+  onCustomAccentChange: (nextAccentHex: string) => void;
   rootRef?: RefObject<HTMLElement | null>;
   resume: Resume;
   templateId: PdfTemplateId;
@@ -73,6 +66,7 @@ function buildInlineListSignature(values: string[]) {
 
 export function PdfEditorWorkspace({
   company,
+  customAccentHex,
   error,
   exporting,
   intro,
@@ -82,12 +76,20 @@ export function PdfEditorWorkspace({
   onResumeChange,
   onTemplateChange,
   onThemeChange,
+  onCustomAccentChange,
   rootRef,
   resume,
   templateId,
   themeId
 }: PdfEditorWorkspaceProps) {
-  const typstPreview = useTypstPreview({ company, intro, resume, templateId, themeId });
+  const typstPreview = useTypstPreview({
+    company,
+    customAccentHex,
+    intro,
+    resume,
+    templateId,
+    themeId
+  });
   const [openSection, setOpenSection] = useState<PdfSectionKey | null>(null);
   const [skillsDraft, setSkillsDraft] = useState(() => ({
     signature: buildInlineListSignature(resume.techStack),
@@ -316,80 +318,10 @@ export function PdfEditorWorkspace({
       )
     }
   ];
-  const selectedTemplate = getPdfTemplateOption(templateId);
-  const selectedTheme = getPdfThemeOption(themeId);
 
   return (
     <section className="pdf-workspace" ref={rootRef}>
       {error && <p className="status error">{error}</p>}
-
-      <section className="card pdf-template-picker">
-        <div className="pdf-template-picker-head">
-          <div>
-            <p className="card-kicker">Template</p>
-            <h2>먼저 레이아웃을 고르세요</h2>
-            <p className="card-copy">
-              선택한 템플릿 기준으로 미리보기와 최종 PDF를 바로 갱신합니다.
-            </p>
-          </div>
-          <span className="inline-badge ok">
-            {selectedTemplate.label} · {selectedTheme.label}
-          </span>
-        </div>
-
-        <div className="pdf-template-grid">
-          {PDF_TEMPLATE_OPTIONS.map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              className={`pdf-template-card ${templateId === template.id ? "active" : ""}`}
-              onClick={() => onTemplateChange(template.id)}
-              disabled={exporting}
-            >
-              <div className="pdf-template-card-head">
-                <strong>{template.label}</strong>
-                {template.id === "classic" && <span className="pdf-template-recommend">추천</span>}
-              </div>
-              <p className="pdf-template-summary">{template.summary}</p>
-              <p className="pdf-template-description">{template.description}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="pdf-theme-picker">
-          <div>
-            <p className="card-kicker">Color</p>
-            <h3>기본 강조 색상</h3>
-          </div>
-
-          <div className="pdf-theme-grid">
-            {PDF_THEME_OPTIONS.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                className={`pdf-theme-card ${themeId === theme.id ? "active" : ""}`}
-                onClick={() => onThemeChange(theme.id)}
-                disabled={exporting}
-              >
-                <span
-                  className="pdf-theme-swatch"
-                  aria-hidden="true"
-                  style={
-                    {
-                      "--pdf-theme-accent": theme.accentHex,
-                      "--pdf-theme-soft": theme.softHex
-                    } as CSSProperties
-                  }
-                />
-                <span className="pdf-theme-copy">
-                  <strong>{theme.label}</strong>
-                  <span>{theme.description}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <div className="pdf-workspace-grid">
         <div className="pdf-editor-pane">
@@ -416,7 +348,12 @@ export function PdfEditorWorkspace({
         <PdfPreviewPane
           company={company}
           intro={intro}
+          exporting={exporting}
           resume={resume}
+          customAccentHex={customAccentHex}
+          onCustomAccentChange={onCustomAccentChange}
+          onTemplateChange={onTemplateChange}
+          onThemeChange={onThemeChange}
           templateId={templateId}
           themeId={themeId}
           typstPreview={typstPreview}

@@ -101,7 +101,8 @@ describe("POST /api/pdf", () => {
       introFixture,
       companyFixture,
       "classic",
-      "cobalt"
+      "cobalt",
+      undefined
     );
   });
 
@@ -139,7 +140,8 @@ describe("POST /api/pdf", () => {
       introFixture,
       companyFixture,
       "classic",
-      "cobalt"
+      "cobalt",
+      undefined
     );
   });
 
@@ -165,7 +167,35 @@ describe("POST /api/pdf", () => {
       introFixture,
       companyFixture,
       "modern",
-      "forest"
+      "forest",
+      undefined
+    );
+  });
+
+  it("customAccentHex가 있으면 custom 테마와 함께 전달한다", async () => {
+    vi.mocked(buildResumePdf).mockResolvedValue(Buffer.from("%PDF"));
+
+    const request = new Request("http://localhost/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        makeRequestBody({
+          themeId: "custom",
+          customAccentHex: "#111111"
+        })
+      )
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(buildResumePdf).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "classic",
+      "custom",
+      "#111111"
     );
   });
 

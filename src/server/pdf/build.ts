@@ -54,13 +54,14 @@ export async function buildResumePdf(
   intro: Intro,
   company: Company,
   templateId: PdfTemplateId = DEFAULT_PDF_TEMPLATE_ID,
-  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID,
+  customAccentHex?: string
 ): Promise<Buffer> {
   const workdir = path.join(os.tmpdir(), PDF_WORKDIR_PREFIX, randomUUID());
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const pdfOutputPath = path.join(workdir, "resume.pdf");
-  const payload = buildTypstResumeDocument(resume, intro, company, themeId);
+  const payload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
   const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {
@@ -109,13 +110,14 @@ export async function buildResumeSvgPreview(
   intro: Intro,
   company: Company,
   templateId: PdfTemplateId = DEFAULT_PDF_TEMPLATE_ID,
-  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID,
+  customAccentHex?: string
 ): Promise<ResumeSvgPreview> {
   const workdir = path.join(os.tmpdir(), SVG_WORKDIR_PREFIX, randomUUID());
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const svgOutputPattern = "preview-{0p}.svg";
-  const payload = buildTypstResumeDocument(resume, intro, company, themeId);
+  const payload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
   const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {

@@ -1,7 +1,7 @@
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 import {
   DEFAULT_PDF_THEME_ID,
-  getPdfThemeOption,
+  resolvePdfTheme,
   type PdfThemeId
 } from "@/entities/pdf/model/themes";
 
@@ -320,9 +320,10 @@ export function buildTypstResumeDocument(
   resume: Resume,
   intro: Intro,
   company: Company,
-  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID,
+  customAccentHex?: string
 ): TypstResumeDocument {
-  const theme = getPdfThemeOption(themeId);
+  const theme = resolvePdfTheme(themeId, customAccentHex);
 
   return {
     name: resume.name.trim(),

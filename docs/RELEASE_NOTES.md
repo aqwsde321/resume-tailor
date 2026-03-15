@@ -7,11 +7,16 @@
 
 ### Added
 
-- step 4 `/pdf`에 `Classic`, `Compact`, `Modern` Typst 템플릿 선택 추가
+- step 4 `/pdf`에 `Classic`, `Sidebar`, `Modern` Typst 템플릿 선택 추가
+- step 4 `/pdf`에 `Onyx`, `Teal`, `Rose`, `Plum` 프리셋과 사용자 지정 HEX 색상 선택 추가
 
 ### Changed
 
 - step 4는 템플릿을 먼저 고른 뒤 같은 템플릿 기준으로 SVG 미리보기와 PDF export를 수행하도록 조정
+- step 4 색상 선택 UI를 큰 카드에서 미리보기 헤더 내부의 세그먼트/팝오버 방식으로 단순화
+- 사용자 지정 색상은 팝오버 안에서 draft로 고른 뒤 `선택 완료`를 눌렀을 때만 적용되도록 조정
+- `Sidebar` 템플릿의 좌측 레일 가독성을 조정하고, `Modern` 템플릿의 Skills 영역 빈 공간을 줄이도록 재배치
+- PDF preview/export 요청에 `customAccentHex`를 추가해 사용자 지정 색상을 최종 출력까지 그대로 전달
 
 ### Verified
 

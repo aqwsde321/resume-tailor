@@ -30,6 +30,7 @@ const RequestSchema = z
     intro: IntroSchema,
     templateId: z.enum(PDF_TEMPLATE_IDS).default(DEFAULT_PDF_TEMPLATE_ID),
     themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID),
+    customAccentHex: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     introSource: IntroSourceSchema,
     resumeSnapshot: z.string().trim().min(1),
     companySnapshot: z.string().trim().min(1)
@@ -60,7 +61,8 @@ export async function POST(request: Request) {
       body.intro,
       body.company,
       body.templateId,
-      body.themeId
+      body.themeId,
+      body.customAccentHex
     );
     const filename = buildPdfDownloadName(body.company, body.resume);
 

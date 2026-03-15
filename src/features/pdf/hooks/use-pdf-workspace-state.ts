@@ -38,6 +38,7 @@ interface UsePdfWorkspaceStateArgs {
   state: PipelineState;
   templateId: PdfTemplateId;
   themeId: PdfThemeId;
+  customAccentHex: string;
 }
 
 export function usePdfWorkspaceState({
@@ -45,7 +46,8 @@ export function usePdfWorkspaceState({
   setMessage,
   state,
   templateId,
-  themeId
+  themeId,
+  customAccentHex
 }: UsePdfWorkspaceStateArgs) {
   const introFresh = isIntroFresh(state);
   const confirmedResume = useMemo(() => {
@@ -138,6 +140,7 @@ export function usePdfWorkspaceState({
           intro: pdfIntro,
           templateId,
           themeId,
+          customAccentHex: customAccentHex || undefined,
           introSource: state.introSource,
           resumeSnapshot,
           companySnapshot: state.companyConfirmedJson

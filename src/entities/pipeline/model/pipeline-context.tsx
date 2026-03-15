@@ -19,6 +19,7 @@ import {
 } from "@/entities/pdf/model/templates";
 import {
   DEFAULT_PDF_THEME_ID,
+  normalizePdfAccentHex,
   isPdfThemeId,
   type PdfThemeId
 } from "@/entities/pdf/model/themes";
@@ -58,6 +59,7 @@ export interface PipelineState {
   introTone: IntroTone;
   pdfTemplateId: PdfTemplateId;
   pdfThemeId: PdfThemeId;
+  pdfCustomAccentHex: string;
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
@@ -90,6 +92,7 @@ const initialState: PipelineState = {
   introTone: "balanced",
   pdfTemplateId: DEFAULT_PDF_TEMPLATE_ID,
   pdfThemeId: DEFAULT_PDF_THEME_ID,
+  pdfCustomAccentHex: "",
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
@@ -158,6 +161,10 @@ function normalizeState(raw: unknown): PipelineState {
       ? value.pdfTemplateId
       : DEFAULT_PDF_TEMPLATE_ID,
     pdfThemeId: isPdfThemeId(value.pdfThemeId) ? value.pdfThemeId : DEFAULT_PDF_THEME_ID,
+    pdfCustomAccentHex:
+      typeof value.pdfCustomAccentHex === "string"
+        ? normalizePdfAccentHex(value.pdfCustomAccentHex) ?? ""
+        : "",
     resumeUrl: typeof value.resumeUrl === "string" ? value.resumeUrl : "",
     companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
     resumeSavedAt: typeof value.resumeSavedAt === "string" ? value.resumeSavedAt : null,

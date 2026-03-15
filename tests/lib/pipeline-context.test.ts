@@ -15,6 +15,7 @@ const baseState: PipelineState = {
   introTone: "balanced",
   pdfTemplateId: "classic",
   pdfThemeId: "cobalt",
+  pdfCustomAccentHex: "",
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",

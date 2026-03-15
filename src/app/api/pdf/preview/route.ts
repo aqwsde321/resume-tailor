@@ -21,7 +21,8 @@ const RequestSchema = z
     company: CompanySchema,
     intro: IntroSchema,
     templateId: z.enum(PDF_TEMPLATE_IDS).default(DEFAULT_PDF_TEMPLATE_ID),
-    themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID)
+    themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID),
+    customAccentHex: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional()
   })
   .strict();
 
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
       body.intro,
       body.company,
       body.templateId,
-      body.themeId
+      body.themeId,
+      body.customAccentHex
     );
 
     return NextResponse.json({

@@ -1,7 +1,18 @@
 "use client";
 
-import { getPdfTemplateOption, type PdfTemplateId } from "@/entities/pdf/model/templates";
-import { getPdfThemeOption, type PdfThemeId } from "@/entities/pdf/model/themes";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+
+import {
+  getPdfTemplateOption,
+  PDF_TEMPLATE_OPTIONS,
+  type PdfTemplateId
+} from "@/entities/pdf/model/templates";
+import {
+  normalizePdfAccentHex,
+  PDF_THEME_OPTIONS,
+  resolvePdfTheme,
+  type PdfThemeId
+} from "@/entities/pdf/model/themes";
 import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
@@ -9,7 +20,12 @@ import type { TypstPreviewState } from "./types";
 
 interface PdfPreviewPaneProps {
   company: Company;
+  customAccentHex: string;
+  exporting: boolean;
   intro: Intro;
+  onCustomAccentChange: (nextAccentHex: string) => void;
+  onTemplateChange: (nextTemplateId: PdfTemplateId) => void;
+  onThemeChange: (nextThemeId: PdfThemeId) => void;
   resume: Resume;
   templateId: PdfTemplateId;
   themeId: PdfThemeId;
@@ -18,15 +34,65 @@ interface PdfPreviewPaneProps {
 
 export function PdfPreviewPane({
   company,
+  customAccentHex,
+  exporting,
   intro,
+  onCustomAccentChange,
+  onTemplateChange,
+  onThemeChange,
   resume,
   templateId,
   themeId,
   typstPreview
 }: PdfPreviewPaneProps) {
-  const preview = buildTypstResumeDocument(resume, intro, company, themeId);
+  const preview = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
   const template = getPdfTemplateOption(templateId);
-  const theme = getPdfThemeOption(themeId);
+  const theme = resolvePdfTheme(themeId, customAccentHex);
+  const effectiveCustomHex = normalizePdfAccentHex(customAccentHex) ?? "#2950c8";
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [customHexDraft, setCustomHexDraft] = useState(effectiveCustomHex);
+  const normalizedCustomDraftHex = normalizePdfAccentHex(customHexDraft);
+  const themeMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setCustomHexDraft(effectiveCustomHex);
+  }, [effectiveCustomHex]);
+
+  const applyCustomTheme = () => {
+    const nextAccentHex = normalizePdfAccentHex(customHexDraft);
+    if (!nextAccentHex) {
+      return;
+    }
+
+    onThemeChange("custom");
+    onCustomAccentChange(nextAccentHex);
+    setThemeOpen(false);
+  };
+
+  useEffect(() => {
+    if (!themeOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!themeMenuRef.current?.contains(event.target as Node)) {
+        setThemeOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setThemeOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [themeOpen]);
 
   return (
     <div className="pdf-preview-pane">
@@ -36,18 +102,144 @@ export function PdfPreviewPane({
             <p className="card-kicker">Typst Preview</p>
             <h3>실제 출력 미리보기</h3>
             <p className="pdf-preview-card-copy">
-              {company.companyName || "회사"} 기준 {template.label} 템플릿과 {theme.label} 색상을 그대로 보여줍니다.
+              {company.companyName || "회사"} 기준 {template.label} 템플릿을 바로 확인합니다.
             </p>
           </div>
-          <span className={`inline-badge ${typstPreview.status === "error" ? "warn" : "ok"}`}>
-            {typstPreview.status === "ready"
-              ? `${typstPreview.pages.length}p`
-              : typstPreview.status === "rendering"
-                ? "렌더링 중"
-                : typstPreview.status === "error"
-                  ? "fallback"
-                  : "준비 중"}
-          </span>
+          <div className="pdf-preview-head-actions">
+            <div className="pdf-template-segment" role="tablist" aria-label="PDF 템플릿 선택">
+              {PDF_TEMPLATE_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`pdf-template-segment-button ${
+                    templateId === option.id ? "active" : ""
+                  }`}
+                  onClick={() => onTemplateChange(option.id)}
+                  disabled={exporting}
+                  aria-pressed={templateId === option.id}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="pdf-theme-menu" ref={themeMenuRef}>
+              <button
+                type="button"
+                className={`pdf-theme-trigger ${themeOpen ? "active" : ""}`}
+                onClick={() => setThemeOpen((current) => !current)}
+                disabled={exporting}
+                aria-expanded={themeOpen}
+                aria-haspopup="dialog"
+              >
+                <span
+                  className="pdf-theme-trigger-swatch"
+                  aria-hidden="true"
+                  style={
+                    {
+                      "--pdf-theme-accent": theme.accentHex,
+                      "--pdf-theme-soft": theme.softHex
+                    } as CSSProperties
+                  }
+                />
+                <span>{theme.label}</span>
+              </button>
+
+              {themeOpen && (
+                <div className="pdf-theme-popover" role="dialog" aria-label="PDF 색상 선택">
+                  {PDF_THEME_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`pdf-theme-option ${themeId === option.id ? "active" : ""}`}
+                      onClick={() => {
+                        onThemeChange(option.id);
+                        setThemeOpen(false);
+                      }}
+                      disabled={exporting}
+                    >
+                      <span
+                        className="pdf-theme-option-swatch"
+                        aria-hidden="true"
+                        style={
+                          {
+                            "--pdf-theme-accent": option.accentHex,
+                            "--pdf-theme-soft": option.softHex
+                          } as CSSProperties
+                        }
+                      />
+                      <span className="pdf-theme-option-copy">
+                        <strong>{option.label}</strong>
+                        <span>{option.description}</span>
+                      </span>
+                    </button>
+                  ))}
+
+                  <div className="pdf-theme-custom">
+                    <div className="pdf-theme-custom-copy">
+                      <strong>Custom</strong>
+                      <span>원하는 강조색을 직접 고릅니다.</span>
+                    </div>
+                    <div className="pdf-theme-custom-controls">
+                      <label className="pdf-theme-color-field">
+                        <input
+                          type="color"
+                          aria-label="사용자 지정 PDF 색상"
+                          value={normalizedCustomDraftHex ?? effectiveCustomHex}
+                          onChange={(event) => {
+                            const nextAccentHex = normalizePdfAccentHex(event.target.value);
+                            if (!nextAccentHex) {
+                              return;
+                            }
+
+                            setCustomHexDraft(nextAccentHex);
+                          }}
+                          disabled={exporting}
+                        />
+                      </label>
+                      <div className="pdf-theme-hex-actions">
+                        <input
+                          type="text"
+                          className="pdf-theme-hex-input"
+                          aria-label="사용자 지정 PDF HEX"
+                          inputMode="text"
+                          value={customHexDraft}
+                          onChange={(event) => {
+                            setCustomHexDraft(event.target.value);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              applyCustomTheme();
+                            }
+                          }}
+                          disabled={exporting}
+                        />
+                        <button
+                          type="button"
+                          className="secondary pdf-theme-apply-button"
+                          onClick={applyCustomTheme}
+                          disabled={exporting || !normalizedCustomDraftHex}
+                        >
+                          선택 완료
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <span className={`inline-badge ${typstPreview.status === "error" ? "warn" : "ok"}`}>
+              {typstPreview.status === "ready"
+                ? `${typstPreview.pages.length}p`
+                : typstPreview.status === "rendering"
+                  ? "렌더링 중"
+                  : typstPreview.status === "error"
+                    ? "fallback"
+                    : "준비 중"}
+            </span>
+          </div>
         </div>
 
         {typstPreview.error && (

@@ -87,7 +87,8 @@ describe("POST /api/pdf/preview", () => {
       introFixture,
       companyFixture,
       "classic",
-      "cobalt"
+      "cobalt",
+      undefined
     );
   });
 
@@ -119,7 +120,41 @@ describe("POST /api/pdf/preview", () => {
       introFixture,
       companyFixture,
       "compact",
-      "ember"
+      "ember",
+      undefined
+    );
+  });
+
+  it("customAccentHex가 있으면 custom 테마로 SVG 미리보기를 만든다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({
+      pages: ["<svg>page-custom</svg>"]
+    });
+
+    const request = new Request("http://localhost/api/pdf/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumeFixture,
+        company: companyFixture,
+        intro: introFixture,
+        themeId: "custom",
+        customAccentHex: "#111111"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.pages).toEqual(["<svg>page-custom</svg>"]);
+    expect(buildResumeSvgPreview).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "classic",
+      "custom",
+      "#111111"
     );
   });
 

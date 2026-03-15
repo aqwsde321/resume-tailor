@@ -30,7 +30,8 @@ export default function PdfPage() {
     setMessage,
     state,
     templateId: state.pdfTemplateId,
-    themeId: state.pdfThemeId
+    themeId: state.pdfThemeId,
+    customAccentHex: state.pdfCustomAccentHex
   });
   const workspaceRef = usePdfWorkspaceDock(canExportPdf);
 
@@ -94,10 +95,17 @@ export default function PdfPage() {
                   pdfThemeId: nextThemeId
                 }))
               }
+              onCustomAccentChange={(nextAccentHex) =>
+                patch((prev) => ({
+                  ...prev,
+                  pdfCustomAccentHex: nextAccentHex
+                }))
+              }
               rootRef={workspaceRef}
               resume={pdfResume}
               templateId={state.pdfTemplateId}
               themeId={state.pdfThemeId}
+              customAccentHex={state.pdfCustomAccentHex}
             />
           )}
         </>
