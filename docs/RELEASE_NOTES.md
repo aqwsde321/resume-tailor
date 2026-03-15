@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## v0.8.0 (2026-03-15)
+
 ### Changed
 
 - 프론트엔드 구조를 `route-first feature modules` 기준으로 재편
@@ -25,6 +27,10 @@
 - `npm run test`
 - `npm run build`
 - `npm run test:e2e`
+
+### Tag
+
+- Git tag: `v0.8.0`
 
 ## v0.7.0 (2026-03-15)
 
