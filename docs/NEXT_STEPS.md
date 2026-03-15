@@ -1,8 +1,8 @@
 # 다음 작업 로드맵
 
-- 문서 버전: v0.7
+- 문서 버전: v0.8
 - 마지막 업데이트: 2026-03-15
-- 기준: 현재 로컬 MVP(v0.7.0) 이후 우선 작업
+- 기준: 현재 로컬 MVP(v0.8.0) 이후 우선 작업
 - 상태 표기:
   - `[x]` 반영 완료
   - `[~]` 일부 반영
@@ -11,18 +11,18 @@
 ## 1. 추천 작업 순서
 
 1. [~] 자기소개 생성 품질 개선
-2. [~] 채용공고 구조화와 URL 추출 안정화
-3. [~] 테스트 자동화와 회귀 방지
-4. [~] 단계별 UX 정교화
-5. [~] Typst PDF 출력 품질과 미리보기 안정화
+2. [~] Typst PDF 출력 품질과 미리보기 안정화
+3. [~] 채용공고 구조화와 URL 추출 안정화
+4. [~] 테스트 자동화와 회귀 방지
+5. [~] 단계별 UX 정교화
 6. [ ] 입력 확장과 배포 검토
 
 ## 2. 왜 이 순서인가
 
 - 사용자 체감 가치는 여전히 `자기소개 결과 품질`과 `공고 구조화 정확도`에 크게 좌우됩니다.
-- PDF step 4와 Typst 기반 내보내기 1차는 들어갔으므로, 이제는 “있는 기능을 더 정확하고 빠르게” 다듬는 쪽이 우선입니다.
-- 특히 실제 Typst SVG 미리보기는 사용자 체감 품질이 높지만, 렌더 비용과 회귀 검증을 따로 관리하지 않으면 응답성 문제가 생길 수 있습니다.
-- CI는 들어왔지만, PDF preview/PDF export 시각 회귀까지 자동으로 잡는 수준은 아직 아니므로 렌더 검증을 보강할 필요가 있습니다.
+- step 4 `/pdf`는 템플릿 선택, 색상 프리셋, 사용자 지정 HEX 색상까지 들어가서 기능 밀도가 높아졌으므로, 이제는 “있는 기능을 더 정확하고 빠르게” 다듬는 쪽이 우선입니다.
+- 특히 실제 Typst SVG 미리보기는 사용자 체감 품질이 높지만, 렌더 비용과 시각 회귀를 따로 관리하지 않으면 응답성과 안정성이 같이 흔들릴 수 있습니다.
+- CI는 들어왔지만, 템플릿 3종과 색상 변경까지 포함한 PDF preview/PDF export 시각 회귀를 자동으로 잡는 수준은 아직 아니므로 렌더 검증을 보강할 필요가 있습니다.
 
 ## 3. 우선순위별 작업
 
@@ -75,6 +75,18 @@
 - [x] 임시 작업 디렉터리와 산출물 정리 규칙 추가
 - [x] step 4에서 실제 Typst SVG 미리보기 API 추가
 - [x] Typst 미리보기 실패 시 HTML fallback 유지
+- [x] `Classic`, `Sidebar`, `Modern` 3종 템플릿 선택 추가
+- [x] 색상 프리셋 확장
+  - [x] `Cobalt`
+  - [x] `Forest`
+  - [x] `Ember`
+  - [x] `Graphite`
+  - [x] `Onyx`
+  - [x] `Teal`
+  - [x] `Rose`
+  - [x] `Plum`
+- [x] 사용자 지정 `HEX` 색상과 `customAccentHex` 전달 추가
+- [x] 색상 팝오버 안에서 draft 후 `선택 완료`로 적용하는 흐름 추가
 - [ ] Typst SVG preview 렌더 성능 최적화
   - [ ] 동일 입력 해시 기준 preview 캐시
   - [ ] 연속 수정 중 preview compile 병합 또는 rate limit
@@ -82,6 +94,7 @@
 - [ ] 시각 회귀 검증 추가
   - [ ] fixture 기준 SVG 또는 PNG snapshot smoke test
   - [ ] 대표 PDF 1페이지 PNG diff 절차 문서화
+  - [ ] 템플릿 3종과 대표 색상 2종 기준 baseline 이미지 고정
 
 필드 설계:
 
@@ -111,6 +124,7 @@ UX 방침:
 - [x] 1차 PDF 내보내기는 별도 step 4 `/pdf`에서 제공
 - [x] step 4에서는 왼쪽 편집과 오른쪽 실제 Typst 미리보기를 동시에 제공
 - [x] step 4에서는 step 1에 없던 연락처, 링크, PDF용 Highlights/Strengths를 바로 수정 가능
+- [x] step 4에서는 미리보기 헤더에서 템플릿과 색상을 먼저 고르고 같은 기준으로 미리보기와 export를 수행
 - [ ] 이후 필요하면 `intro` 없이도 일반 이력서 PDF만 내보내는 흐름을 별도 검토
 
 누락 필드 fallback 규칙:
@@ -138,6 +152,8 @@ UX 방침:
 - [x] `POST /api/pdf/preview` Typst SVG preview 경로
 - [x] 실제 Typst 미리보기 실패 시 HTML fallback
 - [x] 현재 환경에서 `typst compile`과 `typst compile --format svg` 가능
+- [x] templateId와 themeId, customAccentHex를 preview/export API에 반영
+- [x] 색상 선택 UI를 미리보기 헤더 세그먼트/팝오버 기준으로 단순화
 
 완료 기준:
 
@@ -208,6 +224,9 @@ UX 방침:
 - [x] step 4 모바일 4열 수정 칩과 섹션 모달 viewport 회귀 E2E 추가
 - [x] step 4 섹션 모달 수정값의 Typst 미리보기 반영과 draft 유지 E2E 추가
 - [x] `/resume`, `/company`, `/pdf` 기술 스택 입력의 쉼표 기반 raw text 유지 회귀 E2E 추가
+- [x] URL 기반 step 1~4 전체 흐름과 PDF export 요청 검증 E2E 추가
+- [x] PDF preview/export API의 customAccentHex 전달 테스트 추가
+- [ ] 실제 다운로드된 PDF 바이너리의 페이지 수나 제목 메타 smoke test 추가
 
 완료 기준:
 
