@@ -13,6 +13,7 @@
   - `entities`: pipeline, intro, resume, pdf 공통 모델
   - `shared`: 공통 UI, 훅, 유틸, 스타일
   - `server`: Codex 실행, URL fetch, OCR, PDF build
+- `src/app` 구조에서 발생하는 Turbopack dev panic을 피하기 위해 기본 개발 서버를 `next dev --webpack`으로 전환하고, 필요할 때만 `npm run dev:turbopack`을 사용하도록 조정
 - `/resume`, `/company`, `/pdf`의 기술 스택 입력이 쉼표 기반 raw text를 입력 중에도 유지하도록 수정
 - step 4 PDF 기술 스택 자동 분류에 `Frontend` 그룹 추가
 - step 4 PDF 기술 스택 분류에서 `TypeScript`, `JavaScript` 같은 공유 웹 스택을 주변 기술 맥락에 따라 `Frontend` 또는 `Backend`로 분류하도록 개선
