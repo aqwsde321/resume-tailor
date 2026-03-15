@@ -32,7 +32,7 @@ async function completeResumeStep(page: Page) {
   await page.getByRole("button", { name: "내용 정리" }).click();
 
   await expect(resumeSection.getByLabel("희망 직무")).toHaveValue("Frontend Engineer");
-  await expect(resumeSection.getByLabel("기술 스택")).toHaveValue("React, TypeScript, Next.js");
+  await expect(resumeSection.locator(".inline-stack-input")).toHaveValue("React, TypeScript, Next.js");
 
   await page.getByRole("button", { name: "이력서 저장" }).click();
   await expect(page.getByRole("link", { name: "공고 정리로 가기" })).toBeVisible();
@@ -58,7 +58,7 @@ async function generateIntro(page: Page) {
   await page.getByRole("button", { name: "소개글 만들기" }).click();
 
   await expect(page.getByText("이 소개글의 근거")).toBeVisible();
-  await expect(page.getByText("지금 결과가 최신이에요.")).toBeVisible();
+  await expect(page.getByText("최신 결과가 준비돼 있어요")).toBeVisible();
 }
 
 async function completeIntroFlow(page: Page) {
@@ -277,7 +277,8 @@ test("PDF 단계의 Highlights는 Enter 줄바꿈으로 여러 항목을 바로 
 
   await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
 
-  const highlightsField = page.getByLabel("Highlights");
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Highlights" }).click();
+  const highlightsField = page.locator(".pdf-editor-modal").getByLabel("Highlights");
   await highlightsField.fill("첫 번째 근거");
   await highlightsField.press("Enter");
   await expect(highlightsField).toHaveValue("첫 번째 근거\n");
@@ -286,6 +287,80 @@ test("PDF 단계의 Highlights는 Enter 줄바꿈으로 여러 항목을 바로 
   const preview = page.locator(".pdf-preview-pane");
   await expect(preview.getByText("첫 번째 근거")).toBeVisible();
   await expect(preview.getByText("두 번째 근거")).toBeVisible();
+});
+
+test("모바일 PDF 단계는 4열 수정 칩을 유지하고 섹션 모달을 화면 안에서 연다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await completeIntroFlow(page);
+
+  await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
+
+  const editorPane = page.locator(".pdf-editor-pane");
+  const chips = editorPane.locator(".pdf-editor-chip");
+  await expect(chips).toHaveCount(8);
+
+  const widths = await editorPane.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth
+  }));
+  expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth + 1);
+
+  const positions = await chips.evaluateAll((nodes) =>
+    nodes.slice(0, 5).map((node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: Math.round(rect.left),
+        top: Math.round(rect.top)
+      };
+    })
+  );
+
+  expect(Math.abs(positions[0].top - positions[1].top)).toBeLessThanOrEqual(2);
+  expect(Math.abs(positions[1].top - positions[2].top)).toBeLessThanOrEqual(2);
+  expect(Math.abs(positions[2].top - positions[3].top)).toBeLessThanOrEqual(2);
+  expect(positions[4].top).toBeGreaterThan(positions[0].top + 8);
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Strengths" }).click();
+
+  const modal = page.locator(".pdf-editor-modal");
+  await expect(modal).toBeVisible();
+  await expect(page.locator("body")).toHaveClass(/pdf-modal-open/);
+
+  const modalBounds = await modal.boundingBox();
+  expect(modalBounds).not.toBeNull();
+  expect(modalBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(modalBounds!.y).toBeGreaterThanOrEqual(0);
+  expect(modalBounds!.x + modalBounds!.width).toBeLessThanOrEqual(390);
+  expect(modalBounds!.y + modalBounds!.height).toBeLessThanOrEqual(844);
+});
+
+test("PDF 섹션 모달에서 수정한 값은 미리보기에 반영되고 다시 열어도 유지된다", async ({ page }) => {
+  await completeIntroFlow(page);
+
+  await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Header" }).click();
+  const headerModal = page.locator(".pdf-editor-modal");
+  await headerModal.getByLabel("이름").fill("김테스트");
+  await headerModal.getByRole("button", { name: "닫기" }).click();
+
+  const preview = page.locator(".pdf-preview-pane");
+  await expect(preview.getByText("김테스트")).toBeVisible();
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Highlights" }).click();
+  const highlightsModal = page.locator(".pdf-editor-modal");
+  const highlightsField = highlightsModal.getByLabel("Highlights");
+  await highlightsField.fill("첫 번째 근거\n두 번째 근거");
+  await highlightsModal.getByRole("button", { name: "닫기" }).click();
+
+  await expect(preview.getByText("첫 번째 근거")).toBeVisible();
+  await expect(preview.getByText("두 번째 근거")).toBeVisible();
+  await expect(page.locator(".pdf-editor-chip").filter({ hasText: "Highlights" }).locator(".pdf-editor-chip-meta")).toHaveText("2개");
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Highlights" }).click();
+  await expect(page.locator(".pdf-editor-modal").getByLabel("Highlights")).toHaveValue(
+    "첫 번째 근거\n두 번째 근거"
+  );
 });
 
 test("실행 중 로그 모달이 보이고 완료 후 하단 기록 패널에서 다시 확인할 수 있다", async ({ page }) => {
@@ -334,7 +409,6 @@ test("실행 중 로그 모달이 보이고 완료 후 하단 기록 패널에�
 
   const liveLogModal = page.locator(".live-log-modal");
   await expect(liveLogModal).toBeVisible();
-  await expect(liveLogModal.getByText("실행 중")).toBeVisible();
   await expect(liveLogModal.getByRole("heading", { name: "이력서 정리" })).toBeVisible();
   await expect(liveLogModal.locator(".live-log-spinner")).toBeVisible();
   await expect(liveLogModal.getByLabel("작업 진행 상태")).toBeVisible();
@@ -434,13 +508,11 @@ test("공고를 수정하고 다시 저장하면 소개글에 공고 변경 stal
   await page.getByRole("button", { name: "공고 저장" }).click();
 
   await page.goto("/result");
-  await expect(page.getByText("소개글 다시 만들기 필요")).toBeVisible();
-  await expect(page.getByText("최신 내용으로 다시 만들 차례예요.")).toBeVisible();
-  await expect(page.getByText("공고가 바뀌었어요.")).toBeVisible();
+  await expect(page.locator(".intro-action-copy strong")).toHaveText("공고 변경");
   await expect(page.locator(".reason-chip").filter({ hasText: "공고 변경" })).toBeVisible();
 
   await page.getByRole("button", { name: "소개글 만들기" }).click();
 
-  await expect(page.getByText("지금 결과가 최신이에요.")).toBeVisible();
+  await expect(page.getByText("최신 결과가 준비돼 있어요")).toBeVisible();
   await expect(page.locator(".reason-chip").filter({ hasText: "공고 변경" })).toHaveCount(0);
 });

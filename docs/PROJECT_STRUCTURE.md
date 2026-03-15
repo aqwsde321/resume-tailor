@@ -1,7 +1,7 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.4
-- 마지막 업데이트: 2026-03-08
+- 문서 버전: v0.5
+- 마지막 업데이트: 2026-03-15
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
@@ -16,9 +16,11 @@ resume-tailor/
 │  ├─ company/               # STEP 2 공고 입력/확정 화면
 │  ├─ result/                # STEP 3 자기소개 생성/검토 화면
 │  ├─ components/            # 화면 공용 컴포넌트
+│  ├─ hooks/                 # 페이지/프레임 전용 상태 훅
 │  ├─ page.tsx               # 루트에서 /resume 으로 이동
 │  ├─ layout.tsx             # 공통 레이아웃
 │  └─ providers.tsx          # 전역 provider 연결
+├─ app/styles/               # 전역 스타일 분리 파일(base/pdf/frame/refresh)
 ├─ lib/                      # 도메인 로직, Codex 연동, 스키마/유틸
 │  ├─ codex-client.ts        # Codex SDK 실행 브릿지
 │  ├─ skills.ts              # SKILL.md 로드/파싱
@@ -76,6 +78,12 @@ resume-tailor/
 - `app/components/*`
   - 여러 페이지에서 재사용하는 UI 컴포넌트
   - `reasoning-inline.tsx`는 단계별 `생각 깊이` 선택 UI를 담당합니다.
+- `app/hooks/*`
+  - 페이지나 프레임에서 반복되는 상태 계산과 흐름 제어를 분리합니다.
+  - 예: `use-pipeline-stream-task.ts`, `use-result-page-view.ts`, `use-app-frame-view.ts`
+- `app/styles/*`
+  - `globals.css`가 import 하는 전역 스타일 분리 파일입니다.
+  - 현재는 `base.css`, `pdf-and-frame.css`, `editorial-refresh.css`로 나뉩니다.
 
 ### `lib/`
 
@@ -126,6 +134,7 @@ resume-tailor/
   - 정규화와 가이드 계산 같은 순수 로직 테스트
 - `tests/e2e`
   - 실제 사용자 흐름 회귀 테스트
+  - step 4 모바일 PDF 툴바, 섹션 모달, 미리보기 반영 같은 UI 회귀도 포함
 - `tests/fixtures`
   - 공고와 소개글 샘플 데이터
 

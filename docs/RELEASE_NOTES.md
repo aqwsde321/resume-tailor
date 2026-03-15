@@ -1,6 +1,6 @@
 # 릴리즈 노트
 
-- 마지막 업데이트: 2026-03-10
+- 마지막 업데이트: 2026-03-15
 - 기준: 버전별 기능, 문서, 검증 기록
 
 ## Unreleased
@@ -13,6 +13,7 @@
 - 실제 Typst SVG 미리보기 API 추가: `POST /api/pdf/preview`
 - PDF 전용 필드와 override 추가: `headline`, `careerDurationText`, `contacts[]`, `projects[].subtitle/link/linkLabel/highlights[]`, `pdfHighlights[]`, `pdfStrengths[]`
 - PDF export와 preview 관련 API/unit/E2E 테스트 추가
+- step 4 모바일 4열 수정 칩, 섹션 모달 viewport, 수정값 유지/미리보기 반영 E2E 추가
 
 ### Changed
 
@@ -29,6 +30,8 @@
 - `/resume`에서 PDF 전용 입력을 제거하고, step 4 `/pdf`에서만 마감 편집하도록 역할 분리
 - step 4 미리보기를 HTML 중심에서 실제 Typst SVG 렌더 중심으로 변경하고, 실패 시 HTML fallback 유지
 - 작업 중 중앙 모달에 `작업 중지`를 추가하고 클라이언트/서버 AI 호출 abort를 연결
+- 리팩터링으로 `app-frame`, `result`, `resume-editor`, `pdf-editor` 상태/섹션 분리와 전역 스타일 파일 분리 적용
+- 미사용 `TagInput` 컴포넌트와 관련 죽은 스타일 제거
 
 ### Verified
 

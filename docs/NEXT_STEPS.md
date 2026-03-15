@@ -1,7 +1,7 @@
 # 다음 작업 로드맵
 
 - 문서 버전: v0.6
-- 마지막 업데이트: 2026-03-10
+- 마지막 업데이트: 2026-03-15
 - 기준: 현재 로컬 MVP(v0.6.0) 이후 우선 작업
 - 상태 표기:
   - `[x]` 반영 완료
@@ -205,6 +205,8 @@ UX 방침:
 - [x] `pdf/view-model` fallback 규칙 테스트 추가
 - [x] `POST /api/pdf`, `POST /api/pdf/preview` API 테스트 추가
 - [x] step 4의 Enter 기반 Highlights 편집 E2E 추가
+- [x] step 4 모바일 4열 수정 칩과 섹션 모달 viewport 회귀 E2E 추가
+- [x] step 4 섹션 모달 수정값의 Typst 미리보기 반영과 draft 유지 E2E 추가
 
 완료 기준:
 
