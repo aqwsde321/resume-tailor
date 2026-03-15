@@ -8,6 +8,7 @@ import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
 import { parseInlineItems, parseListText, stringifyInlineList, stringifyLineList } from "@/lib/list-input";
@@ -21,7 +22,6 @@ import {
 } from "@/lib/resume-utils";
 import { usePipeline } from "@/lib/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
-import { isAbortError, postSseJson } from "@/lib/stream-client";
 import type { ApiFailure, ApiSuccess, Resume, ResumeExperienceItem, ResumeProjectItem } from "@/lib/types";
 
 function formatIssueDetails(errorMessage: string): string {
@@ -52,13 +52,9 @@ export default function ResumePage() {
     patch,
     clearStatus,
     setError,
-    setMessage,
-    clearLogs,
-    startTask,
-    finishTask,
-    addLog,
-    setTaskAborter
+    setMessage
   } = usePipeline();
+  const runStreamTask = usePipelineStreamTask();
 
   const isBusy = state.currentTask !== null;
   const isResumeWorking = state.currentTask === "resume";
@@ -289,43 +285,27 @@ export default function ResumePage() {
       return;
     }
 
-    clearLogs();
-    startTask("resume", "이력서를 읽고 있어요.");
-    const controller = new AbortController();
-    setTaskAborter(() => controller.abort());
-
-    try {
-      const resume = await postSseJson<Resume>(
-        "/api/resume/stream",
-        {
-          text: state.resumeText,
-          agent: toAgentRunOptions(state.agentSettings)
-        },
-        {
-          onLog: (payload) => addLog("resume", payload),
-          signal: controller.signal
-        }
-      );
-
-      patch((prev) => ({
-        ...prev,
-        resumeJsonText: JSON.stringify(resume, null, 2),
-        resumeConfirmedJson: null,
-        companyConfirmedJson: null,
-        introSource: prev.introSource
-      }));
-
-      setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
-    } catch (error) {
-      if (isAbortError(error)) {
-        setMessage("이력서 정리를 중단했어요.");
-      } else {
-        setError(error instanceof Error ? error.message : "이력서를 읽는 중 문제가 생겼어요.");
+    await runStreamTask<Resume>({
+      task: "resume",
+      endpoint: "/api/resume/stream",
+      requestBody: {
+        text: state.resumeText,
+        agent: toAgentRunOptions(state.agentSettings)
+      },
+      startMessage: "이력서를 읽고 있어요.",
+      successMessage: "초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.",
+      abortMessage: "이력서 정리를 중단했어요.",
+      fallbackErrorMessage: "이력서를 읽는 중 문제가 생겼어요.",
+      onSuccess: (resume) => {
+        patch((prev) => ({
+          ...prev,
+          resumeJsonText: JSON.stringify(resume, null, 2),
+          resumeConfirmedJson: null,
+          companyConfirmedJson: null,
+          introSource: prev.introSource
+        }));
       }
-    } finally {
-      setTaskAborter(null);
-      finishTask();
-    }
+    });
   };
 
   const handleConfirmResume = () => {

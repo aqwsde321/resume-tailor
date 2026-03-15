@@ -8,13 +8,13 @@ import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
 import { parseInlineItems, parseListText, stringifyInlineList, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
-import { isAbortError, postSseJson } from "@/lib/stream-client";
 
 const EMPTY_COMPANY: Company = {
   companyName: "",
@@ -74,13 +74,9 @@ export default function CompanyPage() {
     patch,
     clearStatus,
     setError,
-    setMessage,
-    clearLogs,
-    startTask,
-    finishTask,
-    addLog,
-    setTaskAborter
+    setMessage
   } = usePipeline();
+  const runStreamTask = usePipelineStreamTask();
 
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
@@ -218,42 +214,26 @@ export default function CompanyPage() {
       return;
     }
 
-    clearLogs();
-    startTask("company", "공고를 읽고 있어요.");
-    const controller = new AbortController();
-    setTaskAborter(() => controller.abort());
-
-    try {
-      const company = await postSseJson<Company>(
-        "/api/company/stream",
-        {
-          text: state.companyText,
-          agent: toAgentRunOptions(state.agentSettings)
-        },
-        {
-          onLog: (payload) => addLog("company", payload),
-          signal: controller.signal
-        }
-      );
-
-      patch((prev) => ({
-        ...prev,
-        companyJsonText: JSON.stringify(company, null, 2),
-        companyConfirmedJson: null,
-        introSource: prev.introSource
-      }));
-
-      setMessage("초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.");
-    } catch (error) {
-      if (isAbortError(error)) {
-        setMessage("공고 정리를 중단했어요.");
-      } else {
-        setError(error instanceof Error ? error.message : "공고를 읽는 중 문제가 생겼어요.");
+    await runStreamTask<Company>({
+      task: "company",
+      endpoint: "/api/company/stream",
+      requestBody: {
+        text: state.companyText,
+        agent: toAgentRunOptions(state.agentSettings)
+      },
+      startMessage: "공고를 읽고 있어요.",
+      successMessage: "초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.",
+      abortMessage: "공고 정리를 중단했어요.",
+      fallbackErrorMessage: "공고를 읽는 중 문제가 생겼어요.",
+      onSuccess: (company) => {
+        patch((prev) => ({
+          ...prev,
+          companyJsonText: JSON.stringify(company, null, 2),
+          companyConfirmedJson: null,
+          introSource: prev.introSource
+        }));
       }
-    } finally {
-      setTaskAborter(null);
-      finishTask();
-    }
+    });
   };
 
   const handleFetchUrl = async () => {

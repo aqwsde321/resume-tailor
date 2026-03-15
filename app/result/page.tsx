@@ -7,162 +7,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { ToneInline } from "@/app/components/tone-inline";
+import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
-import { formatIntroToneLabel } from "@/lib/intro-tone";
 import { getIntroRefreshReasons, getResumeIntroSnapshot, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import {
+  buildCompareSection,
+  buildIntroActionSummary,
+  buildRefreshReasonBadges,
+  getIntroInsights,
+  type CopyFeedback,
+  type IntroSectionKey
+} from "@/lib/result-view";
 import { serializeResumeIntroSnapshot } from "@/lib/resume-utils";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
-import { isAbortError, postSseJson } from "@/lib/stream-client";
 import type { Intro } from "@/lib/types";
-
-function getIntroInsights(intro: Intro | null) {
-  if (!intro) {
-    return null;
-  }
-
-  const fitReasons = Array.isArray(intro.fitReasons) ? intro.fitReasons.filter(Boolean) : [];
-  const matchedSkills = Array.isArray(intro.matchedSkills) ? intro.matchedSkills.filter(Boolean) : [];
-  const gapNotes = Array.isArray(intro.gapNotes) ? intro.gapNotes.filter(Boolean) : [];
-  const missingButRelevant = Array.isArray(intro.missingButRelevant)
-    ? intro.missingButRelevant.filter(Boolean)
-    : [];
-
-  if (
-    fitReasons.length === 0 &&
-    matchedSkills.length === 0 &&
-    gapNotes.length === 0 &&
-    missingButRelevant.length === 0
-  ) {
-    return null;
-  }
-
-  return {
-    fitReasons,
-    matchedSkills,
-    gapNotes,
-    missingButRelevant
-  };
-}
-
-type IntroSectionKey = "oneLineIntro" | "shortIntro" | "longIntro";
-type CompareChunkStatus = "same" | "added" | "removed";
-
-interface CopyFeedback {
-  key: IntroSectionKey;
-  title: string;
-  status: "success" | "error";
-}
-
-interface CompareChunk {
-  id: string;
-  text: string;
-  status: CompareChunkStatus;
-}
-
-interface CompareSection {
-  key: IntroSectionKey;
-  title: string;
-  previousTitle: string;
-  currentTitle: string;
-  previousChunks: CompareChunk[];
-  currentChunks: CompareChunk[];
-  addedCount: number;
-  removedCount: number;
-  unchangedCount: number;
-  changed: boolean;
-}
-
-const SENTENCE_CHUNK_PATTERN = /[^.!?。！？\n]+[.!?。！？]?/g;
-
-function splitCompareChunks(text: string) {
-  const normalized = text.replace(/\r\n/g, "\n").trim();
-  if (!normalized) {
-    return [];
-  }
-
-  return normalized.split(/\n+/).flatMap((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    const chunks = trimmed.match(SENTENCE_CHUNK_PATTERN) ?? [trimmed];
-    return chunks.map((chunk) => chunk.trim()).filter(Boolean);
-  });
-}
-
-function normalizeCompareChunk(text: string) {
-  return text
-    .replace(/\s+/g, " ")
-    .replace(/^[\u2022•\-*]+\s*/, "")
-    .replace(/[.!?。！？]+$/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-function countCompareSignatures(chunks: string[]) {
-  const counts = new Map<string, number>();
-
-  for (const chunk of chunks) {
-    const signature = normalizeCompareChunk(chunk);
-    if (!signature) {
-      continue;
-    }
-
-    counts.set(signature, (counts.get(signature) ?? 0) + 1);
-  }
-
-  return counts;
-}
-
-function markCompareChunks(chunks: string[], otherCounts: Map<string, number>, missingStatus: CompareChunkStatus) {
-  const seen = new Map<string, number>();
-
-  return chunks.map((chunk, index) => {
-    const signature = normalizeCompareChunk(chunk);
-    const seenCount = seen.get(signature) ?? 0;
-    seen.set(signature, seenCount + 1);
-
-    return {
-      id: `${signature || "chunk"}-${index}`,
-      text: chunk,
-      status: signature && seenCount < (otherCounts.get(signature) ?? 0) ? "same" : missingStatus
-    } satisfies CompareChunk;
-  });
-}
-
-function buildCompareSection(
-  key: IntroSectionKey,
-  title: string,
-  previousTitle: string,
-  currentTitle: string,
-  previousValue: string,
-  currentValue: string
-) {
-  const previousSource = splitCompareChunks(previousValue);
-  const currentSource = splitCompareChunks(currentValue);
-  const previousCounts = countCompareSignatures(previousSource);
-  const currentCounts = countCompareSignatures(currentSource);
-  const previousChunks = markCompareChunks(previousSource, currentCounts, "removed");
-  const currentChunks = markCompareChunks(currentSource, previousCounts, "added");
-  const addedCount = currentChunks.filter((chunk) => chunk.status === "added").length;
-  const removedCount = previousChunks.filter((chunk) => chunk.status === "removed").length;
-  const unchangedCount = currentChunks.filter((chunk) => chunk.status === "same").length;
-
-  return {
-    key,
-    title,
-    previousTitle,
-    currentTitle,
-    previousChunks,
-    currentChunks,
-    addedCount,
-    removedCount,
-    unchangedCount,
-    changed: addedCount > 0 || removedCount > 0
-  } satisfies CompareSection;
-}
 
 export default function ResultPage() {
   const {
@@ -170,13 +29,9 @@ export default function ResultPage() {
     patch,
     clearStatus,
     setError,
-    setMessage,
-    clearLogs,
-    startTask,
-    finishTask,
-    addLog,
-    setTaskAborter
+    setMessage
   } = usePipeline();
+  const runStreamTask = usePipelineStreamTask();
 
   const isBusy = state.currentTask !== null;
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
@@ -188,32 +43,24 @@ export default function ResultPage() {
   const copyResetRef = useRef<number | null>(null);
   const refreshReasonBadges = useMemo(
     () =>
-      refreshReasons.map((reason) => ({
-        key: reason.key,
-        label:
-          reason.key === "resume"
-            ? state.resumeConfirmedJson
-              ? "이력서 변경"
-              : "이력서 다시 저장"
-            : state.companyConfirmedJson
-              ? "공고 변경"
-              : "공고 다시 저장"
-      })),
+      buildRefreshReasonBadges(
+        refreshReasons,
+        Boolean(state.resumeConfirmedJson),
+        Boolean(state.companyConfirmedJson)
+      ),
     [refreshReasons, state.companyConfirmedJson, state.resumeConfirmedJson]
   );
   const freshnessTone = !state.intro ? "info" : introFresh ? "ok" : "warn";
-  const actionHeading = !canGenerate
-    ? "저장 후 만들 수 있어요"
-    : !state.intro
-      ? "저장한 내용으로 바로 만들 수 있어요"
-      : needsRefresh
-        ? refreshReasonBadges.map((badge) => badge.label).join(", ")
-        : "최신 결과가 준비돼 있어요";
-  const actionDescription = !canGenerate
-    ? ""
-    : !state.intro || needsRefresh
-      ? ""
-      : "필요하면 같은 조건으로 다시 만들 수 있어요";
+  const { heading: actionHeading, description: actionDescription } = useMemo(
+    () =>
+      buildIntroActionSummary({
+        canGenerate,
+        hasIntro: Boolean(state.intro),
+        needsRefresh,
+        refreshReasonBadges
+      }),
+    [canGenerate, needsRefresh, refreshReasonBadges, state.intro]
+  );
   // 소개글 생성은 저장 완료된 스냅샷만 기준으로 삼아, 편집 중 draft가 섞이지 않게 한다.
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
@@ -384,50 +231,33 @@ export default function ResultPage() {
       return;
     }
 
-    clearLogs();
-    startTask("intro", "소개글을 만들고 있어요.");
-    const controller = new AbortController();
-    setTaskAborter(() => controller.abort());
-
-    try {
-      // 생성은 항상 현재 화면 draft가 아니라 "저장된 이력서/공고" 조합으로만 다시 돌린다.
-      const intro = await postSseJson<Intro>(
-        "/api/intro/stream",
-          {
-            resume: resume.data,
-            company: company.data,
-            tone: state.introTone,
-            agent: toAgentRunOptions(state.agentSettings)
-          },
-          {
-            onLog: (payload) => addLog("intro", payload),
-            signal: controller.signal
+    await runStreamTask<Intro>({
+      task: "intro",
+      endpoint: "/api/intro/stream",
+      requestBody: {
+        resume: resume.data,
+        company: company.data,
+        tone: state.introTone,
+        agent: toAgentRunOptions(state.agentSettings)
+      },
+      startMessage: "소개글을 만들고 있어요.",
+      successMessage: "소개글이 준비됐어요.",
+      abortMessage: "소개글 생성을 중단했어요.",
+      fallbackErrorMessage: "소개글을 만드는 중 문제가 생겼어요.",
+      onSuccess: (intro) => {
+        patch((prev) => ({
+          ...prev,
+          // 비교 패널에서 직전 결과를 보여줄 수 있도록 생성 전 결과를 따로 보관한다.
+          previousIntro: prev.intro,
+          intro,
+          introSavedAt: new Date().toISOString(),
+          introSource: {
+            resumeConfirmedJson: serializeResumeIntroSnapshot(resume.data),
+            companyConfirmedJson: prev.companyConfirmedJson ?? ""
           }
-      );
-
-      patch((prev) => ({
-        ...prev,
-        // 비교 패널에서 직전 결과를 보여줄 수 있도록 생성 전 결과를 따로 보관한다.
-        previousIntro: prev.intro,
-        intro,
-        introSavedAt: new Date().toISOString(),
-        introSource: {
-          resumeConfirmedJson: serializeResumeIntroSnapshot(resume.data),
-          companyConfirmedJson: prev.companyConfirmedJson ?? ""
-        }
-      }));
-
-      setMessage("소개글이 준비됐어요.");
-    } catch (error) {
-      if (isAbortError(error)) {
-        setMessage("소개글 생성을 중단했어요.");
-      } else {
-        setError(error instanceof Error ? error.message : "소개글을 만드는 중 문제가 생겼어요.");
+        }));
       }
-    } finally {
-      setTaskAborter(null);
-      finishTask();
-    }
+    });
   };
 
   const setCopyFeedbackWithReset = (feedback: CopyFeedback) => {
