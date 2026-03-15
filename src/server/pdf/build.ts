@@ -26,6 +26,36 @@ export interface ResumeSvgPreview {
   pages: string[];
 }
 
+function parseProfileImageDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) {
+    throw new HttpError(400, "프로필 이미지를 읽지 못했어요.", "지원하지 않는 이미지 형식이에요.");
+  }
+
+  const [, imageType, encoded] = match;
+  const extension = imageType === "jpg" ? "jpeg" : imageType;
+
+  return {
+    extension,
+    buffer: Buffer.from(encoded, "base64")
+  };
+}
+
+async function preparePdfPayloadAssets(workdir: string, payload: ReturnType<typeof buildTypstResumeDocument>) {
+  if (!payload.showProfileImage || !payload.profileImageDataUrl) {
+    return payload;
+  }
+
+  const { extension, buffer } = parseProfileImageDataUrl(payload.profileImageDataUrl);
+  const profileImageFilename = `profile-image.${extension}`;
+  await fs.writeFile(path.join(workdir, profileImageFilename), buffer);
+
+  return {
+    ...payload,
+    profileImagePath: profileImageFilename
+  };
+}
+
 function resolveTemplatePath(templateId: PdfTemplateId) {
   return path.join(TEMPLATE_ROOT, templateId, "resume.typ");
 }
@@ -61,12 +91,13 @@ export async function buildResumePdf(
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const pdfOutputPath = path.join(workdir, "resume.pdf");
-  const payload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
+  const rawPayload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
   const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {
     await fs.mkdir(workdir, { recursive: true });
     await fs.copyFile(sourceTemplatePath, templateOutputPath);
+    const payload = await preparePdfPayloadAssets(workdir, rawPayload);
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {
@@ -117,12 +148,13 @@ export async function buildResumeSvgPreview(
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const svgOutputPattern = "preview-{0p}.svg";
-  const payload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
+  const rawPayload = buildTypstResumeDocument(resume, intro, company, themeId, customAccentHex);
   const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {
     await fs.mkdir(workdir, { recursive: true });
     await fs.copyFile(sourceTemplatePath, templateOutputPath);
+    const payload = await preparePdfPayloadAssets(workdir, rawPayload);
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {

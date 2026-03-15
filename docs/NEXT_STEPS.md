@@ -110,11 +110,13 @@
     - [x] `value`
     - [x] `url`
   - [x] `projects[].subtitle`
-  - [x] `projects[].link`
-  - [x] `projects[].linkLabel`
-  - [x] `projects[].highlights[]`
-  - [x] `pdfHighlights[]`
-  - [x] `pdfStrengths[]`
+- [x] `projects[].link`
+- [x] `projects[].linkLabel`
+- [x] `projects[].highlights[]`
+- [x] `pdfHighlights[]`
+- [x] `pdfStrengths[]`
+- [x] `pdfProfileImageDataUrl`
+- [x] `pdfProfileImageVisible`
 - [ ] 2차 확장 필드 검토
   - [ ] `experience[].highlights[]`
   - [ ] `experience[].projects[]`
@@ -129,6 +131,7 @@ UX 방침:
 - [x] step 4에서는 왼쪽 편집과 오른쪽 실제 Typst 미리보기를 동시에 제공
 - [x] step 4에서는 step 1에 없던 연락처, 링크, PDF용 Highlights/Strengths를 바로 수정 가능
 - [x] step 4에서는 미리보기 헤더에서 템플릿과 색상을 먼저 고르고 같은 기준으로 미리보기와 export를 수행
+- [x] step 4 `Header` 모달에서 프로필 이미지 업로드와 표시 여부 제어 추가
 - [ ] 이후 필요하면 `intro` 없이도 일반 이력서 PDF만 내보내는 흐름을 별도 검토
 
 누락 필드 fallback 규칙:
@@ -224,12 +227,14 @@ UX 방침:
 - [x] GitHub Actions에서 `main` push 시 검증 후 Docker Hub publish 추가
 - [x] `pdf/view-model` fallback 규칙 테스트 추가
 - [x] `POST /api/pdf`, `POST /api/pdf/preview` API 테스트 추가
+- [x] `tests/lib/pdf-build.test.ts` 실제 Typst SVG/PDF smoke test 추가
 - [x] step 4의 Enter 기반 Highlights 편집 E2E 추가
 - [x] step 4 모바일 4열 수정 칩과 섹션 모달 viewport 회귀 E2E 추가
 - [x] step 4 섹션 모달 수정값의 Typst 미리보기 반영과 draft 유지 E2E 추가
 - [x] `/resume`, `/company`, `/pdf` 기술 스택 입력의 쉼표 기반 raw text 유지 회귀 E2E 추가
 - [x] URL 기반 step 1~4 전체 흐름과 PDF export 요청 검증 E2E 추가
 - [x] PDF preview/export API의 customAccentHex 전달 테스트 추가
+- [x] step 4 프로필 이미지 업로드와 export draft 반영 E2E 추가
 - [ ] 실제 다운로드된 PDF 바이너리의 페이지 수나 제목 메타 smoke test 추가
 
 완료 기준:

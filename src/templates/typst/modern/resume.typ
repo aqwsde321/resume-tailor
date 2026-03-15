@@ -129,6 +129,21 @@
   ]
 ]
 
+#let profile_photo(width: 18mm, height: 18mm, radius: 8pt) = {
+  if data.showProfileImage and data.profileImagePath != "" {
+    [
+      #box(
+        radius: radius,
+        clip: true,
+      )[
+        #image(data.profileImagePath, width: width, height: height, fit: "cover")
+      ]
+    ]
+  } else {
+    []
+  }
+}
+
 #box(
   fill: accent,
   inset: 13pt,
@@ -138,22 +153,26 @@
     columns: (2.2fr, 1fr),
     column-gutter: 14pt,
     [
-      #text(size: 23pt, weight: "bold", fill: on_accent)[#data.name]
+      #block[#text(size: 23pt, weight: "bold", fill: on_accent)[#data.name]]
       #if data.headline != "" [
-        #v(0.18em)
-        #text(size: 9.2pt, weight: "bold", fill: on_accent)[#data.headline]
+        #v(0.02em)
+        #block[#text(size: 9.2pt, weight: "bold", fill: on_accent)[#data.headline]]
       ]
       #if data.desiredPosition != "" or data.careerDuration != "" [
-        #v(0.2em)
-        #text(size: 8.65pt, fill: on_accent)[
+        #v(0.02em)
+        #block[#text(size: 8.65pt, fill: on_accent)[
           #data.desiredPosition
           #if data.desiredPosition != "" and data.careerDuration != "" [ · ]
           #data.careerDuration
-        ]
+        ]]
       ]
     ],
     [
       #align(right)[
+        #profile_photo()
+        #if data.showProfileImage and data.profileImagePath != "" [
+          #v(0.16em)
+        ]
         #if data.targetCompany != "" or data.targetJobTitle != "" [
           #text(size: 8.15pt, fill: on_accent)[Tailored for #data.targetCompany #if data.targetJobTitle != "" [· #data.targetJobTitle]]
           #v(0.12em)

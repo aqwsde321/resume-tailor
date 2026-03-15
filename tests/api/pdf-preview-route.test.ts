@@ -36,6 +36,12 @@ const resumeFixture: Resume = {
   pdfStrengths: []
 };
 
+const normalizedResumeFixture: Resume = {
+  ...resumeFixture,
+  pdfProfileImageDataUrl: "",
+  pdfProfileImageVisible: false
+};
+
 const companyFixture: Company = {
   companyName: "Scale Infra",
   companyDescription: "테크 회사",
@@ -83,7 +89,7 @@ describe("POST /api/pdf/preview", () => {
     expect(body.ok).toBe(true);
     expect(body.data.pages).toEqual(["<svg>page-1</svg>"]);
     expect(buildResumeSvgPreview).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "classic",
@@ -116,7 +122,7 @@ describe("POST /api/pdf/preview", () => {
     expect(body.ok).toBe(true);
     expect(body.data.pages).toEqual(["<svg>page-modern</svg>"]);
     expect(buildResumeSvgPreview).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "compact",
@@ -149,12 +155,50 @@ describe("POST /api/pdf/preview", () => {
     expect(body.ok).toBe(true);
     expect(body.data.pages).toEqual(["<svg>page-custom</svg>"]);
     expect(buildResumeSvgPreview).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "classic",
       "custom",
       "#111111"
+    );
+  });
+
+  it("프로필 이미지 draft가 있으면 resume와 함께 SVG 미리보기 빌더로 전달한다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({
+      pages: ["<svg>page-image</svg>"]
+    });
+
+    const request = new Request("http://localhost/api/pdf/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: {
+          ...resumeFixture,
+          pdfProfileImageDataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
+          pdfProfileImageVisible: true
+        },
+        company: companyFixture,
+        intro: introFixture
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(buildResumeSvgPreview).toHaveBeenCalledWith(
+      {
+        ...normalizedResumeFixture,
+        pdfProfileImageDataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
+        pdfProfileImageVisible: true
+      },
+      introFixture,
+      companyFixture,
+      "classic",
+      "cobalt",
+      undefined
     );
   });
 

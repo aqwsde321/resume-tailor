@@ -38,6 +38,12 @@ const resumeFixture: Resume = {
   pdfStrengths: []
 };
 
+const normalizedResumeFixture: Resume = {
+  ...resumeFixture,
+  pdfProfileImageDataUrl: "",
+  pdfProfileImageVisible: false
+};
+
 const companyFixture: Company = {
   companyName: "Scale Infra",
   companyDescription: "테크 회사",
@@ -97,7 +103,7 @@ describe("POST /api/pdf", () => {
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(body.byteLength).toBe(4);
     expect(buildResumePdf).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "classic",
@@ -136,7 +142,11 @@ describe("POST /api/pdf", () => {
 
     expect(response.status).toBe(200);
     expect(buildResumePdf).toHaveBeenCalledWith(
-      editedResume,
+      {
+        ...editedResume,
+        pdfProfileImageDataUrl: "",
+        pdfProfileImageVisible: false
+      },
       introFixture,
       companyFixture,
       "classic",
@@ -163,7 +173,7 @@ describe("POST /api/pdf", () => {
 
     expect(response.status).toBe(200);
     expect(buildResumePdf).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "modern",
@@ -190,12 +200,46 @@ describe("POST /api/pdf", () => {
 
     expect(response.status).toBe(200);
     expect(buildResumePdf).toHaveBeenCalledWith(
-      resumeFixture,
+      normalizedResumeFixture,
       introFixture,
       companyFixture,
       "classic",
       "custom",
       "#111111"
+    );
+  });
+
+  it("프로필 이미지 draft가 있으면 resume와 함께 PDF 빌더로 전달한다", async () => {
+    vi.mocked(buildResumePdf).mockResolvedValue(Buffer.from("%PDF"));
+
+    const request = new Request("http://localhost/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        makeRequestBody({
+          resume: {
+            ...resumeFixture,
+            pdfProfileImageDataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
+            pdfProfileImageVisible: true
+          }
+        })
+      )
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(buildResumePdf).toHaveBeenCalledWith(
+      {
+        ...normalizedResumeFixture,
+        pdfProfileImageDataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
+        pdfProfileImageVisible: true
+      },
+      introFixture,
+      companyFixture,
+      "classic",
+      "cobalt",
+      undefined
     );
   });
 

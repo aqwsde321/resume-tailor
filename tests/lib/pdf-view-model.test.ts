@@ -177,4 +177,20 @@ describe("buildTypstResumeDocument", () => {
     expect(document.achievements).toEqual(["PDF용 Highlights"]);
     expect(document.strengths).toEqual(["PDF용 Strengths"]);
   });
+
+  it("프로필 이미지가 있으면 PDF 전용 이미지 필드를 문서에 반영한다", () => {
+    const document = buildTypstResumeDocument(
+      {
+        ...resumeFixture,
+        pdfProfileImageDataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
+        pdfProfileImageVisible: true
+      },
+      introFixture,
+      companyFixture
+    );
+
+    expect(document.showProfileImage).toBe(true);
+    expect(document.profileImageDataUrl).toBe("data:image/jpeg;base64,ZmFrZS1pbWFnZQ==");
+    expect(document.profileImagePath).toBe("");
+  });
 });

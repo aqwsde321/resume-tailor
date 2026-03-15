@@ -120,6 +120,22 @@
   ]
 ]
 
+#let profile_photo(width: 100%, height: 22mm, radius: 12pt) = {
+  if data.showProfileImage and data.profileImagePath != "" {
+    [
+      #box(
+        width: width,
+        radius: radius,
+        clip: true,
+      )[
+        #image(data.profileImagePath, width: width, height: height, fit: "cover")
+      ]
+    ]
+  } else {
+    []
+  }
+}
+
 #grid(
   columns: (31mm, 1fr),
   column-gutter: 12pt,
@@ -129,18 +145,22 @@
       inset: 9pt,
       radius: 16pt,
     )[
-      #text(size: 18.5pt, weight: "bold")[#data.name]
-      #if data.desiredPosition != "" [
+      #profile_photo()
+      #if data.showProfileImage and data.profileImagePath != "" [
         #v(0.12em)
-        #text(size: 8.5pt, weight: "bold", fill: accent)[#data.desiredPosition]
+      ]
+      #block[#text(size: 18.5pt, weight: "bold")[#data.name]]
+      #if data.desiredPosition != "" [
+        #v(0.01em)
+        #block[#text(size: 8.5pt, weight: "bold", fill: accent)[#data.desiredPosition]]
       ]
       #if data.careerDuration != "" [
-        #v(0.08em)
-        #text(size: 8.15pt, fill: text_muted)[#data.careerDuration]
+        #v(0.01em)
+        #block[#text(size: 8.15pt, fill: text_muted)[#data.careerDuration]]
       ]
       #if data.headline != "" [
-        #v(0.18em)
-        #text(size: 8.25pt, weight: "bold")[#data.headline]
+        #v(0.08em)
+        #block[#text(size: 8.25pt, weight: "bold")[#data.headline]]
       ]
       #if data.targetCompany != "" or data.targetJobTitle != "" [
         #v(0.3em)

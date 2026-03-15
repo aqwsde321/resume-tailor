@@ -56,6 +56,9 @@ export interface TypstResumeDocument {
   desiredPosition: string;
   careerDuration: string;
   headline: string;
+  profileImageDataUrl: string;
+  profileImagePath: string;
+  showProfileImage: boolean;
   targetCompany: string;
   targetJobTitle: string;
   contacts: PdfContactView[];
@@ -324,12 +327,17 @@ export function buildTypstResumeDocument(
   customAccentHex?: string
 ): TypstResumeDocument {
   const theme = resolvePdfTheme(themeId, customAccentHex);
+  const profileImageDataUrl = resume.pdfProfileImageDataUrl?.trim() ?? "";
+  const showProfileImage = (resume.pdfProfileImageVisible ?? true) && Boolean(profileImageDataUrl);
 
   return {
     name: resume.name.trim(),
     desiredPosition: resume.desiredPosition.trim(),
     careerDuration: buildCareerDuration(resume),
     headline: buildHeadline(resume, intro),
+    profileImageDataUrl,
+    profileImagePath: "",
+    showProfileImage,
     targetCompany: company.companyName.trim(),
     targetJobTitle: company.jobTitle.trim(),
     contacts: resume.contacts

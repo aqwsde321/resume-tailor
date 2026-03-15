@@ -191,9 +191,13 @@ export function PdfEditorWorkspace({
       key: "header",
       kicker: "Header",
       title: "상단 헤더",
-      chipTitle: "상단",
-      description: "첫 화면 기준으로 이름, 직무, 회사 정보를 맞춥니다.",
-      summary: "기본",
+      chipTitle: "상단·사진",
+      description: "첫 화면 기준으로 이름, 직무, 회사 정보와 프로필 이미지를 함께 맞춥니다.",
+      summary: resume.pdfProfileImageDataUrl?.trim()
+        ? resume.pdfProfileImageVisible
+          ? "사진 on"
+          : "사진 off"
+        : "사진 추가",
       body: (
         <HeaderSectionForm
           company={company}

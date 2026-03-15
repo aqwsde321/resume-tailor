@@ -176,6 +176,66 @@ body.pdf-modal-open .sticky-shell.static-shell {
   background: rgba(255, 255, 255, 0.84);
 }
 
+.pdf-profile-image-panel {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(35, 56, 102, 0.12);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.pdf-profile-image-preview-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 18px;
+  border: 1px solid rgba(35, 56, 102, 0.12);
+  background: rgba(244, 247, 252, 0.92);
+  overflow: hidden;
+}
+
+.pdf-profile-image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pdf-profile-image-empty {
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.pdf-profile-image-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.pdf-profile-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdf-profile-image-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 .pdf-intro-textarea {
   min-height: 160px;
 }
@@ -201,15 +261,52 @@ body.pdf-modal-open .sticky-shell.static-shell {
 
 .pdf-paper-header {
   display: grid;
-  gap: 0.12cm;
+  gap: 0.05cm;
   text-align: center;
+}
+
+.pdf-paper-header-copy {
+  display: grid;
+  gap: 0.01cm;
+  min-width: 0;
+}
+
+.pdf-paper-header.has-profile-image {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.18cm;
+  align-items: start;
+  text-align: left;
+}
+
+.pdf-paper-profile-image-shell {
+  width: 20mm;
+  height: 20mm;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(35, 56, 102, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.pdf-paper-profile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pdf-paper-header:not(.has-profile-image) {
+  justify-items: center;
+}
+
+.pdf-paper-header:not(.has-profile-image) .pdf-paper-header-copy {
+  justify-items: center;
 }
 
 .pdf-paper-name {
   margin: 0;
   font-size: 25pt;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 0.96;
 }
 
 .pdf-paper-role-line,
@@ -957,6 +1054,19 @@ textarea:focus-visible {
     border-radius: 14px;
   }
 
+  .pdf-profile-image-panel {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .pdf-profile-image-preview-shell {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+  }
+
   .pdf-workspace-footer .action-row,
   .pdf-workspace-footer button {
     width: 100%;
@@ -1016,6 +1126,10 @@ textarea:focus-visible {
     max-height: 42vh;
   }
 
+  .pdf-profile-image-panel {
+    grid-template-columns: 1fr;
+  }
+
   .pdf-workspace-head {
     padding: 16px;
   }
@@ -1062,4 +1176,3 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 }
-

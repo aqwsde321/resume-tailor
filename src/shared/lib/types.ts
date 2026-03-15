@@ -45,6 +45,8 @@ export interface Resume {
   desiredPosition: string;
   careerYears: number;
   careerDurationText: string;
+  pdfProfileImageDataUrl?: string;
+  pdfProfileImageVisible?: boolean;
   contacts: ResumeContactItem[];
   techStack: string[];
   experience: ResumeExperienceItem[];

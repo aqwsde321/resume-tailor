@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import {
@@ -261,23 +262,37 @@ export function PdfPreviewPane({
           </div>
         ) : (
           <article className="pdf-paper">
-            <header className="pdf-paper-header">
-              <p className="pdf-paper-name">{preview.name || "이름을 입력해 주세요"}</p>
-              <p className="pdf-paper-role-line">
-                {[preview.desiredPosition, preview.careerDuration].filter(Boolean).join(" • ") ||
-                  "직무와 경력을 입력해 주세요"}
-              </p>
-              {preview.headline && <p className="pdf-paper-headline">{preview.headline}</p>}
-              {preview.targetCompany && (
-                <p className="pdf-paper-target">
-                  Tailored for {preview.targetCompany}
-                  {preview.targetJobTitle ? ` · ${preview.targetJobTitle}` : ""}
+            <header className={`pdf-paper-header ${preview.showProfileImage ? "has-profile-image" : ""}`}>
+              <div className="pdf-paper-header-copy">
+                <p className="pdf-paper-name">{preview.name || "이름을 입력해 주세요"}</p>
+                <p className="pdf-paper-role-line">
+                  {[preview.desiredPosition, preview.careerDuration].filter(Boolean).join(" • ") ||
+                    "직무와 경력을 입력해 주세요"}
                 </p>
-              )}
-              {preview.contacts.length > 0 && (
-                <p className="pdf-paper-contacts">
-                  {preview.contacts.map((contact) => contact.display).join(" • ")}
-                </p>
+                {preview.headline && <p className="pdf-paper-headline">{preview.headline}</p>}
+                {preview.targetCompany && (
+                  <p className="pdf-paper-target">
+                    Tailored for {preview.targetCompany}
+                    {preview.targetJobTitle ? ` · ${preview.targetJobTitle}` : ""}
+                  </p>
+                )}
+                {preview.contacts.length > 0 && (
+                  <p className="pdf-paper-contacts">
+                    {preview.contacts.map((contact) => contact.display).join(" • ")}
+                  </p>
+                )}
+              </div>
+              {preview.showProfileImage && preview.profileImageDataUrl && (
+                <div className="pdf-paper-profile-image-shell">
+                  <Image
+                    src={preview.profileImageDataUrl || ""}
+                    alt="프로필 이미지 미리보기"
+                    className="pdf-paper-profile-image"
+                    width={64}
+                    height={64}
+                    unoptimized
+                  />
+                </div>
               )}
             </header>
 

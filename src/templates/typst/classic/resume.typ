@@ -121,34 +121,68 @@
   [#body_copy(value)],
 )
 
-#align(center)[
-  #text(size: 25pt, weight: "bold")[#data.name]
+#let profile_photo(width: 24mm, height: 24mm, radius: 10pt) = {
+  if data.showProfileImage and data.profileImagePath != "" {
+    [
+      #box(
+        radius: radius,
+        clip: true,
+      )[
+        #image(data.profileImagePath, width: width, height: height, fit: "cover")
+      ]
+    ]
+  } else {
+    []
+  }
+}
+
+#let has_profile_image = data.showProfileImage and data.profileImagePath != ""
+
+#let header_copy = [
+  #block[#text(size: 25pt, weight: "bold")[#data.name]]
   #if data.desiredPosition != "" or data.careerDuration != "" [
-    #v(0.12em)
+    #v(0.02em)
+    #block[
     #if data.desiredPosition != "" [
       #text(size: 10pt, weight: "bold", fill: accent)[#data.desiredPosition]
     ]
     #if data.desiredPosition != "" and data.careerDuration != "" [
-      #h(0.45em)
+      #h(0.42em)
       #text(size: 9.4pt, weight: "bold", fill: accent)[•]
-      #h(0.45em)
+      #h(0.42em)
     ]
     #if data.careerDuration != "" [
       #text(size: 10pt, weight: "bold", fill: accent)[#data.careerDuration]
     ]
+    ]
   ]
   #if data.headline != "" [
-    #v(0.24em)
-    #text(size: 9.35pt, weight: "bold")[#data.headline]
+    #v(0.06em)
+    #block[#text(size: 9.35pt, weight: "bold")[#data.headline]]
   ]
   #if data.targetCompany != "" or data.targetJobTitle != "" [
-    #v(0.18em)
-    #text(size: 8.5pt, fill: text_muted)[Tailored for #data.targetCompany #if data.targetJobTitle != "" [· #data.targetJobTitle]]
+    #v(0.04em)
+    #block[#text(size: 8.5pt, fill: text_muted)[Tailored for #data.targetCompany #if data.targetJobTitle != "" [· #data.targetJobTitle]]]
   ]
   #if data.contacts.len() > 0 [
-    #v(0.18em)
-    #text(size: 8.8pt)[#inline_join(data.contacts.map(linked_value))]
+    #v(0.04em)
+    #block[#text(size: 8.8pt)[#inline_join(data.contacts.map(linked_value))]]
   ]
+]
+
+#if has_profile_image [
+  #grid(
+    columns: (1fr, auto),
+    column-gutter: 6pt,
+    [
+      #header_copy
+    ],
+    [
+      #align(right + top)[#profile_photo(width: 20mm, height: 20mm, radius: 9pt)]
+    ],
+  )
+] else [
+  #align(center)[#header_copy]
 ]
 
 #for section in data.sections [

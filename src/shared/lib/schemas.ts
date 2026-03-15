@@ -47,6 +47,8 @@ export const ResumeSchema = z
     desiredPosition: z.string().default(""),
     careerYears: z.number().int().nonnegative().default(0),
     careerDurationText: z.string().default(""),
+    pdfProfileImageDataUrl: z.string().default(""),
+    pdfProfileImageVisible: z.boolean().default(false),
     contacts: z.array(ResumeContactItemSchema).default([]),
     techStack: StringArraySchema,
     experience: z.array(ResumeExperienceItemSchema).default([]),
