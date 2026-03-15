@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { CompanyDetailsSection } from "@/app/components/company-editor/details-section";
@@ -10,6 +10,7 @@ import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { SaveActionCard } from "@/app/components/workflow/save-action-card";
 import { SourceInputCard } from "@/app/components/workflow/source-input-card";
 import { UrlFetchPanel, type UrlFetchPreview } from "@/app/components/workflow/url-fetch-panel";
+import { useRequiredFieldFocus } from "@/app/hooks/use-required-field-focus";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
@@ -74,7 +75,8 @@ export default function CompanyPage() {
   const isBusy = state.currentTask !== null;
   const canEdit = hasResumeConfirmed(state);
   const isCompanyWorking = state.currentTask === "company";
-  const requiredFieldRefs = useRef<Partial<Record<CompanyRequiredFieldKey, HTMLElement | null>>>({});
+  const { bindRequiredFieldRef, focusRequiredField } =
+    useRequiredFieldFocus<CompanyRequiredFieldKey>();
   const [isUrlLoading, setIsUrlLoading] = useState(false);
   const [urlPreview, setUrlPreview] = useState<UrlFetchPreview | null>(null);
   const uiBusy = isBusy || isUrlLoading;
@@ -86,37 +88,6 @@ export default function CompanyPage() {
   const normalizedDraftJson = JSON.stringify(draft, null, 2);
   const companyNeedsConfirm =
     state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
-
-  // 저장 직전 실패하면 첫 번째 누락 필드로 이동시켜 사용자가 바로 수정할 수 있게 한다.
-  const focusRequiredField = (key: CompanyRequiredFieldKey) => {
-    const root = requiredFieldRefs.current[key];
-    if (!root) {
-      return;
-    }
-
-    root.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-
-    const target =
-      root.matches("input, textarea")
-        ? root
-        : root.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled])");
-
-    window.setTimeout(() => {
-      target?.focus({ preventScroll: true });
-
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-        const caret = target.value.length;
-        target.setSelectionRange(caret, caret);
-      }
-    }, 220);
-  };
-  const bindRequiredFieldRef =
-    (key: CompanyRequiredFieldKey) => (node: HTMLElement | null) => {
-      requiredFieldRefs.current[key] = node;
-    };
 
   const missingCompanyRequired: Array<{ key: CompanyRequiredFieldKey; label: string }> = [];
   if (!draft.companyName.trim()) {
