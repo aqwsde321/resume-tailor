@@ -32,8 +32,7 @@ async function completeResumeStep(page: Page) {
   await page.getByRole("button", { name: "내용 정리" }).click();
 
   await expect(resumeSection.getByLabel("희망 직무")).toHaveValue("Frontend Engineer");
-  await expect(resumeSection.locator(".tag-chip").filter({ hasText: "React" }).first()).toBeVisible();
-  await expect(resumeSection.locator(".tag-chip").filter({ hasText: "TypeScript" }).first()).toBeVisible();
+  await expect(resumeSection.getByLabel("기술 스택")).toHaveValue("React, TypeScript, Next.js");
 
   await page.getByRole("button", { name: "이력서 저장" }).click();
   await expect(page.getByRole("link", { name: "공고 정리로 가기" })).toBeVisible();
