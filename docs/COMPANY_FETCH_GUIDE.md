@@ -43,8 +43,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 구현 진입점:
 
-- [app/api/company/fetch-url/route.ts](../app/api/company/fetch-url/route.ts)
-- [server/company-url-fetch.ts](../server/company-url-fetch.ts)
+- [route.ts](../src/app/api/company/fetch-url/route.ts)
+- [company-url-fetch.ts](../src/server/company-url-fetch.ts)
 
 ## 4. 공통 처리 규칙
 
@@ -86,8 +86,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 관련 코드:
 
-- [server/company-url-fetch.ts](../server/company-url-fetch.ts#L183)
-- [server/company-url-fetch.ts](../server/company-url-fetch.ts#L400)
+- [company-url-fetch.ts](../src/server/company-url-fetch.ts#L183)
+- [company-url-fetch.ts](../src/server/company-url-fetch.ts#L400)
 
 ### 5.2 잡코리아 GI_Read (`jobkorea.co.kr/Recruit/GI_Read/...`)
 
@@ -115,8 +115,8 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 관련 코드:
 
-- [server/company-url-fetch.ts](../server/company-url-fetch.ts#L553)
-- [server/company-url-fetch.ts](../server/company-url-fetch.ts#L591)
+- [company-url-fetch.ts](../src/server/company-url-fetch.ts#L553)
+- [company-url-fetch.ts](../src/server/company-url-fetch.ts#L591)
 
 ### 5.3 일반 사이트
 
@@ -156,7 +156,7 @@ URL 입력 시 서버는 아래 순서로 공고 본문을 찾는다.
 
 구현 위치:
 
-- [server/company-image-ocr.ts](../server/company-image-ocr.ts)
+- [company-image-ocr.ts](../src/server/company-image-ocr.ts)
 - [scripts/vision_ocr.swift](../scripts/vision_ocr.swift)
 
 제약:
