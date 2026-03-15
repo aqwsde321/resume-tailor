@@ -1,9 +1,10 @@
 "use client";
 
-import type { Route } from "next";
-import Link from "next/link";
 import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 
+import { FrameShell, type FrameStepItem } from "@/app/components/frame/frame-shell";
+import { LiveTaskModal } from "@/app/components/frame/live-task-modal";
+import { LogDrawer } from "@/app/components/frame/log-drawer";
 import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import type { PipelineLog, TaskKind } from "@/lib/types";
@@ -238,7 +239,7 @@ export function AppFrame({
     state.introSavedAt ? `소개글 ${formatSavedAt(state.introSavedAt)}` : null
   ].filter((item): item is string => Boolean(item));
 
-  const steps = useMemo(() => {
+  const steps = useMemo<FrameStepItem[]>(() => {
     const stepStatusLabel = (key: StepKey, status: StepStatus): string => {
       if (key === "result") {
         switch (status) {
@@ -326,6 +327,7 @@ export function AppFrame({
         key: "resume" as const,
         label: "이력서",
         href: "/resume" as StepRoute,
+        active: step === "resume",
         enabled: true,
         status: resumeStatus,
         statusLabel: stepStatusLabel("resume", resumeStatus)
@@ -334,6 +336,7 @@ export function AppFrame({
         key: "company" as const,
         label: "공고",
         href: "/company" as StepRoute,
+        active: step === "company",
         enabled: companyStatus !== "locked",
         status: companyStatus,
         statusLabel: stepStatusLabel("company", companyStatus)
@@ -342,6 +345,7 @@ export function AppFrame({
         key: "result" as const,
         label: "소개글",
         href: "/result" as StepRoute,
+        active: step === "result",
         enabled: resultStatus !== "locked",
         status: resultStatus,
         statusLabel: stepStatusLabel("result", resultStatus)
@@ -350,6 +354,7 @@ export function AppFrame({
         key: "pdf" as const,
         label: "PDF",
         href: "/pdf" as StepRoute,
+        active: step === "pdf",
         enabled: pdfStatus !== "locked",
         status: pdfStatus,
         statusLabel: stepStatusLabel("pdf", pdfStatus)
@@ -384,6 +389,14 @@ export function AppFrame({
       <p>{log.message}</p>
     </li>
   );
+  const latestSummary = latestLog ? (
+    <p className="log-summary">
+      <strong>{TASK_LABEL[latestLog.task]}</strong>
+      <span>{formatLogTime(latestLog.at)}</span>
+      <span>{latestLog.message}</span>
+    </p>
+  ) : null;
+  const logList = <ul className="log-list">{logs.map((log) => renderLogItem(log))}</ul>;
 
   if (!hydrated) {
     return (
@@ -410,49 +423,14 @@ export function AppFrame({
         <div className={`busy-overlay ${liveModal.isClosing ? "closing" : ""}`} aria-hidden="true" />
       )}
       <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
-        <header className="hero">
-          <p className="eyebrow">ResumeTailor</p>
-          <h1>{title}</h1>
-          <p>{description}</p>
-        </header>
-
-        <section className={`sticky-shell ${stickyShell ? "" : "static-shell"}`.trim()}>
-          <ol className="steps">
-            {steps.map((item) => (
-              <li
-                key={item.key}
-                className={`step-item ${step === item.key ? "active" : ""} ${item.status}`}
-              >
-                {item.enabled ? (
-                  <Link href={item.href as Route} className="step-link step-content">
-                    <span>{item.label}</span>
-                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                  </Link>
-                ) : (
-                  <span className="step-link step-content disabled">
-                    <span>{item.label}</span>
-                    <span className={`step-state ${item.status}`}>{item.statusLabel}</span>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
-
-          {showSaveSummary && saveSummaryItems.length > 0 && (
-            <details className="sticky-meta-disclosure">
-              <summary>
-                <span>최근 저장 {saveSummaryItems.length}건</span>
-              </summary>
-              <div className="sticky-meta-body" aria-label="마지막 저장 시각">
-                {saveSummaryItems.map((item) => (
-                  <span key={item} className="save-meta-chip subtle">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </details>
-          )}
-        </section>
+        <FrameShell
+          description={description}
+          saveSummaryItems={saveSummaryItems}
+          showSaveSummary={showSaveSummary}
+          steps={steps}
+          stickyShell={stickyShell}
+          title={title}
+        />
 
         {(state.error || state.message) && (
           <div className="toast-stack" aria-live={state.error ? "assertive" : "polite"}>
@@ -468,94 +446,34 @@ export function AppFrame({
         {children}
 
         {logs.length > 0 && !state.currentTask && (
-          <section className={`card log-drawer ${logExpanded ? "open" : ""}`}>
-            <div className="card-head">
-              <div>
-                <p className="card-kicker">기록</p>
-                <h2>지난 작업 기록</h2>
-              </div>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setLogExpanded((prev) => !prev)}
-              >
-                {logExpanded ? "접기" : "기록 보기"}
-              </button>
-            </div>
-
-            {!logExpanded && latestLog ? (
-              <p className="log-summary">
-                <strong>{TASK_LABEL[latestLog.task]}</strong>
-                <span>{formatLogTime(latestLog.at)}</span>
-                <span>{latestLog.message}</span>
-              </p>
-            ) : (
-              <ul className="log-list">{logs.map((log) => renderLogItem(log))}</ul>
-            )}
-          </section>
+          <LogDrawer
+            latestSummary={latestSummary}
+            logExpanded={logExpanded}
+            logList={logList}
+            onToggle={() => setLogExpanded((prev) => !prev)}
+          />
         )}
       </div>
 
       {activeLiveTask && (
-        <section
-          className={`live-log-modal ${liveModal.isClosing ? "closing" : ""}`}
-          aria-live="polite"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="live-log-head">
-            <div>
-              <div className="live-log-title-row">
-                <span className="live-log-spinner" aria-hidden="true" />
-                <h2>{TASK_LABEL[activeLiveTask]}</h2>
-                {busyStage && busyStageLabels && (
-                  <span className="live-log-phase-pill">{busyStageLabels[busyStage]}</span>
-                )}
-              </div>
-              <p className="live-log-copy">
-                {state.isCancellingTask
-                  ? "현재 실행을 중단하고 있어요."
-                  : liveLogs[0]?.message ?? "결과를 준비하고 있어요."}
-              </p>
-              {!state.isCancellingTask && liveLogs[1]?.message && (
-                <p className="live-log-subcopy">{liveLogs[1].message}</p>
-              )}
-            </div>
-            <div className="live-log-actions">
-              <span className="live-log-timer">{elapsedSeconds}초</span>
-              <button
-                type="button"
-                className="secondary"
-                onClick={cancelCurrentTask}
-                disabled={!state.currentTask || state.isCancellingTask}
-              >
-                {state.isCancellingTask ? "중단 중..." : "작업 중지"}
-              </button>
-            </div>
-          </div>
-
-          {busyStage && busyStageLabels && (
-            <div className="live-progress" aria-label="작업 진행 상태">
-              <div className="live-progress-track" aria-hidden="true">
-                <div className="live-progress-fill" style={{ width: `${busyProgressValue}%` }} />
-              </div>
-              <ol className="live-progress-steps">
-                {busyStageOrder.map((stage, index) => {
-                  const currentIndex = busyStageOrder.indexOf(busyStage);
-                  const status =
-                    index < currentIndex ? "done" : index === currentIndex ? "current" : "upcoming";
-
-                  return (
-                    <li key={stage} className={`live-progress-step ${status}`}>
-                      <span className="live-progress-dot" aria-hidden="true" />
-                      <span>{busyStageLabels[stage]}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          )}
-        </section>
+        <LiveTaskModal
+          activeTaskLabel={TASK_LABEL[activeLiveTask]}
+          busyProgressValue={busyProgressValue}
+          busyStage={busyStage}
+          busyStageLabels={busyStageLabels}
+          busyStageOrder={busyStageOrder}
+          canCancel={Boolean(state.currentTask) && !state.isCancellingTask}
+          elapsedSeconds={elapsedSeconds}
+          isCancellingTask={Boolean(state.isCancellingTask)}
+          isClosing={liveModal.isClosing}
+          liveMessage={
+            state.isCancellingTask
+              ? "현재 실행을 중단하고 있어요."
+              : liveLogs[0]?.message ?? "결과를 준비하고 있어요."
+          }
+          liveSubMessage={!state.isCancellingTask ? liveLogs[1]?.message : undefined}
+          onCancel={cancelCurrentTask}
+        />
       )}
     </main>
   );
