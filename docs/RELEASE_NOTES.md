@@ -5,6 +5,23 @@
 
 ## Unreleased
 
+### Added
+
+- step 4 `/pdf`에 `Classic`, `Compact`, `Modern` Typst 템플릿 선택 추가
+
+### Changed
+
+- step 4는 템플릿을 먼저 고른 뒤 같은 템플릿 기준으로 SVG 미리보기와 PDF export를 수행하도록 조정
+
+### Verified
+
+- `typst compile`로 3종 템플릿 실제 컴파일 확인
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
+
 ## v0.8.0 (2026-03-15)
 
 ### Changed

@@ -12,6 +12,16 @@ import {
 } from "react";
 
 import { normalizeAgentSettings } from "@/shared/lib/agent-settings";
+import {
+  DEFAULT_PDF_TEMPLATE_ID,
+  isPdfTemplateId,
+  type PdfTemplateId
+} from "@/entities/pdf/model/templates";
+import {
+  DEFAULT_PDF_THEME_ID,
+  isPdfThemeId,
+  type PdfThemeId
+} from "@/entities/pdf/model/themes";
 import { isIntroTone } from "@/entities/intro/model/intro-tone";
 import {
   matchesResumeIntroSnapshot,
@@ -46,6 +56,8 @@ export interface IntroRefreshReason {
 export interface PipelineState {
   agentSettings: AgentSettings;
   introTone: IntroTone;
+  pdfTemplateId: PdfTemplateId;
+  pdfThemeId: PdfThemeId;
   resumeInputMode: InputMode;
   companyInputMode: InputMode;
   resumeText: string;
@@ -76,6 +88,8 @@ const initialState: PipelineState = {
     modelReasoningEffort: "medium"
   },
   introTone: "balanced",
+  pdfTemplateId: DEFAULT_PDF_TEMPLATE_ID,
+  pdfThemeId: DEFAULT_PDF_THEME_ID,
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",
@@ -140,6 +154,10 @@ function normalizeState(raw: unknown): PipelineState {
     ...value,
     agentSettings: normalizeAgentSettings(value.agentSettings),
     introTone: isIntroTone(value.introTone) ? value.introTone : "balanced",
+    pdfTemplateId: isPdfTemplateId(value.pdfTemplateId)
+      ? value.pdfTemplateId
+      : DEFAULT_PDF_TEMPLATE_ID,
+    pdfThemeId: isPdfThemeId(value.pdfThemeId) ? value.pdfThemeId : DEFAULT_PDF_THEME_ID,
     resumeUrl: typeof value.resumeUrl === "string" ? value.resumeUrl : "",
     companyUrl: typeof value.companyUrl === "string" ? value.companyUrl : "",
     resumeSavedAt: typeof value.resumeSavedAt === "string" ? value.resumeSavedAt : null,

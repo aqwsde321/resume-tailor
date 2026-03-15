@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  DEFAULT_PDF_TEMPLATE_ID,
+  PDF_TEMPLATE_IDS
+} from "@/entities/pdf/model/templates";
+import {
+  DEFAULT_PDF_THEME_ID,
+  PDF_THEME_IDS
+} from "@/entities/pdf/model/themes";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
 import { buildResumeSvgPreview } from "@/server/pdf/build";
 import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
@@ -11,7 +19,9 @@ const RequestSchema = z
   .object({
     resume: ResumeSchema,
     company: CompanySchema,
-    intro: IntroSchema
+    intro: IntroSchema,
+    templateId: z.enum(PDF_TEMPLATE_IDS).default(DEFAULT_PDF_TEMPLATE_ID),
+    themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID)
   })
   .strict();
 
@@ -27,7 +37,13 @@ export async function POST(request: Request) {
       throw new HttpError(400, "소개글이 있어야 Typst 미리보기를 만들 수 있어요.");
     }
 
-    const preview = await buildResumeSvgPreview(body.resume, body.intro, body.company);
+    const preview = await buildResumeSvgPreview(
+      body.resume,
+      body.intro,
+      body.company,
+      body.templateId,
+      body.themeId
+    );
 
     return NextResponse.json({
       ok: true,

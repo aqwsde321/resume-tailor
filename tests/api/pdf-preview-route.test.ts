@@ -82,7 +82,45 @@ describe("POST /api/pdf/preview", () => {
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.data.pages).toEqual(["<svg>page-1</svg>"]);
-    expect(buildResumeSvgPreview).toHaveBeenCalledWith(resumeFixture, introFixture, companyFixture);
+    expect(buildResumeSvgPreview).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "classic",
+      "cobalt"
+    );
+  });
+
+  it("요청에 templateId와 themeId가 있으면 해당 값으로 SVG 미리보기를 만든다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({
+      pages: ["<svg>page-modern</svg>"]
+    });
+
+    const request = new Request("http://localhost/api/pdf/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumeFixture,
+        company: companyFixture,
+        intro: introFixture,
+        templateId: "compact",
+        themeId: "ember"
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.pages).toEqual(["<svg>page-modern</svg>"]);
+    expect(buildResumeSvgPreview).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "compact",
+      "ember"
+    );
   });
 
   it("소개글이 비어 있으면 400을 반환한다", async () => {

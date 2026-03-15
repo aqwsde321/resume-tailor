@@ -3,22 +3,24 @@
   margin: (top: 1.35cm, bottom: 1.35cm, left: 1.55cm, right: 1.55cm),
 )
 
+#let data = json("resume.json")
+#let theme = data.theme
+#let accent = rgb(theme.accentHex)
+#let text_muted = rgb(theme.mutedHex)
+#let divider = rgb(theme.dividerHex)
+#let ink = rgb(theme.inkHex)
+
 #set text(
   font: ("Helvetica Neue", "Apple SD Gothic Neo", "Arial Unicode MS"),
   size: 9.45pt,
   lang: "ko",
-  fill: rgb("#1f2937"),
+  fill: ink,
 )
 
 #set par(
   justify: false,
   leading: 0.63em,
 )
-
-#let data = json("resume.json")
-#let accent = rgb("#3548b6")
-#let text_muted = rgb("#6b7280")
-#let divider = rgb("#1f2937")
 
 #show link: set text(fill: accent)
 

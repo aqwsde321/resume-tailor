@@ -6,16 +6,28 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { HttpError } from "@/server/http";
+import {
+  DEFAULT_PDF_TEMPLATE_ID,
+  type PdfTemplateId
+} from "@/entities/pdf/model/templates";
+import {
+  DEFAULT_PDF_THEME_ID,
+  type PdfThemeId
+} from "@/entities/pdf/model/themes";
 import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 const execFileAsync = promisify(execFile);
-const TEMPLATE_PATH = path.join(process.cwd(), "src", "templates", "typst", "resume.typ");
+const TEMPLATE_ROOT = path.join(process.cwd(), "src", "templates", "typst");
 const PDF_WORKDIR_PREFIX = "resume-tailor-pdf";
 const SVG_WORKDIR_PREFIX = "resume-tailor-svg-preview";
 
 export interface ResumeSvgPreview {
   pages: string[];
+}
+
+function resolveTemplatePath(templateId: PdfTemplateId) {
+  return path.join(TEMPLATE_ROOT, templateId, "resume.typ");
 }
 
 function isExecMissing(error: unknown) {
@@ -40,17 +52,20 @@ function getExecErrorDetails(error: unknown) {
 export async function buildResumePdf(
   resume: Resume,
   intro: Intro,
-  company: Company
+  company: Company,
+  templateId: PdfTemplateId = DEFAULT_PDF_TEMPLATE_ID,
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
 ): Promise<Buffer> {
   const workdir = path.join(os.tmpdir(), PDF_WORKDIR_PREFIX, randomUUID());
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const pdfOutputPath = path.join(workdir, "resume.pdf");
-  const payload = buildTypstResumeDocument(resume, intro, company);
+  const payload = buildTypstResumeDocument(resume, intro, company, themeId);
+  const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {
     await fs.mkdir(workdir, { recursive: true });
-    await fs.copyFile(TEMPLATE_PATH, templateOutputPath);
+    await fs.copyFile(sourceTemplatePath, templateOutputPath);
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {
@@ -92,17 +107,20 @@ export async function buildResumePdf(
 export async function buildResumeSvgPreview(
   resume: Resume,
   intro: Intro,
-  company: Company
+  company: Company,
+  templateId: PdfTemplateId = DEFAULT_PDF_TEMPLATE_ID,
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
 ): Promise<ResumeSvgPreview> {
   const workdir = path.join(os.tmpdir(), SVG_WORKDIR_PREFIX, randomUUID());
   const templateOutputPath = path.join(workdir, "resume.typ");
   const dataOutputPath = path.join(workdir, "resume.json");
   const svgOutputPattern = "preview-{0p}.svg";
-  const payload = buildTypstResumeDocument(resume, intro, company);
+  const payload = buildTypstResumeDocument(resume, intro, company, themeId);
+  const sourceTemplatePath = resolveTemplatePath(templateId);
 
   try {
     await fs.mkdir(workdir, { recursive: true });
-    await fs.copyFile(TEMPLATE_PATH, templateOutputPath);
+    await fs.copyFile(sourceTemplatePath, templateOutputPath);
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {

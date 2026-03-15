@@ -10,7 +10,7 @@ import { usePdfWorkspaceState } from "@/features/pdf/hooks/use-pdf-workspace-sta
 import { getIntroRefreshReasons, usePipeline } from "@/entities/pipeline/model/pipeline-context";
 
 export default function PdfPage() {
-  const { state, clearStatus, setMessage } = usePipeline();
+  const { state, clearStatus, patch, setMessage } = usePipeline();
   const refreshReasons = getIntroRefreshReasons(state);
   const {
     canExportPdf,
@@ -28,7 +28,9 @@ export default function PdfPage() {
   } = usePdfWorkspaceState({
     clearStatus,
     setMessage,
-    state
+    state,
+    templateId: state.pdfTemplateId,
+    themeId: state.pdfThemeId
   });
   const workspaceRef = usePdfWorkspaceDock(canExportPdf);
 
@@ -80,8 +82,22 @@ export default function PdfPage() {
               onExport={() => void exportPdf()}
               onIntroChange={setPdfIntro}
               onResumeChange={setPdfResume}
+              onTemplateChange={(nextTemplateId) =>
+                patch((prev) => ({
+                  ...prev,
+                  pdfTemplateId: nextTemplateId
+                }))
+              }
+              onThemeChange={(nextThemeId) =>
+                patch((prev) => ({
+                  ...prev,
+                  pdfThemeId: nextThemeId
+                }))
+              }
               rootRef={workspaceRef}
               resume={pdfResume}
+              templateId={state.pdfTemplateId}
+              themeId={state.pdfThemeId}
             />
           )}
         </>

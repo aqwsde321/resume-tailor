@@ -24,7 +24,7 @@ resume-tailor/
 │  ├─ entities/                  # 전역 도메인 모델과 상태
 │  ├─ shared/                    # 여러 feature가 공유하는 UI/훅/유틸/스타일
 │  ├─ server/                    # 서버 전용 실행/연동 코드
-│  └─ templates/typst/           # Typst PDF 템플릿
+│  └─ templates/typst/           # Typst PDF 템플릿 3종(classic/compact/modern)
 ├─ tests/                        # API/lib/E2E 테스트
 ├─ docs/                         # 운영, 구조, 품질, 릴리즈 문서
 ├─ scripts/                      # 보조 스크립트
@@ -254,7 +254,7 @@ step별 화면 기능을 모읍니다.
 - 전역 상태와 공통 도메인 모델은 `src/entities/`
 - 두 feature 이상이 공유하는 UI와 유틸은 `src/shared/`
 - 서버 전용 실행/외부 연동은 `src/server/`
-- Typst 템플릿은 `src/templates/typst/`
+- Typst 템플릿은 `src/templates/typst/<template-id>/resume.typ`
 - 회귀 검증은 `tests/`
 
 ## 7. 구조 점검 기준

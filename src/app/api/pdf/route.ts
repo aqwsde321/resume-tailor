@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  DEFAULT_PDF_TEMPLATE_ID,
+  PDF_TEMPLATE_IDS
+} from "@/entities/pdf/model/templates";
+import {
+  DEFAULT_PDF_THEME_ID,
+  PDF_THEME_IDS
+} from "@/entities/pdf/model/themes";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
 import { buildPdfContentDisposition, buildResumePdf } from "@/server/pdf/build";
 import { buildPdfDownloadName } from "@/entities/pdf/model/view-model";
@@ -20,6 +28,8 @@ const RequestSchema = z
     resume: ResumeSchema,
     company: CompanySchema,
     intro: IntroSchema,
+    templateId: z.enum(PDF_TEMPLATE_IDS).default(DEFAULT_PDF_TEMPLATE_ID),
+    themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID),
     introSource: IntroSourceSchema,
     resumeSnapshot: z.string().trim().min(1),
     companySnapshot: z.string().trim().min(1)
@@ -45,7 +55,13 @@ export async function POST(request: Request) {
       throw new HttpError(409, "이력서나 공고가 바뀌었어요. 소개글을 다시 만든 뒤 PDF를 내보내 주세요.");
     }
 
-    const pdf = await buildResumePdf(body.resume, body.intro, body.company);
+    const pdf = await buildResumePdf(
+      body.resume,
+      body.intro,
+      body.company,
+      body.templateId,
+      body.themeId
+    );
     const filename = buildPdfDownloadName(body.company, body.resume);
 
     return new NextResponse(new Uint8Array(pdf), {

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import type { PdfTemplateId } from "@/entities/pdf/model/templates";
+import type { PdfThemeId } from "@/entities/pdf/model/themes";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 import type { TypstPreviewState } from "./types";
@@ -10,9 +12,17 @@ interface UseTypstPreviewArgs {
   company: Company;
   intro: Intro;
   resume: Resume;
+  templateId: PdfTemplateId;
+  themeId: PdfThemeId;
 }
 
-export function useTypstPreview({ company, intro, resume }: UseTypstPreviewArgs) {
+export function useTypstPreview({
+  company,
+  intro,
+  resume,
+  templateId,
+  themeId
+}: UseTypstPreviewArgs) {
   const [typstPreview, setTypstPreview] = useState<TypstPreviewState>({
     error: "",
     pages: [],
@@ -23,9 +33,11 @@ export function useTypstPreview({ company, intro, resume }: UseTypstPreviewArgs)
       JSON.stringify({
         resume,
         intro,
-        company
+        company,
+        templateId,
+        themeId
       }),
-    [company, intro, resume]
+    [company, intro, resume, templateId, themeId]
   );
 
   useEffect(() => {

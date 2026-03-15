@@ -13,6 +13,8 @@ const baseState: PipelineState = {
     modelReasoningEffort: "medium"
   },
   introTone: "balanced",
+  pdfTemplateId: "classic",
+  pdfThemeId: "cobalt",
   resumeInputMode: "text",
   companyInputMode: "text",
   resumeText: "",

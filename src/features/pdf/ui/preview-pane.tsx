@@ -1,5 +1,7 @@
 "use client";
 
+import { getPdfTemplateOption, type PdfTemplateId } from "@/entities/pdf/model/templates";
+import { getPdfThemeOption, type PdfThemeId } from "@/entities/pdf/model/themes";
 import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
@@ -9,6 +11,8 @@ interface PdfPreviewPaneProps {
   company: Company;
   intro: Intro;
   resume: Resume;
+  templateId: PdfTemplateId;
+  themeId: PdfThemeId;
   typstPreview: TypstPreviewState;
 }
 
@@ -16,9 +20,13 @@ export function PdfPreviewPane({
   company,
   intro,
   resume,
+  templateId,
+  themeId,
   typstPreview
 }: PdfPreviewPaneProps) {
-  const preview = buildTypstResumeDocument(resume, intro, company);
+  const preview = buildTypstResumeDocument(resume, intro, company, themeId);
+  const template = getPdfTemplateOption(templateId);
+  const theme = getPdfThemeOption(themeId);
 
   return (
     <div className="pdf-preview-pane">
@@ -28,7 +36,7 @@ export function PdfPreviewPane({
             <p className="card-kicker">Typst Preview</p>
             <h3>실제 출력 미리보기</h3>
             <p className="pdf-preview-card-copy">
-              {company.companyName || "회사"} 기준 최종 PDF를 그대로 보여줍니다.
+              {company.companyName || "회사"} 기준 {template.label} 템플릿과 {theme.label} 색상을 그대로 보여줍니다.
             </p>
           </div>
           <span className={`inline-badge ${typstPreview.status === "error" ? "warn" : "ok"}`}>

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import type { PdfTemplateId } from "@/entities/pdf/model/templates";
+import type { PdfThemeId } from "@/entities/pdf/model/themes";
 import { buildPdfDownloadName, buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
 import { getResumeIntroSnapshot, isIntroFresh, type PipelineState } from "@/entities/pipeline/model/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/shared/lib/schemas";
@@ -34,12 +36,16 @@ interface UsePdfWorkspaceStateArgs {
   clearStatus: () => void;
   setMessage: (message: string) => void;
   state: PipelineState;
+  templateId: PdfTemplateId;
+  themeId: PdfThemeId;
 }
 
 export function usePdfWorkspaceState({
   clearStatus,
   setMessage,
-  state
+  state,
+  templateId,
+  themeId
 }: UsePdfWorkspaceStateArgs) {
   const introFresh = isIntroFresh(state);
   const confirmedResume = useMemo(() => {
@@ -130,6 +136,8 @@ export function usePdfWorkspaceState({
           resume: pdfResume,
           company: pdfCompany,
           intro: pdfIntro,
+          templateId,
+          themeId,
           introSource: state.introSource,
           resumeSnapshot,
           companySnapshot: state.companyConfirmedJson

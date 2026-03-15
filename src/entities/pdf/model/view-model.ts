@@ -1,4 +1,9 @@
 import type { Company, Intro, Resume } from "@/shared/lib/types";
+import {
+  DEFAULT_PDF_THEME_ID,
+  getPdfThemeOption,
+  type PdfThemeId
+} from "@/entities/pdf/model/themes";
 
 interface PdfTextBlock {
   id: string;
@@ -35,6 +40,17 @@ interface PdfTechGroupView {
   items: string[];
 }
 
+interface PdfThemeView {
+  accentHex: string;
+  dividerHex: string;
+  id: PdfThemeId;
+  inkHex: string;
+  label: string;
+  mutedHex: string;
+  onAccentHex: string;
+  softHex: string;
+}
+
 export interface TypstResumeDocument {
   name: string;
   desiredPosition: string;
@@ -47,6 +63,7 @@ export interface TypstResumeDocument {
   experience: PdfExperienceView[];
   achievements: string[];
   projects: PdfProjectView[];
+  theme: PdfThemeView;
   techGroups: PdfTechGroupView[];
   strengths: string[];
 }
@@ -302,8 +319,11 @@ export function formatPdfContactDisplay(contact: Pick<PdfContactView, "label" | 
 export function buildTypstResumeDocument(
   resume: Resume,
   intro: Intro,
-  company: Company
+  company: Company,
+  themeId: PdfThemeId = DEFAULT_PDF_THEME_ID
 ): TypstResumeDocument {
+  const theme = getPdfThemeOption(themeId);
+
   return {
     name: resume.name.trim(),
     desiredPosition: resume.desiredPosition.trim(),
@@ -340,6 +360,16 @@ export function buildTypstResumeDocument(
         highlights: compactStrings(project.highlights)
       }))
       .filter((project) => project.name || project.description || project.meta || project.link),
+    theme: {
+      id: theme.id,
+      label: theme.label,
+      accentHex: theme.accentHex,
+      softHex: theme.softHex,
+      dividerHex: theme.dividerHex,
+      inkHex: theme.inkHex,
+      mutedHex: theme.mutedHex,
+      onAccentHex: theme.onAccentHex
+    },
     techGroups: buildTechGroups(resume.techStack),
     strengths: buildPdfStrengths(resume)
   };

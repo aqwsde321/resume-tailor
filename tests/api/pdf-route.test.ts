@@ -96,7 +96,13 @@ describe("POST /api/pdf", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(body.byteLength).toBe(4);
-    expect(buildResumePdf).toHaveBeenCalledWith(resumeFixture, introFixture, companyFixture);
+    expect(buildResumePdf).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "classic",
+      "cobalt"
+    );
   });
 
   it("PDF 직전 draft로 수정한 resume 값도 그대로 출력에 사용한다", async () => {
@@ -128,7 +134,39 @@ describe("POST /api/pdf", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    expect(buildResumePdf).toHaveBeenCalledWith(editedResume, introFixture, companyFixture);
+    expect(buildResumePdf).toHaveBeenCalledWith(
+      editedResume,
+      introFixture,
+      companyFixture,
+      "classic",
+      "cobalt"
+    );
+  });
+
+  it("요청에 templateId와 themeId가 있으면 해당 값으로 PDF를 만든다", async () => {
+    vi.mocked(buildResumePdf).mockResolvedValue(Buffer.from("%PDF"));
+
+    const request = new Request("http://localhost/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        makeRequestBody({
+          templateId: "modern",
+          themeId: "forest"
+        })
+      )
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(buildResumePdf).toHaveBeenCalledWith(
+      resumeFixture,
+      introFixture,
+      companyFixture,
+      "modern",
+      "forest"
+    );
   });
 
   it("소개글이 비어 있으면 400을 반환한다", async () => {
