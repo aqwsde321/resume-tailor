@@ -3,8 +3,8 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import { AppFrame } from "@/app/components/app-frame";
-import { PdfEditorWorkspace } from "@/app/components/pdf-editor-workspace";
+import { AppFrame } from "@/app/components/frame/app-frame";
+import { PdfEditorWorkspace } from "@/app/components/pdf-editor/workspace";
 import { usePdfWorkspaceDock } from "@/app/hooks/use-pdf-workspace-dock";
 import { usePdfWorkspaceState } from "@/app/hooks/use-pdf-workspace-state";
 import { getIntroRefreshReasons, usePipeline } from "@/lib/pipeline-context";

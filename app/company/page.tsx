@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { AppFrame } from "@/app/components/app-frame";
+import { AppFrame } from "@/app/components/frame/app-frame";
 import { CompanyDetailsSection } from "@/app/components/company-editor/details-section";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { SaveActionCard } from "@/app/components/workflow/save-action-card";

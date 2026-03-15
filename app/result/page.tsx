@@ -1,6 +1,6 @@
 "use client";
 
-import { AppFrame } from "@/app/components/app-frame";
+import { AppFrame } from "@/app/components/frame/app-frame";
 import {
   CompareCard,
   InsightCard,

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { AppFrame } from "@/app/components/app-frame";
+import { AppFrame } from "@/app/components/frame/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import {
   ResumeCoreSection,
