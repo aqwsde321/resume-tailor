@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/pdf/preview/route";
-import { HttpError } from "@/lib/http";
-import { buildResumeSvgPreview } from "@/lib/pdf/build";
-import type { Company, Intro, Resume } from "@/lib/types";
+import { HttpError } from "@/server/http";
+import { buildResumeSvgPreview } from "@/server/pdf/build";
+import type { Company, Intro, Resume } from "@/shared/lib/types";
 
-vi.mock("@/lib/pdf/build", () => ({
+vi.mock("@/server/pdf/build", () => ({
   buildResumeSvgPreview: vi.fn()
 }));
 

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/company/route";
-import { runSkillJson } from "@/lib/codex-client";
+import { runSkillJson } from "@/server/codex-client";
 import { companyRouteCases } from "../fixtures/company-cases";
 
-vi.mock("@/lib/codex-client", () => ({
+vi.mock("@/server/codex-client", () => ({
   runSkillJson: vi.fn()
 }));
 

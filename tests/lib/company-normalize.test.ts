@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeCompany } from "@/lib/company-normalize";
+import { normalizeCompany } from "@/server/company-normalize";
 
 import { companyNormalizationCases } from "../fixtures/company-cases";
 

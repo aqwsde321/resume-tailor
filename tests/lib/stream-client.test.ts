@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isAbortError, postSseJson } from "@/lib/client/stream-client";
+import { isAbortError, postSseJson } from "@/shared/lib/stream-client";
 
 function toSse(events: Array<{ event: string; data: unknown }>) {
   return events

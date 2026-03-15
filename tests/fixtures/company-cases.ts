@@ -1,4 +1,4 @@
-import type { Company } from "@/lib/types";
+import type { Company } from "@/shared/lib/types";
 
 export type CompanyNormalizationGoldenCase = {
   name: string;

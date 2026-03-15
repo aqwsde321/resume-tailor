@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { apiErrorResponse, HttpError, parseJsonBody } from "@/lib/http";
-import { buildResumeSvgPreview } from "@/lib/pdf/build";
-import { CompanySchema, IntroSchema, ResumeSchema } from "@/lib/schemas";
+import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { buildResumeSvgPreview } from "@/server/pdf/build";
+import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
 
 export const runtime = "nodejs";
 

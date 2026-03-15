@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-import { normalizeCompany } from "@/lib/company-normalize";
-import { runSkillJsonStream } from "@/lib/codex-client";
-import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
-import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
-import { createSseResponse } from "@/lib/sse";
-import { parseTaskResult } from "@/lib/task-result";
+import { normalizeCompany } from "@/server/company-normalize";
+import { runSkillJsonStream } from "@/server/codex-client";
+import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/server/http";
+import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/shared/lib/schemas";
+import { createSseResponse } from "@/server/sse";
+import { parseTaskResult } from "@/server/task-result";
 
 export const runtime = "nodejs";
 

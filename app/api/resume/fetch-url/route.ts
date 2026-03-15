@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { apiErrorResponse, parseJsonBody } from "@/lib/http";
-import { fetchResumePage } from "@/lib/resume-url-fetch";
+import { apiErrorResponse, parseJsonBody } from "@/server/http";
+import { fetchResumePage } from "@/server/resume-url-fetch";
 
 export const runtime = "nodejs";
 

@@ -1,4 +1,4 @@
-import type { Company, Resume } from "@/lib/types";
+import type { Company, Resume } from "@/shared/lib/types";
 
 type IntroGuidanceExpectation = {
   roleOverlap?: string[];

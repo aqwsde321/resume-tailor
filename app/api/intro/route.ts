@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { runSkillJson } from "@/lib/codex-client";
-import { apiErrorResponse, parseJsonBody } from "@/lib/http";
-import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/lib/intro-insights";
+import { runSkillJson } from "@/server/codex-client";
+import { apiErrorResponse, parseJsonBody } from "@/server/http";
+import { buildIntroSkillInput, normalizeIntroWithGuidance } from "@/entities/intro/model/intro-insights";
 import {
   AgentRunOptionsSchema,
   CompanySchema,
@@ -11,9 +11,9 @@ import {
   IntroToneSchema,
   ResumeSchema,
   introOutputSchema
-} from "@/lib/schemas";
-import { parseTaskResult } from "@/lib/task-result";
-import type { ApiSuccess, Intro } from "@/lib/types";
+} from "@/shared/lib/schemas";
+import { parseTaskResult } from "@/server/task-result";
+import type { ApiSuccess, Intro } from "@/shared/lib/types";
 
 export const runtime = "nodejs";
 

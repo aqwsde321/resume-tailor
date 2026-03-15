@@ -52,7 +52,7 @@ describe("company-image-ocr", () => {
       });
     });
 
-    const { extractTextFromImages, isImageOcrAvailable } = await import("@/lib/company-image-ocr");
+    const { extractTextFromImages, isImageOcrAvailable } = await import("@/server/company-image-ocr");
 
     expect(isImageOcrAvailable()).toBe(true);
 
@@ -76,7 +76,7 @@ describe("company-image-ocr", () => {
   it("linux에서 tesseract가 없으면 OCR을 비활성화한다", async () => {
     existsSyncMock.mockReturnValue(false);
 
-    const { extractTextFromImages, isImageOcrAvailable } = await import("@/lib/company-image-ocr");
+    const { extractTextFromImages, isImageOcrAvailable } = await import("@/server/company-image-ocr");
 
     expect(isImageOcrAvailable()).toBe(false);
 

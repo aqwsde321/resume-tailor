@@ -5,7 +5,7 @@ import {
   buildIntroSkillInput,
   buildMatchInsights,
   normalizeIntroWithGuidance
-} from "@/lib/intro-insights";
+} from "@/entities/intro/model/intro-insights";
 
 import {
   backendCompanyFixture,

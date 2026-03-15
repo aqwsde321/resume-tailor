@@ -4,8 +4,8 @@ import {
   getIntroRefreshReasons,
   isIntroFresh,
   type PipelineState
-} from "@/lib/client/pipeline-context";
-import { serializeResume, serializeResumeIntroSnapshot } from "@/lib/resume-utils";
+} from "@/entities/pipeline/model/pipeline-context";
+import { serializeResume, serializeResumeIntroSnapshot } from "@/entities/resume/model/resume-utils";
 
 const baseState: PipelineState = {
   agentSettings: {

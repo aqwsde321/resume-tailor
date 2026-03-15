@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as postCompanyStream } from "@/app/api/company/stream/route";
 import { POST as postIntroStream } from "@/app/api/intro/stream/route";
 import { POST as postResumeStream } from "@/app/api/resume/stream/route";
-import { runSkillJsonStream } from "@/lib/codex-client";
+import { runSkillJsonStream } from "@/server/codex-client";
 
-vi.mock("@/lib/codex-client", () => ({
+vi.mock("@/server/codex-client", () => ({
   runSkillJsonStream: vi.fn()
 }));
 

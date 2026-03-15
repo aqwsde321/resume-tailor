@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTypstResumeDocument } from "@/lib/pdf/view-model";
-import type { Company, Intro, Resume } from "@/lib/types";
+import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
+import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 const resumeFixture: Resume = {
   name: "홍길동",

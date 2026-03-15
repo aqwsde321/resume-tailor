@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { apiErrorResponse, HttpError, parseJsonBody } from "@/lib/http";
-import { buildPdfContentDisposition, buildResumePdf } from "@/lib/pdf/build";
-import { buildPdfDownloadName } from "@/lib/pdf/view-model";
-import { CompanySchema, IntroSchema, ResumeSchema } from "@/lib/schemas";
+import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { buildPdfContentDisposition, buildResumePdf } from "@/server/pdf/build";
+import { buildPdfDownloadName } from "@/entities/pdf/model/view-model";
+import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
 
 export const runtime = "nodejs";
 

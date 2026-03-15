@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { fetchCompanyPage } from "@/lib/company-url-fetch";
-import { apiErrorResponse, parseJsonBody } from "@/lib/http";
+import { fetchCompanyPage } from "@/server/company-url-fetch";
+import { apiErrorResponse, parseJsonBody } from "@/server/http";
 
 export const runtime = "nodejs";
 

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { normalizeCompany } from "@/lib/company-normalize";
-import { runSkillJson } from "@/lib/codex-client";
-import { apiErrorResponse, parseJsonBody } from "@/lib/http";
-import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/lib/schemas";
-import { parseTaskResult } from "@/lib/task-result";
-import type { ApiSuccess, Company } from "@/lib/types";
+import { normalizeCompany } from "@/server/company-normalize";
+import { runSkillJson } from "@/server/codex-client";
+import { apiErrorResponse, parseJsonBody } from "@/server/http";
+import { AgentRunOptionsSchema, CompanySchema, companyOutputSchema } from "@/shared/lib/schemas";
+import { parseTaskResult } from "@/server/task-result";
+import type { ApiSuccess, Company } from "@/shared/lib/types";
 
 export const runtime = "nodejs";
 

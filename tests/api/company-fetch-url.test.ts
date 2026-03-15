@@ -10,7 +10,7 @@ vi.mock("playwright", () => ({
   }
 }));
 
-vi.mock("@/lib/company-image-ocr", () => ({
+vi.mock("@/server/company-image-ocr", () => ({
   extractTextFromImages: extractTextFromImagesMock,
   isImageOcrAvailable: isImageOcrAvailableMock
 }));

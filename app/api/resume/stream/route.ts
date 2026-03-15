@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { runSkillJsonStream } from "@/lib/codex-client";
-import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/lib/http";
-import { AgentRunOptionsSchema, ResumeSchema, resumeOutputSchema } from "@/lib/schemas";
-import { createSseResponse } from "@/lib/sse";
-import { parseTaskResult } from "@/lib/task-result";
+import { runSkillJsonStream } from "@/server/codex-client";
+import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/server/http";
+import { AgentRunOptionsSchema, ResumeSchema, resumeOutputSchema } from "@/shared/lib/schemas";
+import { createSseResponse } from "@/server/sse";
+import { parseTaskResult } from "@/server/task-result";
 
 export const runtime = "nodejs";
 

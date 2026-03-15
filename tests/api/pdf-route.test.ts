@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/pdf/route";
-import { HttpError } from "@/lib/http";
-import { buildResumePdf } from "@/lib/pdf/build";
-import { serializeResumeIntroSnapshot } from "@/lib/resume-utils";
-import type { Company, Intro, Resume } from "@/lib/types";
+import { HttpError } from "@/server/http";
+import { buildResumePdf } from "@/server/pdf/build";
+import { serializeResumeIntroSnapshot } from "@/entities/resume/model/resume-utils";
+import type { Company, Intro, Resume } from "@/shared/lib/types";
 
-vi.mock("@/lib/pdf/build", () => ({
+vi.mock("@/server/pdf/build", () => ({
   buildResumePdf: vi.fn(),
   buildPdfContentDisposition: vi.fn(() => 'attachment; filename="resume.pdf"')
 }));
