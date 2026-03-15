@@ -10,7 +10,7 @@ import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 const execFileAsync = promisify(execFile);
-const TEMPLATE_PATH = path.join(process.cwd(), "templates", "typst", "resume.typ");
+const TEMPLATE_PATH = path.join(process.cwd(), "src", "templates", "typst", "resume.typ");
 const PDF_WORKDIR_PREFIX = "resume-tailor-pdf";
 const SVG_WORKDIR_PREFIX = "resume-tailor-svg-preview";
 
