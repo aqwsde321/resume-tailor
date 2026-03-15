@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 
 import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
@@ -101,6 +101,42 @@ interface AppFrameProps {
   children: ReactNode;
 }
 
+interface LiveModalState {
+  isClosing: boolean;
+  task: TaskKind | null;
+}
+
+type LiveModalAction =
+  | { type: "show"; task: TaskKind }
+  | { type: "start-closing" }
+  | { type: "reset" };
+
+function liveModalReducer(state: LiveModalState, action: LiveModalAction): LiveModalState {
+  switch (action.type) {
+    case "show":
+      return {
+        isClosing: false,
+        task: action.task
+      };
+    case "start-closing":
+      if (!state.task) {
+        return state;
+      }
+
+      return {
+        ...state,
+        isClosing: true
+      };
+    case "reset":
+      return {
+        isClosing: false,
+        task: null
+      };
+    default:
+      return state;
+  }
+}
+
 export function AppFrame({
   step,
   title,
@@ -113,11 +149,13 @@ export function AppFrame({
   const { hydrated, state, cancelCurrentTask, clearStatus } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
-  const [liveTask, setLiveTask] = useState<TaskKind | null>(null);
-  const [isLiveModalClosing, setIsLiveModalClosing] = useState(false);
+  const [liveModal, dispatchLiveModal] = useReducer(liveModalReducer, {
+    isClosing: false,
+    task: null
+  });
   const statusTimerRef = useRef<number | null>(null);
   const liveModalTimerRef = useRef<number | null>(null);
-  const activeLiveTask = state.currentTask ?? liveTask;
+  const activeLiveTask = state.currentTask ?? liveModal.task;
   const showLiveModal = Boolean(activeLiveTask);
   const isWorking = Boolean(state.currentTask);
 
@@ -143,19 +181,17 @@ export function AppFrame({
     }
 
     if (state.currentTask) {
-      setLiveTask(state.currentTask);
-      setIsLiveModalClosing(false);
+      dispatchLiveModal({ type: "show", task: state.currentTask });
       return;
     }
 
-    if (!liveTask) {
+    if (!liveModal.task) {
       return;
     }
 
-    setIsLiveModalClosing(true);
+    dispatchLiveModal({ type: "start-closing" });
     liveModalTimerRef.current = window.setTimeout(() => {
-      setIsLiveModalClosing(false);
-      setLiveTask(null);
+      dispatchLiveModal({ type: "reset" });
       liveModalTimerRef.current = null;
     }, LIVE_MODAL_CLOSE_MS);
 
@@ -165,7 +201,7 @@ export function AppFrame({
         liveModalTimerRef.current = null;
       }
     };
-  }, [liveTask, state.currentTask]);
+  }, [liveModal.task, state.currentTask]);
 
   useEffect(() => {
     if (statusTimerRef.current !== null) {
@@ -371,7 +407,7 @@ export function AppFrame({
     >
       <div className="backdrop" />
       {showLiveModal && (
-        <div className={`busy-overlay ${isLiveModalClosing ? "closing" : ""}`} aria-hidden="true" />
+        <div className={`busy-overlay ${liveModal.isClosing ? "closing" : ""}`} aria-hidden="true" />
       )}
       <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
         <header className="hero">
@@ -462,7 +498,7 @@ export function AppFrame({
 
       {activeLiveTask && (
         <section
-          className={`live-log-modal ${isLiveModalClosing ? "closing" : ""}`}
+          className={`live-log-modal ${liveModal.isClosing ? "closing" : ""}`}
           aria-live="polite"
           role="dialog"
           aria-modal="true"

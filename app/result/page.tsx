@@ -28,8 +28,7 @@ export default function ResultPage() {
     state,
     patch,
     clearStatus,
-    setError,
-    setMessage
+    setError
   } = usePipeline();
   const runStreamTask = usePipelineStreamTask();
 
