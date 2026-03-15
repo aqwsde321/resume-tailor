@@ -5,15 +5,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
-import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
-import { ListPreview } from "@/app/components/list-preview";
+import { CompanyDetailsSection } from "@/app/components/company-editor/details-section";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { SaveActionCard } from "@/app/components/workflow/save-action-card";
 import { SourceInputCard } from "@/app/components/workflow/source-input-card";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
-import { parseInlineItems, parseListText, stringifyInlineList, stringifyLineList } from "@/lib/list-input";
+import { stringifyInlineList, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
@@ -122,6 +121,10 @@ export default function CompanyPage() {
       }
     }, 220);
   };
+  const bindRequiredFieldRef =
+    (key: CompanyRequiredFieldKey) => (node: HTMLElement | null) => {
+      requiredFieldRefs.current[key] = node;
+    };
 
   const missingCompanyRequired: Array<{ key: CompanyRequiredFieldKey; label: string }> = [];
   if (!draft.companyName.trim()) {
@@ -444,129 +447,22 @@ export default function CompanyPage() {
         processing={isCompanyWorking}
       />
 
-      <section className={`card workflow-summary-card ${isCompanyWorking ? "card-processing" : ""}`}>
-        <div className="card-head">
-          <div>
-            <p className="card-kicker">확인</p>
-            <h2>공고 다듬기</h2>
-          </div>
-          {companyNeedsConfirm ? (
-            <span className="inline-badge warn">수정됨</span>
-          ) : state.companyConfirmedJson ? (
-            <span className="inline-badge ok">저장됨</span>
-          ) : (
-            <span className="inline-badge">아직 없음</span>
-          )}
-        </div>
-
-        <div className="form-grid two">
-          <label
-            ref={(node) => {
-              requiredFieldRefs.current.companyName = node;
-            }}
-            className={`field ${!draft.companyName.trim() ? "field-error" : ""}`}
-          >
-            <span>회사명</span>
-            <input
-              className="form-input"
-              value={draft.companyName}
-              onChange={(event) => syncDraft({ ...draft, companyName: event.target.value })}
-              disabled={uiBusy || !canEdit}
-            />
-          </label>
-
-          <label
-            ref={(node) => {
-              requiredFieldRefs.current.jobTitle = node;
-            }}
-            className={`field ${!draft.jobTitle.trim() ? "field-error" : ""}`}
-          >
-            <span>포지션</span>
-            <input
-              className="form-input"
-              value={draft.jobTitle}
-              onChange={(event) => syncDraft({ ...draft, jobTitle: event.target.value })}
-              disabled={uiBusy || !canEdit}
-            />
-          </label>
-
-          <label className="field field-full">
-            <span>회사 소개</span>
-            <AutoGrowTextarea
-              value={draft.companyDescription}
-              onChange={(event) =>
-                syncDraft({ ...draft, companyDescription: event.target.value })
-              }
-              disabled={uiBusy || !canEdit}
-            />
-          </label>
-
-          <label className="field field-full">
-            <span>주요 업무</span>
-            <AutoGrowTextarea
-              value={draft.jobDescription}
-              onChange={(event) => syncDraft({ ...draft, jobDescription: event.target.value })}
-              disabled={uiBusy || !canEdit}
-            />
-          </label>
-
-          <label
-            ref={(node) => {
-              requiredFieldRefs.current.requirements = node;
-            }}
-            className={`field field-full ${draft.requirements.length === 0 ? "field-error" : ""}`}
-          >
-            <span>필수 조건</span>
-            <AutoGrowTextarea
-              className="list-textarea"
-              value={requirementsText}
-              onChange={(event) => {
-                const value = event.target.value;
-                setRequirementsText(value);
-                syncDraft({ ...draft, requirements: parseListText(value) });
-              }}
-              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) Java 기반 서버 개발 경험"}
-              disabled={uiBusy || !canEdit}
-            />
-            <ListPreview items={draft.requirements} label="지금 들어간 필수 조건" />
-          </label>
-
-          <label className="field field-full">
-            <span>우대 조건</span>
-            <AutoGrowTextarea
-              className="list-textarea"
-              value={preferredSkillsText}
-              onChange={(event) => {
-                const value = event.target.value;
-                setPreferredSkillsText(value);
-                syncDraft({ ...draft, preferredSkills: parseListText(value) });
-              }}
-              placeholder={"한 줄에 하나씩 입력해 주세요.\n예) 대용량 트래픽 서비스 경험"}
-              disabled={uiBusy || !canEdit}
-            />
-            <ListPreview items={draft.preferredSkills} label="지금 들어간 우대 조건" />
-          </label>
-
-          <div className="field field-full">
-            <span>기술 스택</span>
-            <input
-              className="form-input inline-stack-input"
-              aria-label="공고 기술 스택"
-              type="text"
-              value={techStackText}
-              onChange={(event) => {
-                const value = event.target.value;
-                setTechStackText(value);
-                syncDraft({ ...draft, techStack: parseInlineItems(value) });
-              }}
-              placeholder="예) Java, Spring, C#, .NET, MySQL"
-              disabled={uiBusy || !canEdit}
-            />
-            <span className="field-help">쉼표로 구분해서 한 줄로 적으면 됩니다.</span>
-          </div>
-        </div>
-
-      </section>
+      <CompanyDetailsSection
+        bindRequiredFieldRef={bindRequiredFieldRef}
+        canEdit={canEdit}
+        companyNeedsConfirm={companyNeedsConfirm}
+        draft={draft}
+        isSaved={Boolean(state.companyConfirmedJson)}
+        isWorking={isCompanyWorking}
+        requirementsText={requirementsText}
+        preferredSkillsText={preferredSkillsText}
+        setRequirementsText={setRequirementsText}
+        setPreferredSkillsText={setPreferredSkillsText}
+        setTechStackText={setTechStackText}
+        syncDraft={syncDraft}
+        techStackText={techStackText}
+        uiBusy={uiBusy}
+      />
 
       <SaveActionCard
         title="공고 저장"
