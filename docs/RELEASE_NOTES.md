@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+- 아직 분류된 변경 없음
+
+## v0.7.0 (2026-03-15)
+
 ### Added
 
 - GitHub Actions Docker publish 워크플로 추가: `main` push 시 검증 후 Docker Hub에 이미지 업로드
@@ -41,6 +45,10 @@
 - `npm run build`
 - `npm run test:e2e`
 - 실제 `POST /api/pdf/preview` 호출로 SVG 미리보기 생성 확인
+
+### Tag
+
+- Git tag: `v0.7.0`
 
 ## v0.6.0 (2026-03-07)
 
