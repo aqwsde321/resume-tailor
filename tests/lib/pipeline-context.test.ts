@@ -4,7 +4,7 @@ import {
   getIntroRefreshReasons,
   isIntroFresh,
   type PipelineState
-} from "@/lib/pipeline-context";
+} from "@/lib/client/pipeline-context";
 import { serializeResume, serializeResumeIntroSnapshot } from "@/lib/resume-utils";
 
 const baseState: PipelineState = {

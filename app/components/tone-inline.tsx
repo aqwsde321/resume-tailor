@@ -1,7 +1,7 @@
 "use client";
 
 import { formatIntroToneLabel, INTRO_TONE_LABELS, INTRO_TONE_VALUES, isIntroTone } from "@/lib/intro-tone";
-import { usePipeline } from "@/lib/pipeline-context";
+import { usePipeline } from "@/lib/client/pipeline-context";
 
 interface ToneInlineProps {
   disabled?: boolean;
@@ -45,4 +45,3 @@ export function ToneInline({ disabled = false }: ToneInlineProps) {
     </label>
   );
 }
-

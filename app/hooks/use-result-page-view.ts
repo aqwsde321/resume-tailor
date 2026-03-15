@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
-import { getIntroRefreshReasons, getResumeIntroSnapshot, isIntroFresh, type PipelineState } from "@/lib/pipeline-context";
+import {
+  getIntroRefreshReasons,
+  getResumeIntroSnapshot,
+  isIntroFresh,
+  type PipelineState
+} from "@/lib/client/pipeline-context";
 import {
   buildCompareSection,
   buildIntroActionSummary,

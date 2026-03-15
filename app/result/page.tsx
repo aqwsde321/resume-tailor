@@ -14,7 +14,7 @@ import { ToneInline } from "@/app/components/tone-inline";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { useResultPageView } from "@/app/hooks/use-result-page-view";
 import { toAgentRunOptions } from "@/lib/agent-settings";
-import { usePipeline } from "@/lib/pipeline-context";
+import { usePipeline } from "@/lib/client/pipeline-context";
 import { serializeResumeIntroSnapshot } from "@/lib/resume-utils";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import type { Intro } from "@/lib/types";

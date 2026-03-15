@@ -25,7 +25,7 @@ import {
   serializeResume,
   toResumeDraft
 } from "@/lib/resume-utils";
-import { usePipeline } from "@/lib/pipeline-context";
+import { usePipeline } from "@/lib/client/pipeline-context";
 import { ResumeSchema } from "@/lib/schemas";
 import type { ApiFailure, ApiSuccess, Resume, ResumeExperienceItem, ResumeProjectItem } from "@/lib/types";
 

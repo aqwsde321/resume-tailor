@@ -5,7 +5,7 @@ import {
   MODEL_REASONING_EFFORT_LABELS,
   MODEL_REASONING_EFFORT_VALUES
 } from "@/lib/agent-settings";
-import { usePipeline } from "@/lib/pipeline-context";
+import { usePipeline } from "@/lib/client/pipeline-context";
 
 interface ReasoningInlineProps {
   disabled?: boolean;

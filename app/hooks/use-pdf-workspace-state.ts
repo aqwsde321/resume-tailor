@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { buildPdfDownloadName, buildTypstResumeDocument } from "@/lib/pdf/view-model";
-import { getResumeIntroSnapshot, isIntroFresh, type PipelineState } from "@/lib/pipeline-context";
+import { getResumeIntroSnapshot, isIntroFresh, type PipelineState } from "@/lib/client/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
 import type { ApiFailure, ApiSuccess, Company, Intro, Resume } from "@/lib/types";
 

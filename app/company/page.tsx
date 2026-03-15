@@ -16,7 +16,7 @@ import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
 import { stringifyInlineList, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
-import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
+import { hasResumeConfirmed, usePipeline } from "@/lib/client/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
 
 const EMPTY_COMPANY: Company = {

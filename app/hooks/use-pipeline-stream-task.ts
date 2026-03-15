@@ -2,8 +2,8 @@
 
 import { useCallback } from "react";
 
-import { usePipeline } from "@/lib/pipeline-context";
-import { isAbortError, postSseJson } from "@/lib/stream-client";
+import { usePipeline } from "@/lib/client/pipeline-context";
+import { isAbortError, postSseJson } from "@/lib/client/stream-client";
 import type { TaskKind } from "@/lib/types";
 
 interface RunPipelineStreamTaskOptions<TResponse> {

@@ -15,7 +15,7 @@ import {
   TASK_PROGRESS_LABELS
 } from "@/app/components/frame/frame-meta";
 import { formatSavedAt } from "@/lib/date-format";
-import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
+import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/client/pipeline-context";
 import type { TaskKind } from "@/lib/types";
 
 interface LiveModalState {

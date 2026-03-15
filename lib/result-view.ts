@@ -1,4 +1,4 @@
-import type { IntroRefreshReason } from "@/lib/pipeline-context";
+import type { IntroRefreshReason } from "@/lib/client/pipeline-context";
 import type { Intro } from "@/lib/types";
 
 export type IntroSectionKey = "oneLineIntro" | "shortIntro" | "longIntro";
