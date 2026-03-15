@@ -44,14 +44,18 @@
   - [x] 근거 없는 과장
   - [x] 공고에 없는 표현 임의 추가 억제
   - [x] 지나치게 일반적인 문장 반복 방지 강화
-- [~] `tone`별 결과 차이와 반복 표현 품질 점검 추가
-- [ ] fixture 기반 소개글 품질 회귀 케이스를 결과 문장 수준까지 확장
+- [x] `tone`별 결과 차이와 반복 표현 품질 점검 추가
+- [x] fixture 기반 소개글 품질 회귀 케이스를 결과 문장 수준까지 확장
 
 현재 반영:
 
 - [x] 소개글 단계 `톤` 선택 UI와 API 입력 반영
 - [x] `buildIntroGuidance()`와 `normalizeIntroWithGuidance()` 기반 후처리
 - [x] `tests/lib/intro-insights.test.ts`에서 fixture 기반 매칭 근거 회귀 검증
+- [x] `evaluateIntroQuality()` 기반 품질 평가기 추가
+- [x] `shortIntro` 요건 직접 언급, `longIntro` 앵커 커버리지, 중복 문장 금지 규칙 추가
+- [x] `tests/lib/intro-quality.test.ts`로 frontend/backend/data/AI fixture 품질 회귀 추가
+- [x] `tests/api/intro-route.test.ts`에서 반복 문장 제거와 근거 범위 필터링 회귀 추가
 
 완료 기준:
 

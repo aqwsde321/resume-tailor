@@ -33,7 +33,7 @@ export function IntroOutputCard({
 
       <div className="result-card">
         {introSections.map((section) => (
-          <article key={section.key} className="result-block">
+          <article key={section.key} className={`result-block result-block-${section.key}`}>
             <div className="result-head">
               <h3>{section.title}</h3>
               <button

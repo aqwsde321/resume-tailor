@@ -85,6 +85,31 @@ export type MatchInsights = {
   keywords: string[];
 };
 
+export type IntroQualityIssueCode =
+  | "short_missing_requirement_reference"
+  | "long_missing_anchor_coverage"
+  | "long_not_richer_than_short"
+  | "long_has_duplicate_sentence"
+  | "fit_reason_out_of_guidance"
+  | "gap_note_out_of_guidance"
+  | "missing_relevant_out_of_guidance";
+
+export type IntroQualityIssue = {
+  code: IntroQualityIssueCode;
+  message: string;
+};
+
+export type IntroQualityReport = {
+  ok: boolean;
+  issues: IntroQualityIssue[];
+  shortCoverageTargets: string[];
+  longCoverageTargets: string[];
+  duplicateLongSentences: string[];
+  missingAnchors: string[];
+  shortSentenceCount: number;
+  longSentenceCount: number;
+};
+
 function unique(items: string[]): string[] {
   return Array.from(new Set(items));
 }
@@ -115,6 +140,44 @@ function normalizeList(items: string[], maxLength: number): string[] {
       .map((item) => item.replace(/\s+/g, " ").trim())
       .filter(Boolean)
   ).slice(0, maxLength);
+}
+
+function splitIntroSentences(value: string): string[] {
+  const normalized = value
+    .replace(/\r/g, "\n")
+    .split(/(?<=[.!?。])\s+|\n+/u)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  return normalized.length > 0 ? normalized : value.trim() ? [value.replace(/\s+/g, " ").trim()] : [];
+}
+
+function dedupeIntroSentences(value: string): { text: string; duplicates: string[] } {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  const deduped = splitIntroSentences(value).filter((sentence) => {
+    const key = normalizePhrase(sentence);
+    if (!key) {
+      return false;
+    }
+
+    if (seen.has(key)) {
+      duplicates.push(sentence);
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+
+  return {
+    text: deduped.join(" ").trim(),
+    duplicates: unique(duplicates)
+  };
+}
+
+function countMeaningfulTextTokens(value: string): number {
+  return unique(getMeaningfulTokens(value)).length;
 }
 
 function buildEvidenceEntries(resume: Resume): EvidenceEntry[] {
@@ -479,6 +542,142 @@ function buildMissingButRelevantSuggestions(
   );
 }
 
+function collectReferencedTargets(text: string, targets: string[]): string[] {
+  return normalizeList(targets.filter((target) => referencesTarget(text, target)), targets.length);
+}
+
+function looksLikeGapNote(text: string): boolean {
+  return /없|부족|확인되지|보완|필요|아직|추가/u.test(text);
+}
+
+export function evaluateIntroQuality(intro: Intro, resume: Resume, company: Company): IntroQualityReport {
+  const guidance = buildIntroGuidance(resume, company);
+  const normalizedIntro = {
+    oneLineIntro: intro.oneLineIntro.trim(),
+    shortIntro: intro.shortIntro.trim(),
+    longIntro: intro.longIntro.trim()
+  };
+  const duplicateLongSentences = dedupeIntroSentences(normalizedIntro.longIntro).duplicates;
+  const shortCandidates = unique([
+    ...guidance.requirementMatches.map((item) => item.target),
+    ...guidance.matchedSkills
+  ]);
+  const longCandidates = guidance.writingAnchors.map((item) => item.target);
+  const shortCoverageTargets = collectReferencedTargets(normalizedIntro.shortIntro, shortCandidates);
+  const longCoverageTargets = collectReferencedTargets(normalizedIntro.longIntro, longCandidates);
+  const requiredLongCoverage = longCandidates.length > 0 ? Math.min(2, longCandidates.length) : 0;
+  const shortSentenceCount = splitIntroSentences(normalizedIntro.shortIntro).length;
+  const longSentenceCount = splitIntroSentences(normalizedIntro.longIntro).length;
+  const missingAnchors = normalizeList(
+    guidance.writingAnchors
+      .filter((anchor) => !introMentionsAnchor(normalizedIntro.longIntro, anchor))
+      .map((anchor) => anchor.target),
+    5
+  );
+  const issues: IntroQualityIssue[] = [];
+
+  if (shortCandidates.length > 0 && shortCoverageTargets.length === 0) {
+    issues.push({
+      code: "short_missing_requirement_reference",
+      message: "shortIntro는 필수 요건 또는 매칭 기술을 최소 1개 이상 직접 언급해야 합니다."
+    });
+  }
+
+  if (requiredLongCoverage > 0 && longCoverageTargets.length < requiredLongCoverage) {
+    issues.push({
+      code: "long_missing_anchor_coverage",
+      message: "longIntro는 상위 작성 앵커를 최소 2개까지 직접 연결해야 합니다."
+    });
+  }
+
+  const normalizedShort = normalizePhrase(normalizedIntro.shortIntro);
+  const normalizedLong = normalizePhrase(normalizedIntro.longIntro);
+  const shortTokenCount = countMeaningfulTextTokens(normalizedIntro.shortIntro);
+  const longTokenCount = countMeaningfulTextTokens(normalizedIntro.longIntro);
+  const longCarriesMoreInfo =
+    normalizedLong &&
+    normalizedLong !== normalizedShort &&
+    (normalizedIntro.longIntro.length > normalizedIntro.shortIntro.length + 40 ||
+      longSentenceCount > shortSentenceCount ||
+      longTokenCount > shortTokenCount + 4);
+
+  if (normalizedIntro.shortIntro && normalizedIntro.longIntro && !longCarriesMoreInfo) {
+    issues.push({
+      code: "long_not_richer_than_short",
+      message: "longIntro는 shortIntro보다 정보량이 더 많아야 합니다."
+    });
+  }
+
+  if (duplicateLongSentences.length > 0) {
+    issues.push({
+      code: "long_has_duplicate_sentence",
+      message: "longIntro에 동일 문장이 반복되면 안 됩니다."
+    });
+  }
+
+  const fitReferences = [
+    ...company.requirements,
+    ...company.preferredSkills,
+    ...guidance.matchedSkills,
+    ...guidance.roleOverlap,
+    ...guidance.requirementMatches.map((item) => item.target),
+    ...guidance.preferredMatches.map((item) => item.target),
+    ...guidance.requirementMatches.flatMap((item) => item.evidence),
+    ...guidance.preferredMatches.flatMap((item) => item.evidence)
+  ];
+  if (
+    intro.fitReasons.some((item) => !fitReferences.some((target) => referencesTarget(item, target)))
+  ) {
+    issues.push({
+      code: "fit_reason_out_of_guidance",
+      message: "fitReasons는 requirement/preferred/evidence 근거 범위 안에서만 작성해야 합니다."
+    });
+  }
+
+  if (
+    intro.gapNotes.some(
+      (item) =>
+        !looksLikeGapNote(item) ||
+        !guidance.gapCandidates.some((target) => referencesTarget(item, target))
+    )
+  ) {
+    issues.push({
+      code: "gap_note_out_of_guidance",
+      message: "gapNotes는 gapCandidates 범위를 넘지 않아야 합니다."
+    });
+  }
+
+  const availableMissingAnchors = guidance.writingAnchors.filter(
+    (anchor) => !introMentionsAnchor(`${normalizedIntro.oneLineIntro} ${normalizedIntro.shortIntro} ${normalizedIntro.longIntro}`, anchor)
+  );
+  if (
+    intro.missingButRelevant.some(
+      (item) =>
+        !availableMissingAnchors.some(
+          (anchor) =>
+            referencesTarget(item, anchor.target) ||
+            anchor.evidence.some((evidence) => referencesTarget(item, stripEvidenceLabel(evidence)))
+        )
+    )
+  ) {
+    issues.push({
+      code: "missing_relevant_out_of_guidance",
+      message: "missingButRelevant는 아직 본문에 직접 드러나지 않은 작성 앵커만 허용합니다."
+    });
+  }
+
+  return {
+    ok: issues.length === 0,
+    issues,
+    shortCoverageTargets,
+    longCoverageTargets,
+    duplicateLongSentences,
+    missingAnchors,
+    shortSentenceCount,
+    longSentenceCount
+  };
+}
+
 export function buildIntroGuidance(resume: Resume, company: Company): IntroGuidance {
   // 소개글 생성 전에 겹치는 강점, 직접 근거, 부족한 항목을 구조화해 프롬프트 힌트로 만든다.
   const resumeKeywords = collectResumeKeywords(resume);
@@ -655,6 +854,7 @@ export function buildIntroSkillInput(
     "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
     "- longIntro는 450~700자, 5~8문장으로 작성합니다.",
     "- longIntro는 shortIntro보다 정보량이 분명히 많아야 하며, 문장을 그대로 반복하지 않습니다.",
+    "- shortIntro 본문에는 필수 요건 requirementMatches 상위 항목 또는 matchedSkills를 최소 1개 이상 직접 언급합니다.",
     "- [핵심 요건]의 최우선 필수 요건이 있으면 shortIntro 본문에 직접 반영합니다.",
     "- [핵심 요건]의 상위 필수 요건 2개까지는 longIntro 본문에서 근거와 함께 직접 연결합니다.",
     "- shortIntro와 longIntro에는 필수 요건 requirementMatches 상위 항목을 최소 1개 이상 자연스럽게 반영합니다.",
@@ -673,6 +873,10 @@ export function buildIntroSkillInput(
 
 export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company: Company): Intro {
   const guidance = buildIntroGuidance(resume, company);
+  const normalizedOneLineIntro = intro.oneLineIntro.trim();
+  const normalizedShortIntro = intro.shortIntro.trim();
+  const dedupedLongIntro = dedupeIntroSentences(intro.longIntro.trim());
+  const normalizedLongIntro = dedupedLongIntro.text || normalizedShortIntro;
   const rawFitReasons = normalizeList(intro.fitReasons, 4);
   const rawGapNotes = normalizeList(intro.gapNotes, 3);
   const rawMissingButRelevant = normalizeList(intro.missingButRelevant, 3);
@@ -684,6 +888,8 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
   );
 
   const fitReferences = [
+    ...company.requirements,
+    ...company.preferredSkills,
     ...guidance.matchedSkills,
     ...guidance.roleOverlap,
     ...guidance.requirementMatches.map((item) => item.target),
@@ -695,10 +901,10 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
     fitReferences.some((target) => referencesTarget(item, target))
   );
   const filteredGapNotes = rawGapNotes.filter((item) =>
-    guidance.gapCandidates.some((target) => referencesTarget(item, target))
+    looksLikeGapNote(item) && guidance.gapCandidates.some((target) => referencesTarget(item, target))
   );
   const availableMissingAnchors = guidance.writingAnchors.filter(
-    (anchor) => !introMentionsAnchor(`${intro.oneLineIntro} ${intro.shortIntro} ${intro.longIntro}`, anchor)
+    (anchor) => !introMentionsAnchor(`${normalizedOneLineIntro} ${normalizedShortIntro} ${normalizedLongIntro}`, anchor)
   );
   const filteredMissingButRelevant = rawMissingButRelevant.filter((item) =>
     availableMissingAnchors.some(
@@ -707,18 +913,31 @@ export function normalizeIntroWithGuidance(intro: Intro, resume: Resume, company
         anchor.evidence.some((evidence) => referencesTarget(item, stripEvidenceLabel(evidence)))
     )
   );
-  const computedMissingButRelevant = buildMissingButRelevantSuggestions(guidance.writingAnchors, intro);
-
-  // 모델이 과하게 넓게 쓴 보조 필드는 실제 매칭 근거 범위 안으로 다시 제한한다.
-  return {
-    oneLineIntro: intro.oneLineIntro.trim(),
-    shortIntro: intro.shortIntro.trim(),
-    longIntro: intro.longIntro.trim() || intro.shortIntro.trim(),
-    fitReasons: filteredFitReasons.length > 0 ? filteredFitReasons : rawFitReasons,
+  const normalizedIntro = {
+    oneLineIntro: normalizedOneLineIntro,
+    shortIntro: normalizedShortIntro,
+    longIntro: normalizedLongIntro,
+    fitReasons: filteredFitReasons,
     matchedSkills:
       canonicalMatchedSkills.length > 0
         ? canonicalMatchedSkills
         : guidance.matchedSkills.slice(0, Math.min(4, guidance.matchedSkills.length)),
+    gapNotes: filteredGapNotes,
+    missingButRelevant: filteredMissingButRelevant
+  };
+  const qualityReport = evaluateIntroQuality(normalizedIntro, resume, company);
+  const computedMissingButRelevant =
+    qualityReport.missingAnchors.length > 0
+      ? buildMissingButRelevantSuggestions(guidance.writingAnchors, normalizedIntro)
+      : [];
+
+  // 모델이 과하게 넓게 쓴 보조 필드는 실제 매칭 근거 범위 안으로 다시 제한한다.
+  return {
+    oneLineIntro: normalizedOneLineIntro,
+    shortIntro: normalizedShortIntro,
+    longIntro: normalizedLongIntro,
+    fitReasons: filteredFitReasons,
+    matchedSkills: normalizedIntro.matchedSkills,
     gapNotes: filteredGapNotes,
     missingButRelevant:
       filteredMissingButRelevant.length > 0 ? filteredMissingButRelevant : computedMissingButRelevant

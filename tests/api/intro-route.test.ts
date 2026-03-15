@@ -43,7 +43,7 @@ describe("POST /api/intro", () => {
       shortIntro: "실무 3년 경력의 백엔드 개발자입니다.",
       longIntro:
         "실무 3년 동안 Node.js와 TypeScript 기반 서버를 개발하며 API 구조를 정리하고 운영 이슈를 안정적으로 대응해 왔습니다. 서비스 요구사항을 빠르게 해석해 백엔드 구조로 옮기는 데 강점이 있고, 문제를 재현하고 원인을 좁혀 가는 방식으로 장애를 해결해 왔습니다. 특히 Node.js 기반 서버 개발 경험은 이번 공고의 핵심 요구사항과 직접 맞닿아 있습니다. TypeScript를 활용해 유지보수하기 쉬운 코드를 만드는 데 익숙하며, 팀과 함께 안정적인 백엔드 운영 기준을 정리해 온 경험도 있습니다. 입사 후에도 서비스 구조를 빠르게 이해하고 안정적인 API 운영에 기여할 수 있습니다.",
-      fitReasons: ["Node.js 기반 서버 개발 경험이 공고 요구사항과 맞닿아 있습니다."],
+      fitReasons: ["Node.js 기반 API 개발 경험이 공고 요구사항과 맞닿아 있습니다."],
       matchedSkills: ["Node.js", "TypeScript", "Spring Boot"],
       gapNotes: [
         "AWS 경험은 이력서에서 직접 확인되지 않습니다.",
@@ -141,6 +141,12 @@ describe("POST /api/intro", () => {
 
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("[톤 가이드]");
     expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain("자신감 있게");
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain(
+      "shortIntro 본문에는 필수 요건 requirementMatches 상위 항목 또는 matchedSkills를 최소 1개 이상 직접 언급합니다."
+    );
+    expect(mockedRunSkillJson.mock.calls[0]?.[0]?.inputText).toContain(
+      "longIntro는 shortIntro보다 정보량이 분명히 많아야 하며, 문장을 그대로 반복하지 않습니다."
+    );
   });
 
   it("이전 형식 응답이면 분석 힌트를 기준으로 기본 기술을 보정한다", async () => {
@@ -168,6 +174,46 @@ describe("POST /api/intro", () => {
     expect(body.data.fitReasons).toEqual([]);
     expect(body.data.matchedSkills).toEqual(["TypeScript"]);
     expect(body.data.gapNotes).toEqual([]);
+    expect(body.data.missingButRelevant).toEqual([]);
+  });
+
+  it("반복 문장과 근거 밖 보조 항목은 응답 정규화에서 제거한다", async () => {
+    const mockedRunSkillJson = vi.mocked(runSkillJson);
+    mockedRunSkillJson.mockResolvedValue({
+      oneLineIntro: "문제 해결형 백엔드 개발자",
+      shortIntro:
+        "Node.js 기반 API 개발 경험과 문제 해결 역량을 바탕으로 운영 API를 개선해 온 백엔드 개발자입니다.",
+      longIntro:
+        "Node.js 기반 API 개발 경험과 문제 해결 역량을 바탕으로 운영 API를 개선해 왔습니다. Node.js 기반 API 개발 경험과 문제 해결 역량을 바탕으로 운영 API를 개선해 왔습니다. TypeScript 기반 운영 경험을 바탕으로 장애 원인을 추적하고 재발 방지 기준을 정리해 왔습니다.",
+      fitReasons: [
+        "Node.js 기반 API 개발 경험이 공고 요구사항과 맞닿아 있습니다.",
+        "Rust 기반 인프라 개발 경험이 있습니다."
+      ],
+      matchedSkills: ["Node.js", "TypeScript", "Rust"],
+      gapNotes: ["AWS 경험은 이력서에서 직접 확인되지 않습니다.", "Kubernetes 경험이 필요합니다."],
+      missingButRelevant: ["이미 본문에 드러난 Node.js 기반 API 개발 경험을 다시 강조합니다."]
+    });
+
+    const request = new Request("http://localhost/api/intro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumePayload,
+        company: companyPayload
+      })
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.longIntro).toBe(
+      "Node.js 기반 API 개발 경험과 문제 해결 역량을 바탕으로 운영 API를 개선해 왔습니다. TypeScript 기반 운영 경험을 바탕으로 장애 원인을 추적하고 재발 방지 기준을 정리해 왔습니다."
+    );
+    expect(body.data.fitReasons).toEqual(["Node.js 기반 API 개발 경험이 공고 요구사항과 맞닿아 있습니다."]);
+    expect(body.data.matchedSkills).toEqual(["TypeScript"]);
+    expect(body.data.gapNotes).toEqual(["AWS 경험은 이력서에서 직접 확인되지 않습니다."]);
     expect(body.data.missingButRelevant).toEqual([]);
   });
 

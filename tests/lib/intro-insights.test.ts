@@ -111,7 +111,7 @@ describe("intro insight helpers", () => {
           "  React와 Next.js 기반 제품을 운영하며 관리자 화면과 서비스 개선 작업을 진행했습니다. 요구사항을 빠르게 화면 구조로 바꾸고, TypeScript 기반 코드 정리에 익숙합니다. 공고에서 요구하는 React 기반 서비스 개발 경험과 TypeScript 활용 능력은 실제 프로젝트 경험으로 확인됩니다. 협업 중심 개발 환경에서도 기획과 디자인 요구를 빠르게 반영해 제품 완성도를 높여 왔습니다.  ",
         fitReasons: [
           "React 기반 서비스 개발 경험이 있어 공고와 맞닿아 있습니다.",
-          "GraphQL API를 직접 운영했습니다."
+          "Rust 기반 인프라를 직접 운영했습니다."
         ],
         matchedSkills: ["react", "TypeScript", "Spring Boot"],
         gapNotes: ["GraphQL 경험은 이력서에서 직접 확인되지 않습니다.", "Kubernetes 경험이 필요합니다."],

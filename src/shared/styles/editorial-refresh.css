@@ -736,9 +736,28 @@ button {
 }
 
 .result-block p {
-  max-width: 72ch;
+  max-width: 88ch;
   font-size: 1rem;
   line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+
+.result-block-oneLineIntro p {
+  max-width: 58ch;
+}
+
+.result-block-shortIntro p {
+  max-width: 86ch;
+  text-align: justify;
+  text-align-last: left;
+}
+
+.result-block-longIntro p {
+  max-width: 94ch;
+  text-align: justify;
+  text-align-last: left;
 }
 
 .copy-btn {

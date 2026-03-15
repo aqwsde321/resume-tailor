@@ -17,6 +17,9 @@
 - 사용자 지정 색상은 팝오버 안에서 draft로 고른 뒤 `선택 완료`를 눌렀을 때만 적용되도록 조정
 - `Sidebar` 템플릿의 좌측 레일 가독성을 조정하고, `Modern` 템플릿의 Skills 영역 빈 공간을 줄이도록 재배치
 - PDF preview/export 요청에 `customAccentHex`를 추가해 사용자 지정 색상을 최종 출력까지 그대로 전달
+- 소개글 후처리에 exact 중복 문장 제거와 `gapNotes` 공백 표현 필터를 추가
+- 소개글 품질 평가기 `evaluateIntroQuality()`를 추가하고, `shortIntro` 요건 직접 언급/`longIntro` 앵커 커버리지/정보량 차이 규칙을 코드로 고정
+- `fitReasons`, `gapNotes`, `missingButRelevant`가 공고 근거 범위를 벗어나지 않도록 정규화 규칙을 강화
 
 ### Verified
 
@@ -26,6 +29,8 @@
 - `npm run test`
 - `npm run build`
 - `npm run test:e2e`
+- `tests/lib/intro-quality.test.ts`로 frontend/backend/data/AI fixture 품질 회귀 검증
+- `tests/api/intro-route.test.ts`로 반복 문장 제거와 보조 필드 범위 필터링 검증
 
 ## v0.8.0 (2026-03-15)
 
