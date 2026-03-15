@@ -13,7 +13,7 @@ Write TypeScript with `strict` mode in mind and prefer the `@/*` import alias ov
 Add unit and route tests as `tests/**/*.test.ts`, matching the Vitest include pattern. Add browser flows in `tests/e2e/*.spec.ts`. Prefer focused fixtures in `tests/fixtures/` and mock Codex calls in API tests rather than hitting real services. Before opening a PR, run `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build`; run `npm run test:e2e` for UI or routing changes.
 
 ## Commit & Pull Request Guidelines
-Recent history uses short Korean commit subjects focused on the change outcome, for example `소개글 톤 선택 기능을 추가` or `작업 모달 진행 상태 표시를 개선`. Keep commits single-purpose and descriptive. PRs should include a brief summary, affected routes or skills, linked issue if one exists, test results, and screenshots or short recordings for UI changes.
+Use Conventional Commits prefixes such as `feat:`, `fix:`, `refactor:`, `docs:` in English, and write the subject after the colon in Korean. Example: `feat: 소개글 톤 선택 기능 추가`, `refactor: 작업 모달 진행 상태 표시 구조 개선`. Keep commits single-purpose and descriptive. PRs should include a brief summary, affected routes or skills, linked issue if one exists, test results, and screenshots or short recordings for UI changes.
 
 ## Security & Configuration Tips
 Do not commit Codex credentials or generated artifacts from `.next/`, `test-results/`, or `output/`. When Codex is not on `PATH`, use `CODEX_CLI_PATH`; when external skills are needed, use `CODEX_SKILLS_DIR`. If you change any `skills/*/SKILL.md`, verify the related API route and test coverage together.
