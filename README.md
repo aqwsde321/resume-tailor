@@ -4,9 +4,35 @@
 
 ## 화면 미리보기
 
-![ResumeTailor 주요 흐름](./docs/images/app-flow-overview.png)
+전체 step 흐름을 한 장으로 먼저 볼 수 있습니다.
 
-이력서 정리, 공고 정리, 소개글 생성 흐름을 보여주는 실제 앱 화면 예시입니다.
+![ResumeTailor 전체 흐름](./docs/images/app-flow-overview.png)
+
+각 단계의 실제 사용 흐름을 짧은 GIF로 확인할 수 있습니다.
+
+### Step 1. 이력서 정리
+
+이력서 원문을 붙여넣고 AI가 정리한 뒤 저장하는 흐름입니다.
+
+![Step 1 이력서 정리](./docs/images/step-1-resume.gif)
+
+### Step 2. 공고 정리
+
+채용공고 원문을 붙여넣고 요구사항과 기술 스택을 구조화하는 흐름입니다.
+
+![Step 2 공고 정리](./docs/images/step-2-company.gif)
+
+### Step 3. 소개글 생성
+
+확정된 이력서와 공고를 기준으로 소개글과 근거를 생성하는 흐름입니다.
+
+![Step 3 소개글 생성](./docs/images/step-3-intro.gif)
+
+### Step 4. PDF 내보내기
+
+섹션별 수정 모달과 실제 Typst 미리보기를 보면서 마지막으로 PDF를 다듬는 흐름입니다.
+
+![Step 4 PDF 내보내기](./docs/images/step-4-pdf.gif)
 
 ## 1. 빠른 시작
 
@@ -237,8 +263,10 @@ npm run dev
 참고:
 
 - 각 단계 입력 카드에서 `생각 깊이`를 선택할 수 있고, 높을수록 결과 생성 시간이 늘어날 수 있습니다.
+- `/resume`, `/company`, `/pdf`의 기술 스택 입력은 쉼표 기반 한 줄 편집을 지원하고, 입력 중인 쉼표도 그대로 유지됩니다.
 - 화면에는 현재 단계, 작업 중 상태, AI 분석 로그, 이전 결과와 현재 결과 비교가 표시됩니다.
 - `PDF` step 4에서는 왼쪽 입력을 수정하면 오른쪽에 실제 Typst SVG 미리보기가 다시 렌더되고, 그 상태로 Typst PDF를 생성합니다.
+- step 4의 `Skills`는 입력한 전체 기술 스택을 `Frontend`, `Backend`, `Database`, `DevOps / Tool` 그룹으로 자동 분류해 미리보기와 PDF에 반영합니다.
 - step 4에서는 step 1에 없던 연락처, 링크 URL, 링크 라벨, PDF용 Highlights/Strengths도 바로 추가할 수 있습니다.
 - Typst 미리보기를 불러오지 못하면 같은 화면에서 HTML fallback 미리보기를 보여 주고, 최종 PDF 생성은 계속 시도할 수 있습니다.
 - step 4의 수정은 현재 PDF export draft 기준으로 적용되며, 소개글 freshness 판단을 다시 깨지 않도록 분리되어 있습니다.

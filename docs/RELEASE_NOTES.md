@@ -5,7 +5,21 @@
 
 ## Unreleased
 
-- 아직 분류된 변경 없음
+### Added
+
+- step 4 PDF 기술 스택 자동 분류에 `Frontend` 그룹 추가
+
+### Changed
+
+- `/resume`, `/company`, `/pdf`의 기술 스택 입력이 쉼표 기반 raw text를 입력 중에도 유지하도록 수정
+- step 4 PDF 기술 스택 분류에서 `TypeScript`, `JavaScript` 같은 공유 웹 스택을 주변 기술 맥락에 따라 `Frontend` 또는 `Backend`로 분류하도록 개선
+
+### Verified
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- `npm run test:e2e`
 
 ## v0.7.0 (2026-03-15)
 

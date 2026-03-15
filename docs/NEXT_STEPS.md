@@ -120,7 +120,7 @@ UX 방침:
 - [x] `contacts[]`가 비어 있으면 있는 값만 출력하고, 전부 비어 있으면 연락처 줄 전체를 숨김
 - [x] 프로젝트 `link`가 없으면 링크 영역을 숨김
 - [x] 프로젝트 `highlights[]`가 없으면 `description`만 출력
-- [x] `techStack`을 규칙 기반으로 자동 분류하고, 분류되지 않는 항목은 `DevOps / Tool`로 보냄
+- [x] `techStack`을 `Frontend`, `Backend`, `Database`, `DevOps / Tool`로 규칙 기반 자동 분류하고, 분류되지 않는 항목은 `DevOps / Tool`로 보냄
 - [x] `pdfHighlights[]`, `pdfStrengths[]`가 없으면 기존 `achievements`, `strengths`로 fallback
 - [ ] `experience[].projects[]`가 없으면 경력 설명만 출력하고 하위 프로젝트 블록은 숨김
 
@@ -207,6 +207,7 @@ UX 방침:
 - [x] step 4의 Enter 기반 Highlights 편집 E2E 추가
 - [x] step 4 모바일 4열 수정 칩과 섹션 모달 viewport 회귀 E2E 추가
 - [x] step 4 섹션 모달 수정값의 Typst 미리보기 반영과 draft 유지 E2E 추가
+- [x] `/resume`, `/company`, `/pdf` 기술 스택 입력의 쉼표 기반 raw text 유지 회귀 E2E 추가
 
 완료 기준:
 
