@@ -6,12 +6,13 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { formatSavedAt } from "@/lib/date-format";
 import { getIntroRefreshReasons, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
-import type { PipelineLog } from "@/lib/types";
+import type { PipelineLog, TaskKind } from "@/lib/types";
 
 type StepKey = "resume" | "company" | "result" | "pdf";
 type StepRoute = "/resume" | "/company" | "/result" | "/pdf";
 type StepStatus = "blocked" | "locked" | "ready" | "working" | "done";
 type BusyStageKey = "prepare" | "analyze" | "finalize";
+const LIVE_MODAL_CLOSE_MS = 220;
 
 const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
   resume: "이력서 정리",
@@ -95,6 +96,8 @@ interface AppFrameProps {
   title: string;
   description: string;
   layout?: "default" | "wide";
+  stickyShell?: boolean;
+  showSaveSummary?: boolean;
   children: ReactNode;
 }
 
@@ -103,13 +106,19 @@ export function AppFrame({
   title,
   description,
   layout = "default",
+  stickyShell = true,
+  showSaveSummary = true,
   children
 }: AppFrameProps) {
   const { hydrated, state, cancelCurrentTask, clearStatus } = usePipeline();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [logExpanded, setLogExpanded] = useState(false);
-  const [visibleMessage, setVisibleMessage] = useState("");
-  const messageTimerRef = useRef<number | null>(null);
+  const [liveTask, setLiveTask] = useState<TaskKind | null>(null);
+  const [isLiveModalClosing, setIsLiveModalClosing] = useState(false);
+  const statusTimerRef = useRef<number | null>(null);
+  const liveModalTimerRef = useRef<number | null>(null);
+  const activeLiveTask = state.currentTask ?? liveTask;
+  const showLiveModal = Boolean(activeLiveTask);
   const isWorking = Boolean(state.currentTask);
 
   useEffect(() => {
@@ -128,45 +137,65 @@ export function AppFrame({
   }, [state.currentTask, state.taskStartedAt]);
 
   useEffect(() => {
-    if (messageTimerRef.current !== null) {
-      window.clearTimeout(messageTimerRef.current);
-      messageTimerRef.current = null;
+    if (liveModalTimerRef.current !== null) {
+      window.clearTimeout(liveModalTimerRef.current);
+      liveModalTimerRef.current = null;
     }
 
-    if (!state.message) {
-      setVisibleMessage("");
+    if (state.currentTask) {
+      setLiveTask(state.currentTask);
+      setIsLiveModalClosing(false);
       return;
     }
 
-    setVisibleMessage(state.message);
-    messageTimerRef.current = window.setTimeout(() => {
-      setVisibleMessage("");
-      clearStatus();
-      messageTimerRef.current = null;
-    }, 2400);
+    if (!liveTask) {
+      return;
+    }
+
+    setIsLiveModalClosing(true);
+    liveModalTimerRef.current = window.setTimeout(() => {
+      setIsLiveModalClosing(false);
+      setLiveTask(null);
+      liveModalTimerRef.current = null;
+    }, LIVE_MODAL_CLOSE_MS);
 
     return () => {
-      if (messageTimerRef.current !== null) {
-        window.clearTimeout(messageTimerRef.current);
-        messageTimerRef.current = null;
+      if (liveModalTimerRef.current !== null) {
+        window.clearTimeout(liveModalTimerRef.current);
+        liveModalTimerRef.current = null;
       }
     };
-  }, [clearStatus, state.message]);
+  }, [liveTask, state.currentTask]);
+
+  useEffect(() => {
+    if (statusTimerRef.current !== null) {
+      window.clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
+
+    const currentStatus = state.error || state.message;
+    if (!currentStatus) {
+      return;
+    }
+
+    statusTimerRef.current = window.setTimeout(() => {
+      clearStatus();
+      statusTimerRef.current = null;
+    }, state.error ? 5200 : 2400);
+
+    return () => {
+      if (statusTimerRef.current !== null) {
+        window.clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = null;
+      }
+    };
+  }, [clearStatus, state.error, state.message]);
 
   const introFresh = isIntroFresh(state);
   const introRefreshReasons = getIntroRefreshReasons(state);
   const hasResume = Boolean(state.resumeConfirmedJson);
   const hasCompany = Boolean(state.companyConfirmedJson);
   const hasIntro = Boolean(state.intro);
-  const refreshSummary = introRefreshReasons
-    .map((reason) => {
-      if (reason.key === "resume") {
-        return state.resumeConfirmedJson ? "이력서 변경" : "이력서 다시 저장";
-      }
-
-      return state.companyConfirmedJson ? "공고 변경" : "공고 다시 저장";
-    })
-    .join(" · ");
   const saveSummaryItems = [
     state.resumeSavedAt ? `이력서 ${formatSavedAt(state.resumeSavedAt)}` : null,
     state.companySavedAt ? `공고 ${formatSavedAt(state.companySavedAt)}` : null,
@@ -293,10 +322,13 @@ export function AppFrame({
   }, [hasResume, hasCompany, hasIntro, introFresh, introRefreshReasons.length, state.currentTask, step]);
 
   const logs = useMemo(() => [...state.logs].slice(-100).reverse(), [state.logs]);
-  const liveLogs = logs.slice(0, 6);
+  const liveLogs = useMemo(
+    () => (activeLiveTask ? logs.filter((log) => log.task === activeLiveTask).slice(0, 2) : []),
+    [activeLiveTask, logs]
+  );
   const latestLog = logs[0] ?? null;
-  const busyStage = state.currentTask ? getBusyStage(state.currentTask, state.logs) : null;
-  const busyStageLabels = state.currentTask ? TASK_PROGRESS_LABELS[state.currentTask] : null;
+  const busyStage = activeLiveTask ? getBusyStage(activeLiveTask, state.logs) : null;
+  const busyStageLabels = activeLiveTask ? TASK_PROGRESS_LABELS[activeLiveTask] : null;
   const busyStageOrder: BusyStageKey[] = ["prepare", "analyze", "finalize"];
   const busyProgressValue = busyStage ? getBusyProgressValue(busyStage) : 0;
 
@@ -333,12 +365,14 @@ export function AppFrame({
 
   return (
     <main
-      className={`page ${isWorking ? "page-busy" : ""}`}
+      className={`page ${showLiveModal ? "page-busy" : ""}`}
       aria-busy={isWorking}
       data-step={step}
     >
       <div className="backdrop" />
-      {isWorking && <div className="busy-overlay" aria-hidden="true" />}
+      {showLiveModal && (
+        <div className={`busy-overlay ${isLiveModalClosing ? "closing" : ""}`} aria-hidden="true" />
+      )}
       <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
         <header className="hero">
           <p className="eyebrow">ResumeTailor</p>
@@ -346,7 +380,7 @@ export function AppFrame({
           <p>{description}</p>
         </header>
 
-        <section className="sticky-shell">
+        <section className={`sticky-shell ${stickyShell ? "" : "static-shell"}`.trim()}>
           <ol className="steps">
             {steps.map((item) => (
               <li
@@ -368,28 +402,30 @@ export function AppFrame({
             ))}
           </ol>
 
-          {saveSummaryItems.length > 0 && (
-            <div className="sticky-save-row" aria-label="마지막 저장 시각">
-              {saveSummaryItems.map((item) => (
-                <span key={item} className="save-meta-chip subtle">
-                  {item}
-                </span>
-              ))}
-            </div>
+          {showSaveSummary && saveSummaryItems.length > 0 && (
+            <details className="sticky-meta-disclosure">
+              <summary>
+                <span>최근 저장 {saveSummaryItems.length}건</span>
+              </summary>
+              <div className="sticky-meta-body" aria-label="마지막 저장 시각">
+                {saveSummaryItems.map((item) => (
+                  <span key={item} className="save-meta-chip subtle">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </details>
           )}
+        </section>
 
-        {!state.currentTask && introRefreshReasons.length > 0 && (
-          <p className="sticky-note warn">
-            <strong>소개글 다시 만들기 필요</strong>
-            <span>{refreshSummary} 반영이 아직 남아 있어요.</span>
-          </p>
-        )}
-      </section>
-
-        {state.error && <p className="status error">{state.error}</p>}
-        {visibleMessage && (
-          <div className="toast-stack" aria-live="polite">
-            <p className="status success toast">{visibleMessage}</p>
+        {(state.error || state.message) && (
+          <div className="toast-stack" aria-live={state.error ? "assertive" : "polite"}>
+            <p
+              className={`status toast ${state.error ? "error" : "success"}`}
+              role={state.error ? "alert" : "status"}
+            >
+              {state.error || state.message}
+            </p>
           </div>
         )}
 
@@ -404,7 +440,7 @@ export function AppFrame({
               </div>
               <button
                 type="button"
-                className="secondary"
+                className="tertiary"
                 onClick={() => setLogExpanded((prev) => !prev)}
               >
                 {logExpanded ? "접기" : "기록 보기"}
@@ -424,22 +460,30 @@ export function AppFrame({
         )}
       </div>
 
-      {state.currentTask && (
-        <section className="live-log-modal" aria-live="polite" role="dialog" aria-modal="true">
+      {activeLiveTask && (
+        <section
+          className={`live-log-modal ${isLiveModalClosing ? "closing" : ""}`}
+          aria-live="polite"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="live-log-head">
             <div>
-              <p className="card-kicker">실행 중</p>
               <div className="live-log-title-row">
                 <span className="live-log-spinner" aria-hidden="true" />
-                <h2>{TASK_LABEL[state.currentTask]}</h2>
+                <h2>{TASK_LABEL[activeLiveTask]}</h2>
+                {busyStage && busyStageLabels && (
+                  <span className="live-log-phase-pill">{busyStageLabels[busyStage]}</span>
+                )}
               </div>
               <p className="live-log-copy">
                 {state.isCancellingTask
-                  ? "현재 실행을 중단하고 있어요. Codex 호출이 멈추면 화면도 바로 정리됩니다."
-                  : busyStage && busyStageLabels
-                  ? `${busyStageLabels[busyStage]} 단계예요. 입력과 확인 영역은 잠시 멈춰두고 있어요.`
-                  : "입력과 확인 영역은 잠시 멈춰두고 있어요."}
+                  ? "현재 실행을 중단하고 있어요."
+                  : liveLogs[0]?.message ?? "결과를 준비하고 있어요."}
               </p>
+              {!state.isCancellingTask && liveLogs[1]?.message && (
+                <p className="live-log-subcopy">{liveLogs[1].message}</p>
+              )}
             </div>
             <div className="live-log-actions">
               <span className="live-log-timer">{elapsedSeconds}초</span>
@@ -447,7 +491,7 @@ export function AppFrame({
                 type="button"
                 className="secondary"
                 onClick={cancelCurrentTask}
-                disabled={state.isCancellingTask}
+                disabled={!state.currentTask || state.isCancellingTask}
               >
                 {state.isCancellingTask ? "중단 중..." : "작업 중지"}
               </button>
@@ -474,14 +518,6 @@ export function AppFrame({
                 })}
               </ol>
             </div>
-          )}
-
-          {liveLogs.length > 0 ? (
-            <ul className="log-list compact">
-              {liveLogs.map((log) => renderLogItem(log))}
-            </ul>
-          ) : (
-            <p className="log-empty">실행 준비를 마치고 있어요.</p>
           )}
         </section>
       )}

@@ -8,10 +8,9 @@ import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
-import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
-import { parseListText, stringifyLineList } from "@/lib/list-input";
+import { parseInlineItems, parseListText, stringifyInlineList, stringifyLineList } from "@/lib/list-input";
 import type { ApiFailure, ApiSuccess, Company } from "@/lib/types";
 import { hasResumeConfirmed, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema } from "@/lib/schemas";
@@ -92,6 +91,7 @@ export default function CompanyPage() {
   const uiBusy = isBusy || isUrlLoading;
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
+  const [techStackText, setTechStackText] = useState("");
   const [requirementsText, setRequirementsText] = useState("");
   const [preferredSkillsText, setPreferredSkillsText] = useState("");
   const normalizedDraftJson = JSON.stringify(draft, null, 2);
@@ -141,6 +141,7 @@ export default function CompanyPage() {
     // 스트림 결과나 외부 저장값이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toCompanyDraft(state.companyJsonText);
     setDraft(next);
+    setTechStackText(stringifyInlineList(next.techStack));
     setRequirementsText(stringifyLineList(next.requirements));
     setPreferredSkillsText(stringifyLineList(next.preferredSkills));
   }, [state.companyJsonText]);
@@ -369,15 +370,12 @@ export default function CompanyPage() {
         </section>
       )}
 
-      <section className={`card card-accent ${isCompanyWorking ? "card-processing" : ""}`}>
-        <div className="card-head">
-          <div>
-            <p className="card-kicker">입력</p>
-            <h2>공고 넣기</h2>
-          </div>
+      <section className={`card card-accent workflow-main-card ${isCompanyWorking ? "card-processing" : ""}`}>
+        <div className="input-card-head">
+          <h2>공고 원문</h2>
         </div>
 
-        <div className="tabs">
+        <div className="tabs input-mode-tabs">
           <button
             type="button"
             className={state.companyInputMode === "text" ? "tab active" : "tab"}
@@ -476,10 +474,7 @@ export default function CompanyPage() {
           disabled={uiBusy || !canEdit}
         />
 
-        <div className="action-panel">
-          <div className="action-copy">
-            <strong>초안 만들기</strong>
-          </div>
+        <div className="action-panel input-card-actions">
           <div className="action-controls">
             <ReasoningInline disabled={uiBusy || !canEdit} />
             <button
@@ -494,7 +489,7 @@ export default function CompanyPage() {
         </div>
       </section>
 
-      <section className={`card card-review ${isCompanyWorking ? "card-processing review" : ""}`}>
+      <section className={`card workflow-summary-card ${isCompanyWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">확인</p>
@@ -599,16 +594,26 @@ export default function CompanyPage() {
 
           <div className="field field-full">
             <span>기술 스택</span>
-            <TagInput
-              ariaLabel="공고 기술 스택"
-              values={draft.techStack}
-              onChange={(values) => syncDraft({ ...draft, techStack: values })}
-              placeholder="입력 후 Enter로 추가"
+            <input
+              className="form-input inline-stack-input"
+              aria-label="공고 기술 스택"
+              type="text"
+              value={techStackText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTechStackText(value);
+                syncDraft({ ...draft, techStack: parseInlineItems(value) });
+              }}
+              placeholder="예) Java, Spring, C#, .NET, MySQL"
               disabled={uiBusy || !canEdit}
             />
+            <span className="field-help">쉼표로 구분해서 한 줄로 적으면 됩니다.</span>
           </div>
         </div>
 
+      </section>
+
+      <section className="card workflow-footer-card">
         <div className="action-panel review">
           <div className="action-copy">
             <strong>공고 저장</strong>
@@ -638,11 +643,11 @@ export default function CompanyPage() {
               className="primary"
               onClick={handleConfirmCompany}
               disabled={
-                  isBusy ||
-                  isUrlLoading ||
-                  !canEdit ||
-                  !state.companyJsonText.trim() ||
-                  hasMissingCompanyRequired
+                isBusy ||
+                isUrlLoading ||
+                !canEdit ||
+                !state.companyJsonText.trim() ||
+                hasMissingCompanyRequired
               }
             >
               공고 저장

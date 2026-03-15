@@ -8,10 +8,9 @@ import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
-import { TagInput } from "@/app/components/tag-input";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
-import { parseListText, stringifyLineList } from "@/lib/list-input";
+import { parseInlineItems, parseListText, stringifyInlineList, stringifyLineList } from "@/lib/list-input";
 import {
   hasSameResumeIntroData,
   makeEmptyExperience,
@@ -69,6 +68,8 @@ export default function ResumePage() {
   const requiredFieldRefs = useRef<Partial<Record<ResumeRequiredFieldKey, HTMLElement | null>>>({});
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
+  const [techStackText, setTechStackText] = useState("");
+  const [projectTechStackTexts, setProjectTechStackTexts] = useState<string[]>([]);
   const [achievementsText, setAchievementsText] = useState("");
   const [strengthsText, setStrengthsText] = useState("");
   const normalizedDraftJson = serializeResume(draft);
@@ -115,6 +116,8 @@ export default function ResumePage() {
     // 스트림 결과나 저장된 JSON이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toResumeDraft(state.resumeJsonText);
     setDraft(next);
+    setTechStackText(stringifyInlineList(next.techStack));
+    setProjectTechStackTexts(next.projects.map((project) => stringifyInlineList(project.techStack)));
     setAchievementsText(stringifyLineList(next.achievements));
     setStrengthsText(stringifyLineList(next.strengths));
   }, [state.resumeJsonText]);
@@ -369,6 +372,12 @@ export default function ResumePage() {
   const completedProjectCount = draft.projects.filter((item) =>
     Boolean(item.name.trim() || item.description.trim() || item.techStack.length > 0)
   ).length;
+  const techStackSummary =
+    draft.techStack.length === 0
+      ? "아직 없음"
+      : draft.techStack.length <= 3
+        ? draft.techStack.join(", ")
+        : `${draft.techStack.slice(0, 3).join(", ")} 외 ${draft.techStack.length - 3}`;
 
   return (
     <AppFrame
@@ -376,15 +385,12 @@ export default function ResumePage() {
       title="이력서 정리"
       description="이력서 내용을 읽고, 필요한 정보만 정리해 저장합니다."
     >
-      <section className={`card card-accent ${isResumeWorking ? "card-processing" : ""}`}>
-        <div className="card-head">
-          <div>
-            <p className="card-kicker">입력</p>
-            <h2>이력서 넣기</h2>
-          </div>
+      <section className={`card card-accent workflow-main-card ${isResumeWorking ? "card-processing" : ""}`}>
+        <div className="input-card-head">
+          <h2>이력서 원문</h2>
         </div>
 
-        <div className="tabs">
+        <div className="tabs input-mode-tabs">
           <button
             type="button"
             className={state.resumeInputMode === "text" ? "tab active" : "tab"}
@@ -476,10 +482,7 @@ export default function ResumePage() {
           disabled={uiBusy}
         />
 
-        <div className="action-panel">
-          <div className="action-copy">
-            <strong>초안 만들기</strong>
-          </div>
+        <div className="action-panel input-card-actions">
           <div className="action-controls">
             <ReasoningInline disabled={uiBusy} />
             <button type="button" className="primary" onClick={handleAnalyze} disabled={uiBusy}>
@@ -489,15 +492,11 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className={`card card-review ${isResumeWorking ? "card-processing review" : ""}`}>
+      <section className={`card workflow-summary-card ${isResumeWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">확인</p>
             <h2>이력서 다듬기</h2>
-            <p className="card-copy">
-              여기서는 소개글 생성에 필요한 정보만 정리합니다. PDF용 헤더, 연락처, 링크, 출력 전용 Highlights는
-              step 4에서 마지막으로 손봅니다.
-            </p>
           </div>
           {resumeNeedsConfirm ? (
             <span className="inline-badge warn">수정됨</span>
@@ -508,27 +507,27 @@ export default function ResumePage() {
           )}
         </div>
 
-        <div className="mini-grid compact">
-          <div className={`mini-stat ${draft.desiredPosition.trim() && draft.techStack.length > 0 ? "ok" : "warn"}`}>
-            <span>핵심 정보</span>
-            <strong>
-              {draft.desiredPosition.trim()
-                ? `${draft.desiredPosition} · ${draft.techStack.length}개 스택`
-                : "희망 직무와 기술 스택 확인 필요"}
-            </strong>
+        <div className="summary-list" aria-label="이력서 현재 요약">
+          <div className={`summary-row ${draft.desiredPosition.trim() ? "ok" : "warn"}`}>
+            <span>희망 직무</span>
+            <strong>{draft.desiredPosition.trim() || "입력 필요"}</strong>
           </div>
-          <div className={`mini-stat ${draft.achievements.length > 0 || draft.strengths.length > 0 ? "ok" : "warn"}`}>
+          <div className={`summary-row ${draft.techStack.length > 0 ? "ok" : "warn"}`}>
+            <span>기술 스택</span>
+            <strong>{techStackSummary}</strong>
+          </div>
+          <div className={`summary-row ${draft.achievements.length > 0 || draft.strengths.length > 0 ? "ok" : "warn"}`}>
             <span>소개글 근거</span>
-            <strong>{`${draft.achievements.length}개 성과 · ${draft.strengths.length}개 강점`}</strong>
+            <strong>{`성과 ${draft.achievements.length} · 강점 ${draft.strengths.length}`}</strong>
           </div>
-          <div className="mini-stat">
+          <div className="summary-row">
             <span>경력 / 프로젝트</span>
-            <strong>{`${completedExperienceCount}개 경력 · ${completedProjectCount}개 프로젝트`}</strong>
+            <strong>{`경력 ${completedExperienceCount} · 프로젝트 ${completedProjectCount}`}</strong>
           </div>
         </div>
       </section>
 
-      <section className="card">
+      <section className="card workflow-section-card">
         <div className="card-head">
           <div>
             <p className="card-kicker">1. 핵심 정보</p>
@@ -588,13 +587,19 @@ export default function ResumePage() {
             className={`field field-full ${draft.techStack.length === 0 ? "field-error" : ""}`}
           >
             <span>기술 스택</span>
-            <TagInput
-              ariaLabel="기술 스택"
-              values={draft.techStack}
-              onChange={(values) => syncDraft({ ...draft, techStack: values })}
-              placeholder="입력 후 Enter로 추가"
+            <input
+              className="form-input inline-stack-input"
+              type="text"
+              value={techStackText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTechStackText(value);
+                syncDraft({ ...draft, techStack: parseInlineItems(value) });
+              }}
+              placeholder="예) Java, Spring Boot, MySQL, Redis, Docker"
               disabled={uiBusy}
             />
+            <span className="field-help">쉼표로 구분해서 한 줄로 적으면 됩니다.</span>
           </div>
 
           <label className="field field-full">
@@ -608,7 +613,7 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card workflow-section-card">
         <div className="card-head">
           <div>
             <p className="card-kicker">2. 소개글 근거</p>
@@ -652,7 +657,7 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card workflow-section-card">
         <div className="card-head">
           <div>
             <p className="card-kicker">3. 경력</p>
@@ -743,7 +748,7 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card workflow-section-card">
         <div className="card-head">
           <div>
             <p className="card-kicker">4. 프로젝트</p>
@@ -759,9 +764,7 @@ export default function ResumePage() {
           </button>
         </div>
 
-        <p className="card-copy">
-          링크, 부제목, PDF 하이라이트는 step 4에서 최종 출력 직전에 다룹니다. 여기서는 소개글 생성에 필요한 핵심 설명만 다듬으면 됩니다.
-        </p>
+        <p className="card-copy">링크와 출력 전용 정보는 step 4에서 다룹니다. 여기서는 핵심 설명만 남기면 됩니다.</p>
 
         {draft.projects.length === 0 && <p className="muted-help">아직 프로젝트가 없어요.</p>}
 
@@ -814,18 +817,26 @@ export default function ResumePage() {
                       disabled={uiBusy}
                     />
                   </label>
-                  <div className="project-stack-panel field-full">
-                    <div className="field">
-                      <span>기술 스택</span>
-                      <TagInput
-                        ariaLabel="프로젝트 기술 스택"
-                        values={item.techStack}
-                        onChange={(values) => updateProjectTechStack(index, values)}
-                        placeholder="입력 후 Enter로 추가"
-                        disabled={uiBusy}
-                      />
-                    </div>
-                  </div>
+                  <label className="field field-full">
+                    <span>기술 스택</span>
+                    <input
+                      className="form-input inline-stack-input"
+                      type="text"
+                      value={projectTechStackTexts[index] ?? stringifyInlineList(item.techStack)}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setProjectTechStackTexts((current) => {
+                          const nextValues = [...current];
+                          nextValues[index] = value;
+                          return nextValues;
+                        });
+                        updateProjectTechStack(index, parseInlineItems(value));
+                      }}
+                      placeholder="예) React, TypeScript, Docker"
+                      disabled={uiBusy}
+                    />
+                    <span className="field-help">쉼표로 구분해서 입력하면 됩니다.</span>
+                  </label>
                 </div>
               </div>
             </details>
@@ -833,7 +844,7 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className="card card-review">
+      <section className="card workflow-footer-card">
         <div className="action-panel review">
           <div className="action-copy">
             <strong>이력서 저장</strong>

@@ -8,7 +8,6 @@ import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
 import { ToneInline } from "@/app/components/tone-inline";
 import { toAgentRunOptions } from "@/lib/agent-settings";
-import { formatSavedAt } from "@/lib/date-format";
 import { buildIntroGuidance, buildMatchInsights } from "@/lib/intro-insights";
 import { formatIntroToneLabel } from "@/lib/intro-tone";
 import { getIntroRefreshReasons, getResumeIntroSnapshot, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
@@ -183,6 +182,7 @@ export default function ResultPage() {
   const canGenerate = Boolean(state.resumeConfirmedJson && state.companyConfirmedJson);
   const introFresh = isIntroFresh(state);
   const refreshReasons = getIntroRefreshReasons(state);
+  const needsRefresh = refreshReasons.length > 0;
   const isIntroWorking = state.currentTask === "intro";
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const copyResetRef = useRef<number | null>(null);
@@ -202,37 +202,18 @@ export default function ResultPage() {
     [refreshReasons, state.companyConfirmedJson, state.resumeConfirmedJson]
   );
   const freshnessTone = !state.intro ? "info" : introFresh ? "ok" : "warn";
-  const freshnessHeading = !state.intro
-    ? "아직 만든 소개글이 없어요."
-    : introFresh
-      ? "지금 결과가 최신이에요."
-      : "최신 내용으로 다시 만들 차례예요.";
-  const freshnessBody = !canGenerate
-    ? ""
-    : !state.intro
-      ? ""
-      : introFresh
-        ? ""
-        : refreshReasons.length > 0
-          ? refreshReasons.map((reason) => reason.message).join(" ")
-          : "";
   const actionHeading = !canGenerate
-    ? "소개글 만들기"
+    ? "저장 후 만들 수 있어요"
     : !state.intro
-      ? "소개글을 만들어요"
-      : refreshReasons.length > 0
-        ? "바뀐 내용으로 다시 만들어요"
-        : "필요하면 다시 만들어요";
+      ? "저장한 내용으로 바로 만들 수 있어요"
+      : needsRefresh
+        ? refreshReasonBadges.map((badge) => badge.label).join(", ")
+        : "최신 결과가 준비돼 있어요";
   const actionDescription = !canGenerate
     ? ""
-    : refreshReasonBadges.length > 0
-      ? `${refreshReasonBadges.map((badge) => badge.label).join(", ")} · 톤 ${formatIntroToneLabel(state.introTone)}`
-      : `톤 ${formatIntroToneLabel(state.introTone)}`;
-  const savedMetaItems = [
-    state.resumeSavedAt ? `이력서 저장 ${formatSavedAt(state.resumeSavedAt)}` : null,
-    state.companySavedAt ? `공고 저장 ${formatSavedAt(state.companySavedAt)}` : null,
-    state.introSavedAt ? `소개글 생성 ${formatSavedAt(state.introSavedAt)}` : null
-  ].filter((item): item is string => Boolean(item));
+    : !state.intro || needsRefresh
+      ? ""
+      : "필요하면 같은 조건으로 다시 만들 수 있어요";
   // 소개글 생성은 저장 완료된 스냅샷만 기준으로 삼아, 편집 중 draft가 섞이지 않게 한다.
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
@@ -505,7 +486,7 @@ export default function ResultPage() {
         </section>
       )}
 
-      <section className={`card card-accent ${isIntroWorking ? "card-processing" : ""}`}>
+      <section className={`card card-accent workflow-main-card ${isIntroWorking ? "card-processing" : ""}`}>
         <div className="card-head">
           <div>
             <p className="card-kicker">만들기</p>
@@ -513,33 +494,22 @@ export default function ResultPage() {
           </div>
         </div>
 
-        <div className={`fresh-badge ${freshnessTone}`}>
-          <strong>{freshnessHeading}</strong>
-          {freshnessBody && <span>{freshnessBody}</span>}
-          {savedMetaItems.length > 0 && (
-            <div className="save-meta-row" aria-label="마지막 저장 시각">
-              {savedMetaItems.map((item) => (
-                <span key={item} className="save-meta-chip">
-                  {item}
-                </span>
-              ))}
-            </div>
-          )}
-          {refreshReasonBadges.length > 0 && (
-            <div className="reason-chip-row" aria-label="다시 만들기 이유">
-              {refreshReasonBadges.map((badge) => (
-                <span key={badge.key} className={`reason-chip ${badge.key}`}>
-                  {badge.label}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
         <div className="action-panel">
-          <div className="action-copy">
+          <div className={`action-copy intro-action-copy ${freshnessTone}`}>
             <strong>{actionHeading}</strong>
             {actionDescription && <span>{actionDescription}</span>}
+            {refreshReasonBadges.length > 0 && (
+              <div className="reason-chip-row">
+                {refreshReasonBadges.map((badge) => (
+                  <span
+                    key={badge.key}
+                    className={`reason-chip ${badge.key === "resume" ? "resume" : "company"}`}
+                  >
+                    {badge.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="action-controls">
             <ToneInline disabled={isBusy || !canGenerate} />
@@ -551,13 +521,49 @@ export default function ResultPage() {
         </div>
       </section>
 
+      <section className="card workflow-result-card result-output-shell">
+        <div className="result-output-head">
+          <div>
+            <p className="card-kicker">결과</p>
+            <h2>복사 전에 한 번만 읽어 보세요</h2>
+          </div>
+          <p className="sr-only" aria-live="polite">
+            {copyAnnouncement}
+          </p>
+        </div>
+
+        <div className="result-card">
+          {introSections.map((section) => (
+            <article key={section.key} className="result-block">
+              <div className="result-head">
+                <h3>{section.title}</h3>
+                <button
+                  type="button"
+                  className={`secondary copy-btn ${
+                    copyFeedback?.key === section.key ? copyFeedback.status : ""
+                  }`}
+                  onClick={() => void copyText(section)}
+                  disabled={isBusy || !state.intro || !section.value.trim()}
+                >
+                  {copyFeedback?.key === section.key
+                    ? copyFeedback.status === "success"
+                      ? "복사됨"
+                      : "복사 실패"
+                    : "복사"}
+                </button>
+              </div>
+              <p>{section.value || section.emptyText}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {writingAnchorView && (
-        <section className="card">
+        <section className="card workflow-support-card">
           <div className="card-head">
             <div>
               <p className="card-kicker">{writingAnchorView.kicker}</p>
               <h2>{writingAnchorView.title}</h2>
-              <p className="anchor-note">{writingAnchorView.description}</p>
             </div>
           </div>
 
@@ -580,7 +586,7 @@ export default function ResultPage() {
       )}
 
       {insightView && (
-        <section className="card">
+        <section className="card workflow-support-card">
           <div className="card-head insight-head">
             <div className="insight-head-copy">
               <p className="card-kicker">{insightView.kicker}</p>
@@ -634,45 +640,8 @@ export default function ResultPage() {
         </section>
       )}
 
-      <section className="card result-output-shell">
-        <div className="result-output-head">
-          <div>
-            <p className="card-kicker">결과</p>
-            <h2>복사 전에 한 번만 읽어 보세요</h2>
-          </div>
-          <p className="sr-only" aria-live="polite">
-            {copyAnnouncement}
-          </p>
-        </div>
-
-        <div className="result-card">
-          {introSections.map((section) => (
-            <article key={section.key} className="result-block">
-              <div className="result-head">
-                <h3>{section.title}</h3>
-                <button
-                  type="button"
-                  className={`secondary copy-btn ${
-                    copyFeedback?.key === section.key ? copyFeedback.status : ""
-                  }`}
-                  onClick={() => void copyText(section)}
-                  disabled={isBusy || !state.intro || !section.value.trim()}
-                >
-                  {copyFeedback?.key === section.key
-                    ? copyFeedback.status === "success"
-                      ? "복사됨"
-                      : "복사 실패"
-                    : "복사"}
-                </button>
-              </div>
-              <p>{section.value || section.emptyText}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       {state.previousIntro && state.intro && (
-        <section className="card compare-shell">
+        <section className="card workflow-support-card compare-shell">
           <div className="card-head">
             <div>
               <p className="card-kicker">비교</p>
@@ -724,13 +693,11 @@ export default function ResultPage() {
         </section>
       )}
 
-      <section className="card card-review">
+      <section className="card workflow-footer-card">
         <div className="action-panel review">
           <div className="action-copy">
             <strong>다음 단계: PDF 마감</strong>
-            <span>
-              최신 소개글이 준비되면 step 4에서 PDF에 들어갈 내용을 마지막으로 다듬고 내려받습니다.
-            </span>
+            <span>최신 소개글이 준비되면 step 4에서 마지막으로 다듬고 내려받습니다.</span>
           </div>
           <div className="action-row">
             {canExportPdf ? (

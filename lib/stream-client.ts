@@ -48,7 +48,7 @@ function toErrorMessage(payload: unknown): string {
   const maybeError = payload as { message?: unknown; details?: unknown };
   const message = typeof maybeError.message === "string" ? maybeError.message : "요청 실패";
   const details = typeof maybeError.details === "string" ? maybeError.details : "";
-  const normalized = normalizeUserFacingMessage(message);
+  const normalized = normalizeUserFacingMessage(message, details);
 
   if (normalized !== message) {
     return normalized;
@@ -57,7 +57,22 @@ function toErrorMessage(payload: unknown): string {
   return details ? `${message} (${details})` : message;
 }
 
-function normalizeUserFacingMessage(message: string): string {
+function normalizeUserFacingMessage(message: string, details = ""): string {
+  if (message.includes("Codex 실행 중 오류가 발생했습니다.")) {
+    if (
+      details.includes("reasoning.effort 'minimal'") &&
+      details.includes("web_search")
+    ) {
+      return "현재 minimal 추론 설정에서는 검색 도구를 함께 쓸 수 없어요. reasoning effort를 low 이상으로 바꾼 뒤 다시 시도해 주세요.";
+    }
+
+    if (details.includes("Codex Exec exited with code")) {
+      return "Codex 실행이 중간에 종료됐어요. 잠시 후 다시 시도해 주세요.";
+    }
+
+    return "Codex 실행 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
+  }
+
   if (
     message.includes("결과를 받지 못했어요") ||
     message.includes("응답이 비어 있습니다") ||

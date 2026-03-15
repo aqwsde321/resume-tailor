@@ -2,11 +2,10 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { PdfEditorWorkspace } from "@/app/components/pdf-editor-workspace";
-import { formatSavedAt } from "@/lib/date-format";
 import { buildPdfDownloadName, buildTypstResumeDocument } from "@/lib/pdf/view-model";
 import { getIntroRefreshReasons, getResumeIntroSnapshot, isIntroFresh, usePipeline } from "@/lib/pipeline-context";
 import { CompanySchema, ResumeSchema } from "@/lib/schemas";
@@ -41,6 +40,8 @@ export default function PdfPage() {
   const refreshReasons = getIntroRefreshReasons(state);
   const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [pdfError, setPdfError] = useState("");
+  const workspaceRef = useRef<HTMLElement | null>(null);
+  const autoDockedRef = useRef(false);
 
   const confirmedResume = useMemo(() => {
     if (!state.resumeConfirmedJson) {
@@ -100,6 +101,63 @@ export default function PdfPage() {
     }
   }, [confirmedCompany]);
 
+  useEffect(() => {
+    if (!canExportPdf) {
+      autoDockedRef.current = false;
+      return;
+    }
+
+    const syncDockState = () => {
+      const workspace = workspaceRef.current;
+      if (!workspace || window.innerWidth <= 1100) {
+        autoDockedRef.current = false;
+        return;
+      }
+
+      if (workspace.getBoundingClientRect().top > 320) {
+        autoDockedRef.current = false;
+      }
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (window.innerWidth <= 1100 || event.deltaY <= 0 || autoDockedRef.current) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(".pdf-editor-pane, .pdf-preview-pane, .pdf-workspace-footer")
+      ) {
+        return;
+      }
+
+      const workspace = workspaceRef.current;
+      if (!workspace) {
+        return;
+      }
+
+      const rect = workspace.getBoundingClientRect();
+      const snapBand = 260;
+
+      if (rect.top <= snapBand && rect.top > 18) {
+        autoDockedRef.current = true;
+        event.preventDefault();
+        window.scrollTo({
+          top: window.scrollY + rect.top - 18,
+          behavior: "smooth"
+        });
+      }
+    };
+
+    window.addEventListener("scroll", syncDockState, { passive: true });
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener("scroll", syncDockState);
+      window.removeEventListener("wheel", handleWheel);
+    };
+  }, [canExportPdf]);
+
   const handlePdfExport = async () => {
     clearStatus();
 
@@ -155,6 +213,8 @@ export default function PdfPage() {
       title="PDF 내보내기"
       description="출력할 내용만 마지막으로 정리하고 Typst PDF로 내보냅니다."
       layout="wide"
+      stickyShell={false}
+      showSaveSummary={false}
     >
       {!canExportPdf && (
         <section className="card card-alert">
@@ -185,14 +245,6 @@ export default function PdfPage() {
 
       {canExportPdf && state.intro && confirmedResume && confirmedCompany && (
         <>
-          <div className="save-meta-row pdf-meta-row" aria-label="PDF 단계 메타">
-            {state.introSavedAt && (
-              <span className="save-meta-chip">소개글 생성 {formatSavedAt(state.introSavedAt)}</span>
-            )}
-            <span className="save-meta-chip">{confirmedCompany.companyName || "회사"} PDF</span>
-            <span className="save-meta-chip">{confirmedResume.projects.length}개 프로젝트 반영</span>
-          </div>
-
           {pdfResume && pdfIntro && pdfCompany && (
             <PdfEditorWorkspace
               company={pdfCompany}
@@ -203,6 +255,7 @@ export default function PdfPage() {
               onExport={() => void handlePdfExport()}
               onIntroChange={setPdfIntro}
               onResumeChange={setPdfResume}
+              rootRef={workspaceRef}
               resume={pdfResume}
             />
           )}

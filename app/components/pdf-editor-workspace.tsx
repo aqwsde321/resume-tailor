@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type RefObject } from "react";
 
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
-import { TagInput } from "@/app/components/tag-input";
-import { parseListText, stringifyLineList } from "@/lib/list-input";
+import {
+  parseInlineItems,
+  parseListText,
+  stringifyInlineList,
+  stringifyLineList
+} from "@/lib/list-input";
 import { buildTypstResumeDocument, formatPdfContactDisplay } from "@/lib/pdf/view-model";
 import {
   makeEmptyContact,
@@ -22,6 +26,7 @@ interface PdfEditorWorkspaceProps {
   onExport: () => void;
   onIntroChange: (nextIntro: Intro) => void;
   onResumeChange: (nextResume: Resume) => void;
+  rootRef?: RefObject<HTMLElement | null>;
   resume: Resume;
 }
 
@@ -38,6 +43,29 @@ interface TypstPreviewState {
   error: string;
   pages: string[];
   status: TypstPreviewStatus;
+}
+
+type PdfSectionKey =
+  | "header"
+  | "contacts"
+  | "intro"
+  | "experience"
+  | "highlights"
+  | "projects"
+  | "skills"
+  | "strengths";
+
+interface PdfSectionDefinition {
+  action?: ReactNode;
+  children: ReactNode;
+  chipTitle?: string;
+  description?: string;
+  isActive: boolean;
+  kicker: string;
+  onClose: () => void;
+  onOpen: () => void;
+  summary: string;
+  title: string;
 }
 
 function ListTextarea({ disabled, onChange, placeholder, value }: ListTextareaProps) {
@@ -63,6 +91,64 @@ function ListTextarea({ disabled, onChange, placeholder, value }: ListTextareaPr
   );
 }
 
+function PdfEditorSection({
+  action,
+  children,
+  chipTitle,
+  description,
+  isActive,
+  kicker,
+  onClose,
+  onOpen,
+  summary,
+  title
+}: PdfSectionDefinition) {
+  return (
+    <>
+      <button
+        type="button"
+        className={`pdf-editor-chip ${isActive ? "active" : ""}`}
+        onClick={onOpen}
+      >
+        <span className="pdf-editor-chip-copy">
+          <span className="pdf-editor-chip-key">{kicker}</span>
+          <span className="pdf-editor-chip-title">{chipTitle ?? title}</span>
+        </span>
+        <span className="pdf-editor-chip-meta">{summary}</span>
+      </button>
+
+      {isActive && (
+        <section className="pdf-modal-shell" aria-modal="true" role="dialog">
+          <button
+            type="button"
+            className="pdf-modal-backdrop"
+            onClick={onClose}
+            aria-label={`${title} 편집 닫기`}
+          />
+
+          <div className="pdf-modal pdf-editor-modal">
+            <div className="pdf-modal-head">
+              <div>
+                <p className="card-kicker">{kicker}</p>
+                <h2>{title}</h2>
+                {description && <p className="pdf-modal-copy">{description}</p>}
+              </div>
+              <div className="pdf-modal-actions">
+                {action}
+                <button type="button" className="secondary" onClick={onClose}>
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            <div className="pdf-editor-modal-body">{children}</div>
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
 export function PdfEditorWorkspace({
   company,
   error,
@@ -72,6 +158,7 @@ export function PdfEditorWorkspace({
   onExport,
   onIntroChange,
   onResumeChange,
+  rootRef,
   resume
 }: PdfEditorWorkspaceProps) {
   const preview = buildTypstResumeDocument(resume, intro, company);
@@ -80,6 +167,7 @@ export function PdfEditorWorkspace({
     pages: [],
     status: "idle"
   });
+  const [openSection, setOpenSection] = useState<PdfSectionKey | null>(null);
   const previewRequestBody = useMemo(
     () =>
       JSON.stringify({
@@ -142,6 +230,31 @@ export function PdfEditorWorkspace({
     };
   }, [previewRequestBody]);
 
+  useEffect(() => {
+    if (!openSection) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenSection(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openSection]);
+
+  useEffect(() => {
+    document.body.classList.toggle("pdf-modal-open", Boolean(openSection));
+
+    return () => {
+      document.body.classList.remove("pdf-modal-open");
+    };
+  }, [openSection]);
+
   const updateResume = (updater: (current: Resume) => Resume) => {
     onResumeChange(updater(resume));
   };
@@ -191,20 +304,23 @@ export function PdfEditorWorkspace({
   };
 
   return (
-    <section className="pdf-workspace">
+    <section className="pdf-workspace" ref={rootRef}>
       {error && <p className="status error">{error}</p>}
 
       <div className="pdf-workspace-grid">
         <div className="pdf-editor-pane">
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Header</p>
-                <h3>상단 헤더</h3>
-              </div>
-              <span className="inline-badge">첫 화면 기준</span>
-            </div>
+          <p className="pdf-editor-toolbar-label">수정 섹션</p>
 
+          <PdfEditorSection
+            kicker="Header"
+            title="상단 헤더"
+            chipTitle="상단"
+            description="첫 화면 기준으로 이름, 직무, 회사 정보를 맞춥니다."
+            summary="기본"
+            isActive={openSection === "header"}
+            onOpen={() => setOpenSection("header")}
+            onClose={() => setOpenSection(null)}
+          >
             <div className="form-grid pdf-form-grid-header">
               <label className="field">
                 <span>이름</span>
@@ -287,14 +403,18 @@ export function PdfEditorWorkspace({
                 />
               </label>
             </div>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Contacts</p>
-                <h3>연락처</h3>
-              </div>
+          <PdfEditorSection
+            kicker="Contacts"
+            title="연락처"
+            chipTitle="연락"
+            description="값이 있는 항목만 PDF에 노출됩니다."
+            summary={`${resume.contacts.length}개`}
+            isActive={openSection === "contacts"}
+            onOpen={() => setOpenSection("contacts")}
+            onClose={() => setOpenSection(null)}
+            action={
               <button
                 type="button"
                 className="secondary"
@@ -308,8 +428,9 @@ export function PdfEditorWorkspace({
               >
                 연락처 추가
               </button>
-            </div>
-
+            }
+          >
+            
             {resume.contacts.length === 0 && (
               <p className="muted-help">
                 이메일, GitHub, 블로그처럼 PDF에 바로 보일 값만 넣으면 됩니다. 값이 없으면 이 줄은 숨겨집니다.
@@ -379,17 +500,18 @@ export function PdfEditorWorkspace({
                 </div>
               ))}
             </div>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Tailored Intro</p>
-                <h3>소개글</h3>
-              </div>
-              <span className="inline-badge ok">{company.companyName || "회사"} 기준</span>
-            </div>
-
+          <PdfEditorSection
+            kicker="Tailored Intro"
+            title="소개글"
+            chipTitle="소개"
+            description={`${company.companyName || "회사"} 기준으로 들어가는 최종 문장입니다.`}
+            summary={intro.longIntro.trim() ? "본문" : "빈칸"}
+            isActive={openSection === "intro"}
+            onOpen={() => setOpenSection("intro")}
+            onClose={() => setOpenSection(null)}
+          >
             <label className="field">
               <span>최종 소개글</span>
               <AutoGrowTextarea
@@ -399,14 +521,18 @@ export function PdfEditorWorkspace({
                 disabled={exporting}
               />
             </label>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Experience</p>
-                <h3>경력</h3>
-              </div>
+          <PdfEditorSection
+            kicker="Experience"
+            title="경력"
+            chipTitle="경력"
+            description="핵심 역할과 기간만 명확하면 충분합니다."
+            summary={`${resume.experience.length}개`}
+            isActive={openSection === "experience"}
+            onOpen={() => setOpenSection("experience")}
+            onClose={() => setOpenSection(null)}
+            action={
               <button
                 type="button"
                 className="secondary"
@@ -420,7 +546,8 @@ export function PdfEditorWorkspace({
               >
                 경력 추가
               </button>
-            </div>
+            }
+          >
 
             {resume.experience.length === 0 && <p className="muted-help">경력이 없으면 이 영역은 PDF에서 숨겨집니다.</p>}
 
@@ -487,17 +614,18 @@ export function PdfEditorWorkspace({
                 </div>
               ))}
             </div>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Highlights</p>
-                <h3>Highlights</h3>
-              </div>
-              <span className="inline-badge">한 줄씩 Enter</span>
-            </div>
-
+          <PdfEditorSection
+            kicker="Highlights"
+            title="Highlights"
+            chipTitle="핵심"
+            description="한 줄이 항목 1개입니다."
+            summary={`${resume.pdfHighlights.length}개`}
+            isActive={openSection === "highlights"}
+            onOpen={() => setOpenSection("highlights")}
+            onClose={() => setOpenSection(null)}
+          >
             <label className="field">
               <span>Highlights</span>
               <ListTextarea
@@ -512,14 +640,18 @@ export function PdfEditorWorkspace({
                 disabled={exporting}
               />
             </label>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Projects</p>
-                <h3>프로젝트</h3>
-              </div>
+          <PdfEditorSection
+            kicker="Projects"
+            title="프로젝트"
+            chipTitle="프로젝트"
+            description="step 1에 없던 링크와 부제목도 여기서 바로 반영됩니다."
+            summary={`${resume.projects.length}개`}
+            isActive={openSection === "projects"}
+            onOpen={() => setOpenSection("projects")}
+            onClose={() => setOpenSection(null)}
+            action={
               <button
                 type="button"
                 className="secondary"
@@ -533,7 +665,8 @@ export function PdfEditorWorkspace({
               >
                 프로젝트 추가
               </button>
-            </div>
+            }
+          >
 
             {resume.projects.length === 0 && <p className="muted-help">프로젝트가 없으면 이 영역은 PDF에서 숨겨집니다.</p>}
 
@@ -587,16 +720,20 @@ export function PdfEditorWorkspace({
                       />
                     </label>
 
-                    <div className="field">
+                    <label className="field">
                       <span>기술 스택</span>
-                      <TagInput
-                        ariaLabel={`프로젝트 ${index + 1} 기술 스택`}
-                        values={project.techStack}
-                        onChange={(values) => updateProjectTechStack(index, values)}
-                        placeholder="입력 후 Enter로 추가"
+                      <AutoGrowTextarea
+                        className="inline-list-textarea"
+                        aria-label={`프로젝트 ${index + 1} 기술 스택`}
+                        placeholder="예: Node.js, TypeScript, PostgreSQL"
+                        value={stringifyInlineList(project.techStack)}
+                        onChange={(event) =>
+                          updateProjectTechStack(index, parseInlineItems(event.target.value))
+                        }
+                        minHeight={44}
                         disabled={exporting}
                       />
-                    </div>
+                    </label>
 
                     <div className="form-grid two">
                       <label className="field">
@@ -640,49 +777,50 @@ export function PdfEditorWorkspace({
                     </label>
                   </div>
 
-                  <p className="muted-help">
-                    step 1에 없던 링크나 부제목도 여기서 바로 넣으면 이번 PDF에 바로 반영됩니다.
-                  </p>
                 </div>
               ))}
             </div>
-          </section>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Skills</p>
-                <h3>기술 스택</h3>
-              </div>
-              <span className="inline-badge">미리보기에서 자동 그룹화</span>
-            </div>
-
-            <div className="field">
+          <PdfEditorSection
+            kicker="Skills"
+            title="기술 스택"
+            chipTitle="스택"
+            description="미리보기에서는 자동 그룹화됩니다."
+            summary={`${resume.techStack.length}개`}
+            isActive={openSection === "skills"}
+            onOpen={() => setOpenSection("skills")}
+            onClose={() => setOpenSection(null)}
+          >
+            <label className="field">
               <span>전체 기술 스택</span>
-              <TagInput
-                ariaLabel="PDF 기술 스택"
-                values={resume.techStack}
-                onChange={(values) =>
+              <AutoGrowTextarea
+                className="inline-list-textarea"
+                aria-label="PDF 기술 스택"
+                placeholder="예: Java, Spring Boot, JPA, Docker"
+                value={stringifyInlineList(resume.techStack)}
+                onChange={(event) =>
                   updateResume((current) => ({
                     ...current,
-                    techStack: values
+                    techStack: parseInlineItems(event.target.value)
                   }))
                 }
-                placeholder="입력 후 Enter로 추가"
+                minHeight={44}
                 disabled={exporting}
               />
-            </div>
-          </section>
+            </label>
+          </PdfEditorSection>
 
-          <section className="pdf-editor-card">
-            <div className="pdf-editor-card-head">
-              <div>
-                <p className="card-kicker">Strengths</p>
-                <h3>Strengths</h3>
-              </div>
-              <span className="inline-badge">한 줄씩 Enter</span>
-            </div>
-
+          <PdfEditorSection
+            kicker="Strengths"
+            title="Strengths"
+            chipTitle="강점"
+            description="한 줄이 항목 1개입니다."
+            summary={`${resume.pdfStrengths.length}개`}
+            isActive={openSection === "strengths"}
+            onOpen={() => setOpenSection("strengths")}
+            onClose={() => setOpenSection(null)}
+          >
             <label className="field">
               <span>Strengths</span>
               <ListTextarea
@@ -697,7 +835,7 @@ export function PdfEditorWorkspace({
                 disabled={exporting}
               />
             </label>
-          </section>
+          </PdfEditorSection>
         </div>
 
         <div className="pdf-preview-pane">
@@ -706,6 +844,9 @@ export function PdfEditorWorkspace({
               <div>
                 <p className="card-kicker">Typst Preview</p>
                 <h3>실제 출력 미리보기</h3>
+                <p className="pdf-preview-card-copy">
+                  {company.companyName || "회사"} 기준 최종 PDF를 그대로 보여줍니다.
+                </p>
               </div>
               <span className={`inline-badge ${typstPreview.status === "error" ? "warn" : "ok"}`}>
                 {typstPreview.status === "ready"
@@ -871,6 +1012,10 @@ export function PdfEditorWorkspace({
       </div>
 
       <div className="pdf-workspace-footer">
+        <div className="action-copy">
+          <strong>{company.companyName || "회사"} PDF</strong>
+          <span>미리보기 기준으로 확인한 뒤 최종 PDF를 내보냅니다.</span>
+        </div>
         <div className="action-row">
           <button type="button" className="primary" onClick={onExport} disabled={exporting}>
             {exporting ? "PDF 만드는 중..." : "PDF 내보내기"}

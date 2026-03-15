@@ -45,3 +45,7 @@ export function parseListText(value: string): string[] {
 export function stringifyLineList(values: string[]): string {
   return values.join("\n");
 }
+
+export function stringifyInlineList(values: string[]): string {
+  return values.join(", ");
+}
