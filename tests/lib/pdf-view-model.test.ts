@@ -88,12 +88,46 @@ describe("buildTypstResumeDocument", () => {
 
     expect(document.techGroups).toEqual([
       {
+        label: "Frontend",
+        items: []
+      },
+      {
         label: "Backend",
         items: ["Node.js"]
       },
       {
         label: "Database",
         items: ["PostgreSQL", "Redis"]
+      },
+      {
+        label: "DevOps / Tool",
+        items: ["Docker"]
+      }
+    ]);
+  });
+
+  it("프론트엔드 스택이 있으면 Frontend 그룹으로 자동 분류한다", () => {
+    const document = buildTypstResumeDocument(
+      {
+        ...resumeFixture,
+        techStack: ["React", "TypeScript", "Next.js", "Tailwind CSS", "PostgreSQL", "Docker"]
+      },
+      introFixture,
+      companyFixture
+    );
+
+    expect(document.techGroups).toEqual([
+      {
+        label: "Frontend",
+        items: ["React", "TypeScript", "Next.js", "Tailwind CSS"]
+      },
+      {
+        label: "Backend",
+        items: []
+      },
+      {
+        label: "Database",
+        items: ["PostgreSQL"]
       },
       {
         label: "DevOps / Tool",

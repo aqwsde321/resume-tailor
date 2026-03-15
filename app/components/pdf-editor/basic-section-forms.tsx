@@ -1,12 +1,12 @@
 "use client";
 
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
-import { parseInlineItems, stringifyInlineList } from "@/lib/list-input";
 import { formatPdfContactDisplay } from "@/lib/pdf/view-model";
 
 import type {
   HeaderSectionFormProps,
   IntroSectionFormProps,
+  SkillsSectionFormProps,
   SharedSectionProps
 } from "./section-form-types";
 
@@ -216,9 +216,9 @@ export function IntroSectionForm({
 
 export function SkillsSectionForm({
   exporting,
-  resume,
-  updateResume
-}: SharedSectionProps) {
+  onSkillsTextChange,
+  skillsText
+}: SkillsSectionFormProps) {
   return (
     <label className="field">
       <span>전체 기술 스택</span>
@@ -226,13 +226,8 @@ export function SkillsSectionForm({
         className="inline-list-textarea"
         aria-label="PDF 기술 스택"
         placeholder="예: Java, Spring Boot, JPA, Docker"
-        value={stringifyInlineList(resume.techStack)}
-        onChange={(event) =>
-          updateResume((current) => ({
-            ...current,
-            techStack: parseInlineItems(event.target.value)
-          }))
-        }
+        value={skillsText}
+        onChange={(event) => onSkillsTextChange(event.target.value)}
         minHeight={44}
         disabled={exporting}
       />

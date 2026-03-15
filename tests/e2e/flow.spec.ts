@@ -272,6 +272,27 @@ test("최신 소개글이 있으면 step 4 PDF 화면으로 이동해 바로 미
   await expect(page.getByRole("button", { name: "PDF 내보내기" })).toBeVisible();
 });
 
+test("이력서와 공고 기술 스택 입력은 쉼표를 입력하는 도중 raw text를 유지한다", async ({ page }) => {
+  await completeResumeStep(page);
+
+  const resumeTechStackInput = getResumeCoreSection(page).locator(".inline-stack-input");
+  await resumeTechStackInput.fill("");
+  await resumeTechStackInput.type("React,");
+  await expect(resumeTechStackInput).toHaveValue("React,");
+  await page.getByRole("button", { name: "이력서 저장" }).click();
+
+  await page.getByRole("link", { name: "공고 정리로 가기" }).click();
+  const companySection = getCompanyReviewSection(page);
+
+  await page.getByPlaceholder("채용 공고 내용을 붙여넣어 주세요.").fill("Beta Corp 채용공고 원문");
+  await page.getByRole("button", { name: "내용 정리" }).click();
+
+  const companyTechStackInput = companySection.getByLabel("공고 기술 스택");
+  await companyTechStackInput.fill("");
+  await companyTechStackInput.type("Java,");
+  await expect(companyTechStackInput).toHaveValue("Java,");
+});
+
 test("PDF 단계의 Highlights는 Enter 줄바꿈으로 여러 항목을 바로 편집할 수 있다", async ({ page }) => {
   await completeIntroFlow(page);
 
@@ -287,6 +308,27 @@ test("PDF 단계의 Highlights는 Enter 줄바꿈으로 여러 항목을 바로 
   const preview = page.locator(".pdf-preview-pane");
   await expect(preview.getByText("첫 번째 근거")).toBeVisible();
   await expect(preview.getByText("두 번째 근거")).toBeVisible();
+});
+
+test("PDF 기술 스택 입력은 쉼표와 줄바꿈이 완성되기 전 raw text를 유지한다", async ({ page }) => {
+  await completeIntroFlow(page);
+
+  await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Skills" }).click();
+  const skillsModal = page.locator(".pdf-editor-modal");
+  const skillsField = skillsModal.getByLabel("PDF 기술 스택");
+  await skillsField.fill("");
+  await skillsField.type("Java,");
+  await expect(skillsField).toHaveValue("Java,");
+  await skillsModal.getByRole("button", { name: "닫기" }).click();
+
+  await page.locator(".pdf-editor-chip").filter({ hasText: "Projects" }).click();
+  const projectsModal = page.locator(".pdf-editor-modal");
+  const projectTechStackField = projectsModal.getByLabel("프로젝트 1 기술 스택");
+  await projectTechStackField.fill("");
+  await projectTechStackField.type("Node.js,");
+  await expect(projectTechStackField).toHaveValue("Node.js,");
 });
 
 test("모바일 PDF 단계는 4열 수정 칩을 유지하고 섹션 모달을 화면 안에서 연다", async ({ page }) => {

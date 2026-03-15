@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
@@ -62,10 +62,21 @@ export default function ResumePage() {
     useRequiredFieldFocus<ResumeRequiredFieldKey>();
 
   const [draft, setDraft] = useState<Resume>(() => toResumeDraft(state.resumeJsonText));
-  const [techStackText, setTechStackText] = useState("");
-  const [projectTechStackTexts, setProjectTechStackTexts] = useState<string[]>([]);
-  const [achievementsText, setAchievementsText] = useState("");
-  const [strengthsText, setStrengthsText] = useState("");
+  const [techStackText, setTechStackText] = useState(() =>
+    stringifyInlineList(toResumeDraft(state.resumeJsonText).techStack)
+  );
+  const [projectTechStackTexts, setProjectTechStackTexts] = useState<string[]>(() =>
+    toResumeDraft(state.resumeJsonText).projects.map((project) =>
+      stringifyInlineList(project.techStack)
+    )
+  );
+  const [achievementsText, setAchievementsText] = useState(() =>
+    stringifyLineList(toResumeDraft(state.resumeJsonText).achievements)
+  );
+  const [strengthsText, setStrengthsText] = useState(() =>
+    stringifyLineList(toResumeDraft(state.resumeJsonText).strengths)
+  );
+  const lastLocalResumeJsonRef = useRef<string | null>(null);
   const normalizedDraftJson = serializeResume(draft);
   const normalizedConfirmedResumeJson = normalizeResumeJsonText(state.resumeConfirmedJson);
   const resumeNeedsConfirm = Boolean(state.resumeSavedAt) && normalizedConfirmedResumeJson !== normalizedDraftJson;
@@ -80,13 +91,18 @@ export default function ResumePage() {
 
   const hasMissingResumeRequired = missingResumeRequired.length > 0;
   useEffect(() => {
-    // 스트림 결과나 저장된 JSON이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
+    if (lastLocalResumeJsonRef.current === state.resumeJsonText) {
+      return;
+    }
+
+    // 외부에서 들어온 JSON이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toResumeDraft(state.resumeJsonText);
     setDraft(next);
     setTechStackText(stringifyInlineList(next.techStack));
     setProjectTechStackTexts(next.projects.map((project) => stringifyInlineList(project.techStack)));
     setAchievementsText(stringifyLineList(next.achievements));
     setStrengthsText(stringifyLineList(next.strengths));
+    lastLocalResumeJsonRef.current = state.resumeJsonText;
   }, [state.resumeJsonText]);
 
   const setResumeText = (value: string) => {
@@ -129,7 +145,9 @@ export default function ResumePage() {
 
   const syncDraft = (next: Resume) => {
     setDraft(next);
-    setResumeJsonText(JSON.stringify(next, null, 2));
+    const nextJson = serializeResume(next);
+    lastLocalResumeJsonRef.current = nextJson;
+    setResumeJsonText(nextJson);
   };
 
   const updateExperience = (

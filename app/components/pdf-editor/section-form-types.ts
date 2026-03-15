@@ -21,3 +21,13 @@ export interface IntroSectionFormProps {
   intro: Intro;
   onIntroChange: IntroUpdater;
 }
+
+export interface SkillsSectionFormProps extends SharedSectionProps {
+  onSkillsTextChange: (value: string) => void;
+  skillsText: string;
+}
+
+export interface ProjectsSectionFormProps extends SharedSectionProps {
+  onProjectTechStackTextChange: (index: number, value: string) => void;
+  projectTechStackTexts: string[];
+}

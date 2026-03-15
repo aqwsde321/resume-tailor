@@ -51,6 +51,35 @@ export interface TypstResumeDocument {
   strengths: string[];
 }
 
+const FRONTEND_SKILLS = new Set([
+  "react",
+  "next.js",
+  "nextjs",
+  "vue",
+  "vue.js",
+  "nuxt",
+  "nuxt.js",
+  "angular",
+  "svelte",
+  "sveltekit",
+  "html",
+  "css",
+  "scss",
+  "sass",
+  "tailwind",
+  "tailwind css",
+  "styled-components",
+  "styled components",
+  "emotion",
+  "redux",
+  "recoil",
+  "zustand",
+  "vite",
+  "webpack",
+  "storybook",
+  "jquery"
+]);
+
 const BACKEND_SKILLS = new Set([
   "java",
   "spring",
@@ -63,8 +92,6 @@ const BACKEND_SKILLS = new Set([
   "nestjs",
   "express",
   "fastify",
-  "typescript",
-  "javascript",
   "python",
   "django",
   "flask",
@@ -84,6 +111,8 @@ const BACKEND_SKILLS = new Set([
   "rest api",
   "kotlin"
 ]);
+
+const SHARED_WEB_SKILLS = new Set(["typescript", "javascript"]);
 
 const DATABASE_SKILLS = new Set([
   "mysql",
@@ -157,30 +186,57 @@ function normalizeSkillKey(value: string) {
 
 function buildTechGroups(techStack: string[]): PdfTechGroupView[] {
   const groups: PdfTechGroupView[] = [
+    { label: "Frontend", items: [] },
     { label: "Backend", items: [] },
     { label: "Database", items: [] },
     { label: "DevOps / Tool", items: [] }
   ];
+  const normalizedTechStack = compactStrings(techStack).map((item) => ({
+    raw: item,
+    normalized: normalizeSkillKey(item)
+  }));
+  const hasExplicitFrontend = normalizedTechStack.some(({ normalized }) => FRONTEND_SKILLS.has(normalized));
+  const hasExplicitBackend = normalizedTechStack.some(({ normalized }) => BACKEND_SKILLS.has(normalized));
 
-  for (const item of compactStrings(techStack)) {
-    const normalized = normalizeSkillKey(item);
-
-    if (DATABASE_SKILLS.has(normalized)) {
-      groups[1].items.push(item);
-      continue;
-    }
-
-    if (BACKEND_SKILLS.has(normalized)) {
+  for (const { raw: item, normalized } of normalizedTechStack) {
+    if (FRONTEND_SKILLS.has(normalized)) {
       groups[0].items.push(item);
       continue;
     }
 
-    if (DEVOPS_SKILLS.has(normalized)) {
+    if (DATABASE_SKILLS.has(normalized)) {
       groups[2].items.push(item);
       continue;
     }
 
-    groups[2].items.push(item);
+    if (BACKEND_SKILLS.has(normalized)) {
+      groups[1].items.push(item);
+      continue;
+    }
+
+    if (SHARED_WEB_SKILLS.has(normalized)) {
+      if (hasExplicitFrontend && !hasExplicitBackend) {
+        groups[0].items.push(item);
+        continue;
+      }
+
+      if (hasExplicitBackend && !hasExplicitFrontend) {
+        groups[1].items.push(item);
+        continue;
+      }
+
+      if (hasExplicitFrontend) {
+        groups[0].items.push(item);
+        continue;
+      }
+    }
+
+    if (DEVOPS_SKILLS.has(normalized)) {
+      groups[3].items.push(item);
+      continue;
+    }
+
+    groups[3].items.push(item);
   }
 
   return groups.map((group) => ({

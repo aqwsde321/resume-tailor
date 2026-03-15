@@ -1,16 +1,17 @@
 "use client";
 
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
-import { parseInlineItems, stringifyInlineList } from "@/lib/list-input";
 
 import { ListTextarea } from "./list-textarea";
-import type { SharedSectionProps } from "./section-form-types";
+import type { ProjectsSectionFormProps } from "./section-form-types";
 
 export function ProjectsSectionForm({
   exporting,
+  onProjectTechStackTextChange,
+  projectTechStackTexts,
   resume,
   updateResume
-}: SharedSectionProps) {
+}: ProjectsSectionFormProps) {
   const updateProjectField = (
     index: number,
     key: "name" | "description" | "subtitle" | "link" | "linkLabel",
@@ -20,15 +21,6 @@ export function ProjectsSectionForm({
       ...current,
       projects: current.projects.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [key]: value } : item
-      )
-    }));
-  };
-
-  const updateProjectTechStack = (index: number, techStack: string[]) => {
-    updateResume((current) => ({
-      ...current,
-      projects: current.projects.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, techStack } : item
       )
     }));
   };
@@ -97,10 +89,8 @@ export function ProjectsSectionForm({
                   className="inline-list-textarea"
                   aria-label={`프로젝트 ${index + 1} 기술 스택`}
                   placeholder="예: Node.js, TypeScript, PostgreSQL"
-                  value={stringifyInlineList(project.techStack)}
-                  onChange={(event) =>
-                    updateProjectTechStack(index, parseInlineItems(event.target.value))
-                  }
+                  value={projectTechStackTexts[index] ?? ""}
+                  onChange={(event) => onProjectTechStackTextChange(index, event.target.value)}
                   minHeight={44}
                   disabled={exporting}
                 />

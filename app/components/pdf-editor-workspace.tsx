@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type RefObject } from "react";
 
 import { PdfPreviewPane } from "@/app/components/pdf-editor/preview-pane";
 import {
@@ -19,6 +19,7 @@ import {
 import { PdfEditorModalSection } from "@/app/components/pdf-editor/section-modal";
 import { useTypstPreview } from "@/app/components/pdf-editor/use-typst-preview";
 import type { PdfSectionKey } from "@/app/components/pdf-editor/types";
+import { parseInlineItems, stringifyInlineList } from "@/lib/list-input";
 import type { Company, Intro, Resume } from "@/lib/types";
 
 interface PdfEditorWorkspaceProps {
@@ -45,6 +46,10 @@ interface SectionConfig {
   title: string;
 }
 
+function buildInlineListSignature(values: string[]) {
+  return values.join("\u0001");
+}
+
 export function PdfEditorWorkspace({
   company,
   error,
@@ -59,6 +64,24 @@ export function PdfEditorWorkspace({
 }: PdfEditorWorkspaceProps) {
   const typstPreview = useTypstPreview({ company, intro, resume });
   const [openSection, setOpenSection] = useState<PdfSectionKey | null>(null);
+  const [skillsDraft, setSkillsDraft] = useState(() => ({
+    signature: buildInlineListSignature(resume.techStack),
+    text: stringifyInlineList(resume.techStack)
+  }));
+  const [projectTechStackDrafts, setProjectTechStackDrafts] = useState(() =>
+    resume.projects.map((project) => ({
+      signature: buildInlineListSignature(project.techStack),
+      text: stringifyInlineList(project.techStack)
+    }))
+  );
+  const resumeTechStackSignature = useMemo(
+    () => buildInlineListSignature(resume.techStack),
+    [resume.techStack]
+  );
+  const projectTechStackSignatures = useMemo(
+    () => resume.projects.map((project) => buildInlineListSignature(project.techStack)),
+    [resume.projects]
+  );
 
   useEffect(() => {
     if (!openSection) {
@@ -87,6 +110,53 @@ export function PdfEditorWorkspace({
 
   const updateResume = (updater: (current: Resume) => Resume) => {
     onResumeChange(updater(resume));
+  };
+
+  const resolvedSkillsText =
+    skillsDraft.signature === resumeTechStackSignature
+      ? skillsDraft.text
+      : stringifyInlineList(resume.techStack);
+
+  const resolvedProjectTechStackTexts = useMemo(
+    () =>
+      resume.projects.map((project, index) =>
+        projectTechStackDrafts[index]?.signature === projectTechStackSignatures[index]
+          ? projectTechStackDrafts[index]?.text ?? stringifyInlineList(project.techStack)
+          : stringifyInlineList(project.techStack)
+      ),
+    [projectTechStackDrafts, projectTechStackSignatures, resume.projects]
+  );
+
+  const handleSkillsTextChange = (value: string) => {
+    const nextTechStack = parseInlineItems(value);
+    setSkillsDraft({
+      signature: buildInlineListSignature(nextTechStack),
+      text: value
+    });
+    updateResume((current) => ({
+      ...current,
+      techStack: nextTechStack
+    }));
+  };
+
+  const handleProjectTechStackTextChange = (index: number, value: string) => {
+    const nextTechStack = parseInlineItems(value);
+
+    setProjectTechStackDrafts((current) => {
+      const nextValues = [...current];
+      nextValues[index] = {
+        signature: buildInlineListSignature(nextTechStack),
+        text: value
+      };
+      return nextValues;
+    });
+
+    updateResume((current) => ({
+      ...current,
+      projects: current.projects.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, techStack: nextTechStack } : item
+      )
+    }));
   };
 
   const sections: SectionConfig[] = [
@@ -181,6 +251,8 @@ export function PdfEditorWorkspace({
       body: (
         <ProjectsSectionForm
           exporting={exporting}
+          onProjectTechStackTextChange={handleProjectTechStackTextChange}
+          projectTechStackTexts={resolvedProjectTechStackTexts}
           resume={resume}
           updateResume={updateResume}
         />
@@ -196,7 +268,9 @@ export function PdfEditorWorkspace({
       body: (
         <SkillsSectionForm
           exporting={exporting}
+          onSkillsTextChange={handleSkillsTextChange}
           resume={resume}
+          skillsText={resolvedSkillsText}
           updateResume={updateResume}
         />
       )

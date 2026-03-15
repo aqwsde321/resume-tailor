@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { CompanyDetailsSection } from "@/app/components/company-editor/details-section";
@@ -60,6 +60,10 @@ function toCompanyDraft(jsonText: string): Company {
   return EMPTY_COMPANY;
 }
 
+function serializeCompany(company: Company): string {
+  return JSON.stringify(CompanySchema.parse(company), null, 2);
+}
+
 type CompanyRequiredFieldKey = "companyName" | "jobTitle" | "requirements";
 
 export default function CompanyPage() {
@@ -82,9 +86,16 @@ export default function CompanyPage() {
   const uiBusy = isBusy || isUrlLoading;
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
-  const [techStackText, setTechStackText] = useState("");
-  const [requirementsText, setRequirementsText] = useState("");
-  const [preferredSkillsText, setPreferredSkillsText] = useState("");
+  const [techStackText, setTechStackText] = useState(() =>
+    stringifyInlineList(toCompanyDraft(state.companyJsonText).techStack)
+  );
+  const [requirementsText, setRequirementsText] = useState(() =>
+    stringifyLineList(toCompanyDraft(state.companyJsonText).requirements)
+  );
+  const [preferredSkillsText, setPreferredSkillsText] = useState(() =>
+    stringifyLineList(toCompanyDraft(state.companyJsonText).preferredSkills)
+  );
+  const lastLocalCompanyJsonRef = useRef<string | null>(null);
   const normalizedDraftJson = JSON.stringify(draft, null, 2);
   const companyNeedsConfirm =
     state.companyJsonText.trim().length > 0 && state.companyConfirmedJson !== normalizedDraftJson;
@@ -102,12 +113,17 @@ export default function CompanyPage() {
 
   const hasMissingCompanyRequired = missingCompanyRequired.length > 0;
   useEffect(() => {
-    // 스트림 결과나 외부 저장값이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
+    if (lastLocalCompanyJsonRef.current === state.companyJsonText) {
+      return;
+    }
+
+    // 외부 저장값이 바뀌면 편집용 draft와 줄단위 입력 상태를 다시 맞춘다.
     const next = toCompanyDraft(state.companyJsonText);
     setDraft(next);
     setTechStackText(stringifyInlineList(next.techStack));
     setRequirementsText(stringifyLineList(next.requirements));
     setPreferredSkillsText(stringifyLineList(next.preferredSkills));
+    lastLocalCompanyJsonRef.current = state.companyJsonText;
   }, [state.companyJsonText]);
 
   const setCompanyText = (value: string) => {
@@ -148,7 +164,9 @@ export default function CompanyPage() {
 
   const syncDraft = (next: Company) => {
     setDraft(next);
-    setCompanyJsonText(JSON.stringify(next, null, 2));
+    const nextJson = serializeCompany(next);
+    lastLocalCompanyJsonRef.current = nextJson;
+    setCompanyJsonText(nextJson);
   };
 
   const handleTxtUpload = async (file: File | undefined) => {
