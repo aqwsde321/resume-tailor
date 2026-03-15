@@ -2,12 +2,14 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { SaveActionCard } from "@/app/components/workflow/save-action-card";
+import { SourceInputCard } from "@/app/components/workflow/source-input-card";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
@@ -350,48 +352,24 @@ export default function CompanyPage() {
         </section>
       )}
 
-      <section className={`card card-accent workflow-main-card ${isCompanyWorking ? "card-processing" : ""}`}>
-        <div className="input-card-head">
-          <h2>공고 원문</h2>
-        </div>
-
-        <div className="tabs input-mode-tabs">
-          <button
-            type="button"
-            className={state.companyInputMode === "text" ? "tab active" : "tab"}
-            onClick={() => setCompanyInputMode("text")}
-            disabled={uiBusy || !canEdit}
-          >
-            붙여넣기
-          </button>
-          <button
-            type="button"
-            className={state.companyInputMode === "file" ? "tab active" : "tab"}
-            onClick={() => setCompanyInputMode("file")}
-            disabled={uiBusy || !canEdit}
-          >
-            파일 업로드
-          </button>
-          <button
-            type="button"
-            className={state.companyInputMode === "url" ? "tab active" : "tab"}
-            onClick={() => setCompanyInputMode("url")}
-            disabled={uiBusy || !canEdit}
-          >
-            URL 불러오기
-          </button>
-        </div>
-
-        {state.companyInputMode === "file" && (
+      <SourceInputCard
+        title="공고 원문"
+        inputMode={state.companyInputMode}
+        modes={[
+          { value: "text", label: "붙여넣기", disabled: uiBusy || !canEdit },
+          { value: "file", label: "파일 업로드", disabled: uiBusy || !canEdit },
+          { value: "url", label: "URL 불러오기", disabled: uiBusy || !canEdit }
+        ]}
+        onInputModeChange={setCompanyInputMode}
+        fileSlot={
           <input
             type="file"
             accept=".txt,text/plain"
             onChange={(event) => void handleTxtUpload(event.target.files?.[0])}
             disabled={uiBusy || !canEdit}
           />
-        )}
-
-        {state.companyInputMode === "url" && (
+        }
+        urlSlot={
           <div className="url-fetch-panel">
             <div className="url-fetch-row">
               <input
@@ -441,21 +419,17 @@ export default function CompanyPage() {
               </div>
             )}
           </div>
-        )}
-
-        <textarea
-          value={state.companyText}
-          onChange={(event) => setCompanyText(event.target.value)}
-          placeholder={
-            state.companyInputMode === "url"
-              ? "URL에서 불러온 공고 내용이 여기에 채워집니다."
-              : "채용 공고 내용을 붙여넣어 주세요."
-          }
-          disabled={uiBusy || !canEdit}
-        />
-
-        <div className="action-panel input-card-actions">
-          <div className="action-controls">
+        }
+        textValue={state.companyText}
+        onTextChange={setCompanyText}
+        textPlaceholder={
+          state.companyInputMode === "url"
+            ? "URL에서 불러온 공고 내용이 여기에 채워집니다."
+            : "채용 공고 내용을 붙여넣어 주세요."
+        }
+        textareaDisabled={uiBusy || !canEdit}
+        actionSlot={
+          <>
             <ReasoningInline disabled={uiBusy || !canEdit} />
             <button
               type="button"
@@ -465,9 +439,10 @@ export default function CompanyPage() {
             >
               {state.currentTask === "company" ? "정리 중..." : "내용 정리"}
             </button>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+        processing={isCompanyWorking}
+      />
 
       <section className={`card workflow-summary-card ${isCompanyWorking ? "card-processing" : ""}`}>
         <div className="card-head">
@@ -593,53 +568,24 @@ export default function CompanyPage() {
 
       </section>
 
-      <section className="card workflow-footer-card">
-        <div className="action-panel review">
-          <div className="action-copy">
-            <strong>공고 저장</strong>
-            {state.companySavedAt && <span className="action-meta">마지막 저장 {formatSavedAt(state.companySavedAt)}</span>}
-            {hasMissingCompanyRequired && (
-              <p className="action-note warn">
-                <span>저장 전 확인:</span>{" "}
-                {missingCompanyRequired.map((item, index) => (
-                  <Fragment key={item.key}>
-                    {index > 0 && <span className="action-note-separator">, </span>}
-                    <button
-                      type="button"
-                      className="action-note-link"
-                      onClick={() => focusRequiredField(item.key)}
-                      disabled={uiBusy || !canEdit}
-                    >
-                      {item.label}
-                    </button>
-                  </Fragment>
-                ))}
-              </p>
-            )}
-          </div>
-          <div className="action-row">
-            <button
-              type="button"
-              className="primary"
-              onClick={handleConfirmCompany}
-              disabled={
-                isBusy ||
-                isUrlLoading ||
-                !canEdit ||
-                !state.companyJsonText.trim() ||
-                hasMissingCompanyRequired
-              }
-            >
-              공고 저장
-            </button>
-            {state.companyConfirmedJson && (
-              <Link className="nav-btn" href={"/result" as Route}>
-                소개글 만들기로 가기
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
+      <SaveActionCard
+        title="공고 저장"
+        savedAtLabel={state.companySavedAt ? `마지막 저장 ${formatSavedAt(state.companySavedAt)}` : undefined}
+        missingItems={missingCompanyRequired}
+        onFocusMissing={focusRequiredField}
+        onPrimary={handleConfirmCompany}
+        primaryDisabled={
+          isBusy ||
+          isUrlLoading ||
+          !canEdit ||
+          !state.companyJsonText.trim() ||
+          hasMissingCompanyRequired
+        }
+        primaryLabel="공고 저장"
+        nextHref={state.companyConfirmedJson ? "/result" : undefined}
+        nextLabel={state.companyConfirmedJson ? "소개글 만들기로 가기" : undefined}
+        busy={uiBusy || !canEdit}
+      />
     </AppFrame>
   );
 }

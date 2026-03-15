@@ -1,13 +1,13 @@
 "use client";
 
-import type { Route } from "next";
-import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AppFrame } from "@/app/components/app-frame";
 import { AutoGrowTextarea } from "@/app/components/auto-grow-textarea";
 import { ListPreview } from "@/app/components/list-preview";
 import { ReasoningInline } from "@/app/components/reasoning-inline";
+import { SaveActionCard } from "@/app/components/workflow/save-action-card";
+import { SourceInputCard } from "@/app/components/workflow/source-input-card";
 import { usePipelineStreamTask } from "@/app/hooks/use-pipeline-stream-task";
 import { toAgentRunOptions } from "@/lib/agent-settings";
 import { formatSavedAt } from "@/lib/date-format";
@@ -365,48 +365,24 @@ export default function ResumePage() {
       title="이력서 정리"
       description="이력서 내용을 읽고, 필요한 정보만 정리해 저장합니다."
     >
-      <section className={`card card-accent workflow-main-card ${isResumeWorking ? "card-processing" : ""}`}>
-        <div className="input-card-head">
-          <h2>이력서 원문</h2>
-        </div>
-
-        <div className="tabs input-mode-tabs">
-          <button
-            type="button"
-            className={state.resumeInputMode === "text" ? "tab active" : "tab"}
-            onClick={() => setResumeInputMode("text")}
-            disabled={uiBusy}
-          >
-            붙여넣기
-          </button>
-          <button
-            type="button"
-            className={state.resumeInputMode === "file" ? "tab active" : "tab"}
-            onClick={() => setResumeInputMode("file")}
-            disabled={uiBusy}
-          >
-            파일 업로드
-          </button>
-          <button
-            type="button"
-            className={state.resumeInputMode === "url" ? "tab active" : "tab"}
-            onClick={() => setResumeInputMode("url")}
-            disabled={uiBusy}
-          >
-            URL 불러오기
-          </button>
-        </div>
-
-        {state.resumeInputMode === "file" && (
+      <SourceInputCard
+        title="이력서 원문"
+        inputMode={state.resumeInputMode}
+        modes={[
+          { value: "text", label: "붙여넣기", disabled: uiBusy },
+          { value: "file", label: "파일 업로드", disabled: uiBusy },
+          { value: "url", label: "URL 불러오기", disabled: uiBusy }
+        ]}
+        onInputModeChange={setResumeInputMode}
+        fileSlot={
           <input
             type="file"
             accept=".txt,text/plain"
             onChange={(event) => void handleTxtUpload(event.target.files?.[0])}
             disabled={uiBusy}
           />
-        )}
-
-        {state.resumeInputMode === "url" && (
+        }
+        urlSlot={
           <div className="url-fetch-panel">
             <div className="url-fetch-row">
               <input
@@ -449,28 +425,25 @@ export default function ResumePage() {
               </div>
             )}
           </div>
-        )}
-
-        <textarea
-          value={state.resumeText}
-          onChange={(event) => setResumeText(event.target.value)}
-          placeholder={
-            state.resumeInputMode === "url"
-              ? "URL에서 불러온 이력서 내용이 여기에 채워집니다."
-              : "이력서 내용을 붙여넣어 주세요."
-          }
-          disabled={uiBusy}
-        />
-
-        <div className="action-panel input-card-actions">
-          <div className="action-controls">
+        }
+        textValue={state.resumeText}
+        onTextChange={setResumeText}
+        textPlaceholder={
+          state.resumeInputMode === "url"
+            ? "URL에서 불러온 이력서 내용이 여기에 채워집니다."
+            : "이력서 내용을 붙여넣어 주세요."
+        }
+        textareaDisabled={uiBusy}
+        actionSlot={
+          <>
             <ReasoningInline disabled={uiBusy} />
             <button type="button" className="primary" onClick={handleAnalyze} disabled={uiBusy}>
               {state.currentTask === "resume" ? "정리 중..." : "내용 정리"}
             </button>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+        processing={isResumeWorking}
+      />
 
       <section className={`card workflow-summary-card ${isResumeWorking ? "card-processing" : ""}`}>
         <div className="card-head">
@@ -824,47 +797,18 @@ export default function ResumePage() {
         </div>
       </section>
 
-      <section className="card workflow-footer-card">
-        <div className="action-panel review">
-          <div className="action-copy">
-            <strong>이력서 저장</strong>
-            {state.resumeSavedAt && <span className="action-meta">마지막 저장 {formatSavedAt(state.resumeSavedAt)}</span>}
-            {hasMissingResumeRequired && (
-              <p className="action-note warn">
-                <span>저장 전 확인:</span>{" "}
-                {missingResumeRequired.map((item, index) => (
-                  <Fragment key={item.key}>
-                    {index > 0 && <span className="action-note-separator">, </span>}
-                    <button
-                      type="button"
-                      className="action-note-link"
-                      onClick={() => focusRequiredField(item.key)}
-                      disabled={uiBusy}
-                    >
-                      {item.label}
-                    </button>
-                  </Fragment>
-                ))}
-              </p>
-            )}
-          </div>
-          <div className="action-row">
-            <button
-              type="button"
-              className="primary"
-              onClick={handleConfirmResume}
-              disabled={uiBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
-            >
-              이력서 저장
-            </button>
-            {state.resumeConfirmedJson && (
-              <Link className="nav-btn" href={"/company" as Route}>
-                공고 정리로 가기
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
+      <SaveActionCard
+        title="이력서 저장"
+        savedAtLabel={state.resumeSavedAt ? `마지막 저장 ${formatSavedAt(state.resumeSavedAt)}` : undefined}
+        missingItems={missingResumeRequired}
+        onFocusMissing={focusRequiredField}
+        onPrimary={handleConfirmResume}
+        primaryDisabled={uiBusy || !state.resumeJsonText.trim() || hasMissingResumeRequired}
+        primaryLabel="이력서 저장"
+        nextHref={state.resumeConfirmedJson ? "/company" : undefined}
+        nextLabel={state.resumeConfirmedJson ? "공고 정리로 가기" : undefined}
+        busy={uiBusy}
+      />
     </AppFrame>
   );
 }
