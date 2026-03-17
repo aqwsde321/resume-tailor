@@ -101,7 +101,18 @@ export function PdfPreviewPane({
         <div className="pdf-preview-card-head">
           <div>
             <p className="card-kicker">Typst Preview</p>
-            <h3>실제 출력 미리보기</h3>
+            <div className="pdf-preview-title-row">
+              <h3>실제 출력 미리보기</h3>
+              <p className={`pdf-preview-meta ${typstPreview.status === "error" ? "warn" : ""}`}>
+                {typstPreview.status === "ready"
+                  ? `${typstPreview.pages.length}p`
+                  : typstPreview.status === "rendering"
+                    ? "렌더링 중"
+                    : typstPreview.status === "error"
+                      ? "fallback"
+                      : "준비 중"}
+              </p>
+            </div>
             <p className="pdf-preview-card-copy">
               {company.companyName || "회사"} 기준 {template.label} 템플릿을 바로 확인합니다.
             </p>
@@ -231,15 +242,6 @@ export function PdfPreviewPane({
               )}
             </div>
 
-            <span className={`inline-badge ${typstPreview.status === "error" ? "warn" : "ok"}`}>
-              {typstPreview.status === "ready"
-                ? `${typstPreview.pages.length}p`
-                : typstPreview.status === "rendering"
-                  ? "렌더링 중"
-                  : typstPreview.status === "error"
-                    ? "fallback"
-                    : "준비 중"}
-            </span>
           </div>
         </div>
 
