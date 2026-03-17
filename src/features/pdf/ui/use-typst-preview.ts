@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import type { PdfTemplateId } from "@/entities/pdf/model/templates";
+import {
+  PDF_PREVIEW_RENDER_VERSION,
+  type PdfTemplateId
+} from "@/entities/pdf/model/templates";
 import type { PdfThemeId } from "@/entities/pdf/model/themes";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
@@ -15,6 +18,37 @@ interface UseTypstPreviewArgs {
   resume: Resume;
   templateId: PdfTemplateId;
   themeId: PdfThemeId;
+}
+
+const PREVIEW_DEBOUNCE_MS = 320;
+const PREVIEW_CACHE_TTL_MS = 60_000;
+
+type CachedPreview = {
+  fetchedAt: number;
+  pages: string[];
+};
+
+const previewResponseCache = new Map<string, CachedPreview>();
+
+function readCachedPreview(cacheKey: string) {
+  const cached = previewResponseCache.get(cacheKey);
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() - cached.fetchedAt > PREVIEW_CACHE_TTL_MS) {
+    previewResponseCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.pages;
+}
+
+function writeCachedPreview(cacheKey: string, pages: string[]) {
+  previewResponseCache.set(cacheKey, {
+    fetchedAt: Date.now(),
+    pages
+  });
 }
 
 export function useTypstPreview({
@@ -38,12 +72,24 @@ export function useTypstPreview({
         company,
         templateId,
         themeId,
-        customAccentHex: customAccentHex || undefined
+        customAccentHex: customAccentHex || undefined,
+        renderVersion: PDF_PREVIEW_RENDER_VERSION
       }),
     [company, customAccentHex, intro, resume, templateId, themeId]
   );
+  const deferredPreviewRequestBody = useDeferredValue(previewRequestBody);
 
   useEffect(() => {
+    const cachedPages = readCachedPreview(deferredPreviewRequestBody);
+    if (cachedPages) {
+      setTypstPreview({
+        error: "",
+        pages: cachedPages,
+        status: "ready"
+      });
+      return;
+    }
+
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setTypstPreview((current) => ({
@@ -58,7 +104,7 @@ export function useTypstPreview({
           headers: {
             "Content-Type": "application/json"
           },
-          body: previewRequestBody,
+          body: deferredPreviewRequestBody,
           signal: controller.signal
         });
 
@@ -73,6 +119,7 @@ export function useTypstPreview({
           throw new Error(message);
         }
 
+        writeCachedPreview(deferredPreviewRequestBody, payload.data.pages);
         setTypstPreview({
           error: "",
           pages: payload.data.pages,
@@ -89,13 +136,13 @@ export function useTypstPreview({
           status: "error"
         }));
       }
-    }, 240);
+    }, PREVIEW_DEBOUNCE_MS);
 
     return () => {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [previewRequestBody]);
+  }, [deferredPreviewRequestBody]);
 
   return typstPreview;
 }

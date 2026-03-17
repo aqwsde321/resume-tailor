@@ -270,11 +270,14 @@ export function PdfPreviewPane({
                     "직무와 경력을 입력해 주세요"}
                 </p>
                 {preview.headline && <p className="pdf-paper-headline">{preview.headline}</p>}
-                {preview.targetCompany && (
-                  <p className="pdf-paper-target">
-                    Tailored for {preview.targetCompany}
-                    {preview.targetJobTitle ? ` · ${preview.targetJobTitle}` : ""}
-                  </p>
+                {(preview.targetCompany || preview.targetJobTitle) && (
+                  <div className="pdf-paper-target-block">
+                    <p className="pdf-paper-target">
+                      {preview.targetCompany || ""}
+                      {preview.targetCompany && preview.targetJobTitle ? " · " : ""}
+                      {preview.targetJobTitle || ""}
+                    </p>
+                  </div>
                 )}
                 {preview.contacts.length > 0 && (
                   <p className="pdf-paper-contacts">

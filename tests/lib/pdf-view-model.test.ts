@@ -77,7 +77,7 @@ describe("buildTypstResumeDocument", () => {
     expect(document.sections).toHaveLength(1);
     expect(document.sections[0]).toMatchObject({
       id: "tailored-intro",
-      title: "Tailored Intro"
+      title: "About Me"
     });
     expect(document.projects[0]?.linkLabel).toBe("https://github.com/example/settlement");
     expect(document.projects[0]?.meta).toBe("TypeScript · Node.js · PostgreSQL");

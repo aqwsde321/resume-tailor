@@ -1,4 +1,5 @@
-export const PDF_TEMPLATE_IDS = ["classic", "compact", "modern"] as const;
+export const PDF_TEMPLATE_IDS = ["classic", "compact", "modern", "typographic"] as const;
+export const PDF_PREVIEW_RENDER_VERSION = "2026-03-16-typographic-header-v4";
 
 export type PdfTemplateId = (typeof PDF_TEMPLATE_IDS)[number];
 
@@ -29,6 +30,12 @@ export const PDF_TEMPLATE_OPTIONS: PdfTemplateOption[] = [
     label: "Modern",
     summary: "상단 배너와 강조 블록이 있는 타입",
     description: "헤더 배너와 섹션 강조 블록으로 브랜드감이 더 강한 레이아웃입니다."
+  },
+  {
+    id: "typographic",
+    label: "Typographic",
+    summary: "타이포 중심의 에디토리얼 타입",
+    description: "세리프 중심 헤더와 본문/보조 컬럼 대비가 강조된 레이아웃입니다."
   }
 ];
 

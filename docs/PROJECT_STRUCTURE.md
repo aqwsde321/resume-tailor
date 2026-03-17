@@ -24,7 +24,7 @@ resume-tailor/
 │  ├─ entities/                  # 전역 도메인 모델과 상태
 │  ├─ shared/                    # 여러 feature가 공유하는 UI/훅/유틸/스타일
 │  ├─ server/                    # 서버 전용 실행/연동 코드
-│  └─ templates/typst/           # Typst PDF 템플릿 3종(classic/compact[Sidebar]/modern)
+│  └─ templates/typst/           # Typst PDF 템플릿 4종(classic/compact[Sidebar]/modern/typographic)
 ├─ tests/                        # API/lib/E2E 테스트
 ├─ docs/                         # 운영, 구조, 품질, 릴리즈 문서
 ├─ scripts/                      # 보조 스크립트

@@ -289,7 +289,7 @@ function buildTextSections(resume: Resume, intro: Intro): PdfTextBlock[] {
   if (tailoredIntroParagraphs.length > 0) {
     sections.push({
       id: "tailored-intro",
-      title: "Tailored Intro",
+      title: "About Me",
       paragraphs: tailoredIntroParagraphs
     });
   }

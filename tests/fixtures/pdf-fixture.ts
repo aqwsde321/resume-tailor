@@ -81,6 +81,7 @@ export const PDF_VISUAL_CASES = [
   { id: "sidebar-onyx", templateId: "compact", themeId: "onyx", withProfileImage: false },
   { id: "modern-cobalt", templateId: "modern", themeId: "cobalt", withProfileImage: false },
   { id: "modern-onyx", templateId: "modern", themeId: "onyx", withProfileImage: false },
+  { id: "typographic-cobalt", templateId: "typographic", themeId: "cobalt", withProfileImage: false },
+  { id: "typographic-onyx", templateId: "typographic", themeId: "onyx", withProfileImage: false },
   { id: "classic-profile-cobalt", templateId: "classic", themeId: "cobalt", withProfileImage: true }
 ] as const;
-

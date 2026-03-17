@@ -11,11 +11,11 @@
 
 ### Added
 
-- step 4 `/pdf`에 `Classic`, `Sidebar`, `Modern` Typst 템플릿 선택 추가
+- step 4 `/pdf`에 `Classic`, `Sidebar`, `Modern`, `Typographic` Typst 템플릿 선택 추가
 - step 4 `/pdf`에 `Onyx`, `Teal`, `Rose`, `Plum` 프리셋과 사용자 지정 HEX 색상 선택 추가
 - step 4 `Header` 모달에 프로필 이미지 업로드/삭제와 `PDF에 표시` 토글 추가
 - `tests/lib/pdf-build.test.ts` 실제 Typst SVG/PDF smoke test 추가
-- `tests/lib/pdf-visual.test.ts` 템플릿 3종, 대표 색상 2종, 프로필 이미지 1종 기준 PNG baseline 시각 회귀 테스트 추가
+- `tests/lib/pdf-visual.test.ts` 템플릿 4종, 대표 색상 2종, 프로필 이미지 1종 기준 PNG baseline 시각 회귀 테스트 추가
 
 ### Changed
 
@@ -23,16 +23,18 @@
 - step 4 색상 선택 UI를 큰 카드에서 미리보기 헤더 내부의 세그먼트/팝오버 방식으로 단순화
 - 사용자 지정 색상은 팝오버 안에서 draft로 고른 뒤 `선택 완료`를 눌렀을 때만 적용되도록 조정
 - `Sidebar` 템플릿의 좌측 레일 가독성을 조정하고, `Modern` 템플릿의 Skills 영역 빈 공간을 줄이도록 재배치
-- `Classic`, `Sidebar`, `Modern` 템플릿의 프로필 이미지 헤더 배치와 이름 아래 메타 간격을 각각 다듬어 템플릿별 균형을 조정
+- `Classic`, `Sidebar`, `Modern`, `Typographic` 템플릿의 프로필 이미지 헤더 배치와 이름 아래 메타 간격을 각각 다듬어 템플릿별 균형을 조정
+- PDF 헤더 메타에서 `Application` 라벨을 제거하고, `About Me` 섹션 제목으로 정리
 - PDF preview/export 요청에 `customAccentHex`를 추가해 사용자 지정 색상을 최종 출력까지 그대로 전달
 - 프로필 이미지는 step 4 PDF draft에만 저장하고, export/preview 시 temp workdir의 실제 이미지 파일로 풀어 Typst에 전달하도록 조정
+- step 4 Typst preview에 동일 입력 캐시와 in-flight 요청 병합을 추가해 연속 수정 시 불필요한 compile을 줄이도록 조정
 - 소개글 후처리에 exact 중복 문장 제거와 `gapNotes` 공백 표현 필터를 추가
 - 소개글 품질 평가기 `evaluateIntroQuality()`를 추가하고, `shortIntro` 요건 직접 언급/`longIntro` 앵커 커버리지/정보량 차이 규칙을 코드로 고정
 - `fitReasons`, `gapNotes`, `missingButRelevant`가 공고 근거 범위를 벗어나지 않도록 정규화 규칙을 강화
 
 ### Verified
 
-- `typst compile`로 3종 템플릿 실제 컴파일 확인
+- `typst compile`로 4종 템플릿 실제 컴파일 확인
 - `npm run typecheck`
 - `npm run lint`
 - `npm run test`
@@ -40,7 +42,7 @@
 - `npm run test:e2e`
 - `tests/lib/intro-quality.test.ts`로 frontend/backend/data/AI fixture 품질 회귀 검증
 - `tests/api/intro-route.test.ts`로 반복 문장 제거와 보조 필드 범위 필터링 검증
-- `tests/lib/pdf-build.test.ts`로 템플릿 3종의 실제 Typst SVG/PDF 생성 검증
+- `tests/lib/pdf-build.test.ts`로 템플릿 4종의 실제 Typst SVG/PDF 생성 검증
 - `tests/lib/pdf-visual.test.ts`로 baseline PNG 기준 첫 페이지 레이아웃 시각 회귀 검증
 
 ### Tag

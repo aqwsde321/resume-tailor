@@ -14,7 +14,7 @@ const resumeFixture = createPdfResumeFixture({
 
 describeWithTypst("pdf build smoke", () => {
   it("모든 템플릿이 프로필 이미지와 함께 SVG 미리보기를 실제로 만든다", async () => {
-    for (const templateId of ["classic", "compact", "modern"] as const) {
+    for (const templateId of ["classic", "compact", "modern", "typographic"] as const) {
       const preview = await buildResumeSvgPreview(
         resumeFixture,
         introFixture,

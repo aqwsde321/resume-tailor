@@ -865,7 +865,7 @@ button {
 
 .pdf-preview-head-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
@@ -873,23 +873,24 @@ button {
 
 .pdf-template-segment {
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
   border: 1px solid rgba(17, 24, 39, 0.08);
-  border-radius: 999px;
+  border-radius: 22px;
   background: rgba(247, 246, 240, 0.96);
 }
 
 .pdf-template-segment-button {
   min-height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
+  white-space: nowrap;
   transition:
     background-color 160ms ease,
     color 160ms ease,
@@ -910,13 +911,13 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
+  min-height: 42px;
   padding: 0 12px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
   color: var(--text);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   transition:
     border-color 160ms ease,
@@ -1416,6 +1417,7 @@ button {
 
   .pdf-template-segment {
     width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .pdf-theme-popover {
@@ -1452,18 +1454,19 @@ button {
 
   .pdf-template-segment {
     width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .pdf-template-segment-button {
     min-height: 32px;
-    padding: 0 8px;
-    font-size: 0.72rem;
+    padding: 0 6px;
+    font-size: 0.68rem;
   }
 
   .pdf-theme-trigger {
-    min-height: 32px;
+    min-height: 40px;
     padding: 0 10px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
   }
 
   .pdf-theme-popover {

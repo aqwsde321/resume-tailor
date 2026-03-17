@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/pdf/preview/route";
 import { HttpError } from "@/server/http";
 import { buildResumeSvgPreview } from "@/server/pdf/build";
+import { resetPdfPreviewCacheForTests } from "@/server/pdf/preview-cache";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 vi.mock("@/server/pdf/build", () => ({
@@ -65,6 +66,7 @@ const introFixture: Intro = {
 describe("POST /api/pdf/preview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetPdfPreviewCacheForTests();
   });
 
   it("유효한 요청이면 SVG 페이지 목록을 반환한다", async () => {
@@ -245,5 +247,70 @@ describe("POST /api/pdf/preview", () => {
 
     expect(response.status).toBe(503);
     expect(body.ok).toBe(false);
+  });
+
+  it("같은 요청이 반복되면 같은 런타임에서는 preview 빌드를 캐시한다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({
+      pages: ["<svg>page-1</svg>"]
+    });
+
+    const createRequest = () =>
+      new Request("http://localhost/api/pdf/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: resumeFixture,
+          company: companyFixture,
+          intro: introFixture,
+          templateId: "modern",
+          themeId: "onyx"
+        })
+      });
+
+    const firstResponse = await POST(createRequest());
+    const secondResponse = await POST(createRequest());
+    const firstBody = await firstResponse.json();
+    const secondBody = await secondResponse.json();
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+    expect(firstBody.data.pages).toEqual(["<svg>page-1</svg>"]);
+    expect(secondBody.data.pages).toEqual(["<svg>page-1</svg>"]);
+    expect(buildResumeSvgPreview).toHaveBeenCalledTimes(1);
+  });
+
+  it("templateId나 themeId가 달라지면 preview 캐시 키도 달라진다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({
+      pages: ["<svg>page-variant</svg>"]
+    });
+
+    const classicRequest = new Request("http://localhost/api/pdf/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumeFixture,
+        company: companyFixture,
+        intro: introFixture,
+        templateId: "classic",
+        themeId: "cobalt"
+      })
+    });
+
+    const modernRequest = new Request("http://localhost/api/pdf/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: resumeFixture,
+        company: companyFixture,
+        intro: introFixture,
+        templateId: "modern",
+        themeId: "onyx"
+      })
+    });
+
+    await POST(classicRequest);
+    await POST(modernRequest);
+
+    expect(buildResumeSvgPreview).toHaveBeenCalledTimes(2);
   });
 });

@@ -325,6 +325,12 @@ body.pdf-modal-open .sticky-shell.static-shell {
   color: var(--muted);
   font-size: 8.5pt;
   font-weight: 700;
+  margin: 0;
+}
+
+.pdf-paper-target-block {
+  display: grid;
+  gap: 0;
 }
 
 .pdf-paper-contacts {

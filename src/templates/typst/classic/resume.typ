@@ -162,7 +162,7 @@
   ]
   #if data.targetCompany != "" or data.targetJobTitle != "" [
     #v(0.04em)
-    #block[#text(size: 8.5pt, fill: text_muted)[Tailored for #data.targetCompany #if data.targetJobTitle != "" [· #data.targetJobTitle]]]
+    #block[#text(size: 8.35pt, fill: text_muted)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]]
   ]
   #if data.contacts.len() > 0 [
     #v(0.04em)

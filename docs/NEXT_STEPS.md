@@ -22,7 +22,7 @@
 - 사용자 체감 가치는 여전히 `자기소개 결과 품질`과 `공고 구조화 정확도`에 크게 좌우됩니다.
 - step 4 `/pdf`는 템플릿 선택, 색상 프리셋, 사용자 지정 HEX 색상까지 들어가서 기능 밀도가 높아졌으므로, 이제는 “있는 기능을 더 정확하고 빠르게” 다듬는 쪽이 우선입니다.
 - 특히 실제 Typst SVG 미리보기는 사용자 체감 품질이 높지만, 렌더 비용과 시각 회귀를 따로 관리하지 않으면 응답성과 안정성이 같이 흔들릴 수 있습니다.
-- 템플릿 3종과 대표 색상, 프로필 이미지 케이스까지 baseline PNG 기준 시각 회귀는 들어왔고, 이제 남은 우선 과제는 렌더 성능과 baseline 유지 절차를 더 가볍게 만드는 일입니다.
+- 템플릿 4종과 대표 색상, 프로필 이미지 케이스까지 baseline PNG 기준 시각 회귀는 들어왔고, 이제 남은 우선 과제는 렌더 성능과 baseline 유지 절차를 더 가볍게 만드는 일입니다.
 
 ## 3. 우선순위별 작업
 
@@ -79,7 +79,7 @@
 - [x] 임시 작업 디렉터리와 산출물 정리 규칙 추가
 - [x] step 4에서 실제 Typst SVG 미리보기 API 추가
 - [x] Typst 미리보기 실패 시 HTML fallback 유지
-- [x] `Classic`, `Sidebar`, `Modern` 3종 템플릿 선택 추가
+- [x] `Classic`, `Sidebar`, `Modern`, `Typographic` 4종 템플릿 선택 추가
 - [x] 색상 프리셋 확장
   - [x] `Cobalt`
   - [x] `Forest`
@@ -91,14 +91,14 @@
   - [x] `Plum`
 - [x] 사용자 지정 `HEX` 색상과 `customAccentHex` 전달 추가
 - [x] 색상 팝오버 안에서 draft 후 `선택 완료`로 적용하는 흐름 추가
-- [ ] Typst SVG preview 렌더 성능 최적화
-  - [ ] 동일 입력 해시 기준 preview 캐시
-  - [ ] 연속 수정 중 preview compile 병합 또는 rate limit
+- [~] Typst SVG preview 렌더 성능 최적화
+  - [x] 동일 입력 해시 기준 preview 캐시
+  - [x] 연속 수정 중 preview compile 병합 또는 rate limit
   - [ ] multi-page preview의 스크롤/줌 UX 검토
 - [~] 시각 회귀 검증 추가
   - [x] fixture 기준 PNG snapshot smoke test
   - [ ] 대표 PDF 1페이지 PNG diff 절차 문서화
-  - [x] 템플릿 3종과 대표 색상 2종, 프로필 이미지 1종 기준 baseline 이미지 고정
+  - [x] 템플릿 4종과 대표 색상 2종, 프로필 이미지 1종 기준 baseline 이미지 고정
 
 필드 설계:
 
@@ -136,7 +136,10 @@ UX 방침:
   - [x] `Classic`: 헤더 옆
   - [x] `Sidebar`: 좌측 레일 상단
   - [x] `Modern`: 상단 배너 안
-- [x] `Classic`, `Sidebar`, `Modern` 헤더에서 이름 아래 메타 간격을 각각 조정
+  - [x] `Typographic`: 헤더 우측 상단
+- [x] `Classic`, `Sidebar`, `Modern`, `Typographic` 헤더에서 이름 아래 메타 간격을 각각 조정
+- [x] 헤더 메타는 `Application` 라벨 없이 회사명/포지션 값만 노출
+- [x] PDF 소개 섹션 제목은 `About Me`로 통일
 - [ ] 이후 필요하면 `intro` 없이도 일반 이력서 PDF만 내보내는 흐름을 별도 검토
 
 누락 필드 fallback 규칙:
@@ -166,6 +169,8 @@ UX 방침:
 - [x] 현재 환경에서 `typst compile`과 `typst compile --format svg` 가능
 - [x] templateId와 themeId, customAccentHex를 preview/export API에 반영
 - [x] 색상 선택 UI를 미리보기 헤더 세그먼트/팝오버 기준으로 단순화
+- [x] preview route에 동일 요청 캐시와 in-flight 병합 추가
+- [x] step 4 클라이언트에서 동일 입력 재진입 시 cached preview 즉시 재사용
 
 완료 기준:
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   DEFAULT_PDF_TEMPLATE_ID,
+  PDF_PREVIEW_RENDER_VERSION,
   PDF_TEMPLATE_IDS
 } from "@/entities/pdf/model/templates";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/entities/pdf/model/themes";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
 import { buildResumeSvgPreview } from "@/server/pdf/build";
+import { createPdfPreviewCacheKey, getCachedPdfPreview } from "@/server/pdf/preview-cache";
 import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
 
 export const runtime = "nodejs";
@@ -22,7 +24,8 @@ const RequestSchema = z
     intro: IntroSchema,
     templateId: z.enum(PDF_TEMPLATE_IDS).default(DEFAULT_PDF_TEMPLATE_ID),
     themeId: z.enum(PDF_THEME_IDS).default(DEFAULT_PDF_THEME_ID),
-    customAccentHex: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional()
+    customAccentHex: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    renderVersion: z.string().default(PDF_PREVIEW_RENDER_VERSION)
   })
   .strict();
 
@@ -38,13 +41,16 @@ export async function POST(request: Request) {
       throw new HttpError(400, "소개글이 있어야 Typst 미리보기를 만들 수 있어요.");
     }
 
-    const preview = await buildResumeSvgPreview(
-      body.resume,
-      body.intro,
-      body.company,
-      body.templateId,
-      body.themeId,
-      body.customAccentHex
+    const cacheKey = createPdfPreviewCacheKey(body);
+    const preview = await getCachedPdfPreview(cacheKey, () =>
+      buildResumeSvgPreview(
+        body.resume,
+        body.intro,
+        body.company,
+        body.templateId,
+        body.themeId,
+        body.customAccentHex
+      )
     );
 
     return NextResponse.json({

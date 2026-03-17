@@ -174,8 +174,8 @@
           #v(0.16em)
         ]
         #if data.targetCompany != "" or data.targetJobTitle != "" [
-          #text(size: 8.15pt, fill: on_accent)[Tailored for #data.targetCompany #if data.targetJobTitle != "" [· #data.targetJobTitle]]
-          #v(0.12em)
+          #text(size: 8.15pt, fill: on_accent)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]
+          #v(0.08em)
         ]
         #if data.contacts.len() > 0 [
           #text(size: 8.15pt, fill: on_accent)[#inline_join(data.contacts.map(linked_value), separator: [#text(fill: on_accent)[ • ]])]

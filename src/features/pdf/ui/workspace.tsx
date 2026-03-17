@@ -226,7 +226,7 @@ export function PdfEditorWorkspace({
     },
     {
       key: "intro",
-      kicker: "Tailored Intro",
+      kicker: "About Me",
       title: "소개글",
       chipTitle: "소개",
       description: `${company.companyName || "회사"} 기준으로 들어가는 최종 문장입니다.`,
