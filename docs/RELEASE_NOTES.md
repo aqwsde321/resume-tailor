@@ -1,11 +1,36 @@
 # 릴리즈 노트
 
-- 마지막 업데이트: 2026-03-16
+- 마지막 업데이트: 2026-03-17
 - 기준: 버전별 기능, 문서, 검증 기록
 
 ## Unreleased
 
 - 아직 정리되지 않은 변경 없음
+
+## v0.10.0 (2026-03-17)
+
+### Added
+
+- step 4 `/pdf`에 `Typographic` Typst 템플릿 추가
+- `tests/lib/pdf-visual.test.ts`에 `Typographic` 템플릿 baseline PNG 회귀 케이스 추가
+
+### Changed
+
+- PDF 소개 섹션 제목을 `Intro`에서 `About Me`로 정리
+- PDF 헤더 메타에서 `Application` 라벨을 제거하고 회사명·포지션 값만 남기도록 단순화
+- `Typographic` 템플릿 헤더 간격과 step 4 preview 캐시 버전을 조정해 템플릿 수정 시 새 SVG가 즉시 반영되도록 개선
+- step 4 미리보기 상단에서 템플릿 선택 세그먼트를 4개 기준으로 재정렬하고, 색상 버튼과 페이지 수 메타의 높이/위치를 정리
+
+### Verified
+
+- `npm run test -- tests/api/pdf-preview-route.test.ts`
+- `npm run test -- tests/lib/pdf-build.test.ts`
+- `UPDATE_PDF_VISUAL_BASELINES=1 npm run test:pdf-visual`
+- `npm run build`
+
+### Tag
+
+- Git tag: `v0.10.0`
 
 ## v0.9.0 (2026-03-16)
 
