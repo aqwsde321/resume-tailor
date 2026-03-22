@@ -1,13 +1,13 @@
 # 서비스 기획서
 
-- 문서 버전: v0.5
-- 마지막 업데이트: 2026-03-08
+- 문서 버전: v0.6
+- 마지막 업데이트: 2026-03-17
 - 기준 범위: 로컬 MVP
 
 ## 1. 서비스 정의
 
 정의:
-`Next.js` 기반 로컬 웹앱. 이력서/채용공고를 텍스트 입력, txt 업로드, URL 불러오기로 받아, `@openai/codex-sdk + SKILL.md` 파이프라인으로 구조화 JSON을 생성하고, 회사 맞춤 자기소개를 웹 화면에서 확인/수정할 수 있다.
+`Next.js` 기반 로컬 웹앱. 이력서/채용공고를 텍스트 입력, txt 업로드, URL 불러오기로 받아, `@openai/codex-sdk + SKILL.md` 파이프라인으로 구조화 JSON을 생성하고, 회사 맞춤 자기소개를 만든 뒤 step 4에서 실제 Typst PDF까지 확인하고 내보낼 수 있다.
 
 핵심 가치:
 - 이력서와 공고의 핵심 정보를 빠르게 구조화한다.
@@ -24,15 +24,16 @@
 1. 사용자가 `/resume`에서 이력서를 입력하거나 `txt`, URL로 불러온 뒤 `resume.json`을 확정한다.
 2. 사용자가 `/company`에서 채용공고를 입력/업로드하고 `company.json`을 확정한다.
 3. 사용자가 `/result`에서 자기소개를 생성한다.
-4. 이후 채용공고만 바꾸는 경우 `/company`만 다시 확정 후 `/result` 재생성한다.
-5. 사용자는 상단 고정 스텝 영역에서 현재 확정 상태와 결과 최신 여부를 계속 확인한다.
+4. 사용자가 `/pdf`에서 템플릿, 색상, 프로필 이미지와 PDF 전용 필드를 마지막으로 조정한다.
+5. 이후 채용공고만 바꾸는 경우 `/company`만 다시 확정 후 `/result` 재생성한다.
+6. 사용자는 상단 스텝 영역에서 현재 확정 상태와 결과 최신 여부를 계속 확인한다.
 
 ## 3. 범위 정의
 
 MVP 포함:
-- 페이지 분리 3단계 플로우(`/resume` -> `/company` -> `/result`)
+- 페이지 분리 4단계 플로우(`/resume` -> `/company` -> `/result` -> `/pdf`)
 - JSON 확정 상태 관리(`resumeConfirmedJson`, `companyConfirmedJson`)
-- API 8개(일반 5개 + SSE 스트림 3개)
+- 일반 API, fetch-url API, SSE 스트림 API, PDF preview/export API
 - txt 업로드 -> textarea 반영
 - 이력서 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
 - 공고 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
@@ -47,6 +48,10 @@ MVP 포함:
 - 각 단계의 마지막 저장/생성 시각 표시
 - 이전 결과와 현재 결과 비교 UI
 - 복사 버튼, 재생성 버튼
+- step 4 실제 Typst SVG 미리보기와 PDF 내보내기
+- `Classic`, `Sidebar`, `Modern`, `Typographic` 템플릿 선택
+- 색상 프리셋과 사용자 지정 HEX 색상 선택
+- 프로필 이미지 업로드와 표시 여부 제어
 
 MVP 제외(후순위):
 - PDF 업로드/파싱
@@ -89,8 +94,16 @@ STEP 3 `/result`:
 - 결과 최신 여부 표시(`최신` / `재생성 필요`)
 - `이력서 변경`, `공고 변경` 등 재생성 이유 배지 표시
 
+STEP 4 `/pdf`:
+- 템플릿 선택(`Classic`, `Sidebar`, `Modern`, `Typographic`)
+- 색상 프리셋과 사용자 지정 HEX 색상 선택
+- 실제 Typst SVG 미리보기 확인
+- `Header`, `Contacts`, `About Me`, `Experience`, `Highlights`, `Projects`, `Skills`, `Strengths` 수정
+- 프로필 이미지 업로드/삭제와 표시 여부 제어
+- 최종 PDF 다운로드
+
 공통:
-- 상단 고정 스텝 이동(`/resume`, `/company`, `/result`)
+- 상단 스텝 이동(`/resume`, `/company`, `/result`, `/pdf`)
 - 스텝 상태 표시(`완료`, `진행`, `대기`, `잠김`)
 - 단계별 `생각 깊이` 선택
 - 소개글 단계 `톤` 선택
@@ -116,6 +129,7 @@ STEP 3 `/result`:
 - Next.js API Routes
 - `@openai/codex-sdk`
 - SKILL.md 3종(`resume-to-json`, `company-to-json`, `generate-intro`)
+- `typst` CLI 기반 SVG preview / PDF export
 
 데이터 흐름:
 1. UI 입력
@@ -130,6 +144,13 @@ STEP 3 `/result`:
 3. 내부 `작성 앵커`로 필수/우대 요건과 이력서 근거를 묶어 프롬프트에 전달
 4. `generate-intro`가 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant` 생성
 5. 결과를 후처리해 실제 근거 범위 안으로 다시 정규화
+
+PDF 보조 흐름:
+1. `/pdf`에서 templateId, themeId, customAccentHex와 PDF 전용 draft를 조정
+2. `POST /api/pdf/preview`
+3. 서버가 view model 변환 후 `typst compile --format svg` 실행
+4. 실제 Typst 미리보기 SVG를 반환하고, 동일 입력은 preview 캐시로 재사용
+5. `POST /api/pdf`로 최종 PDF export
 
 이력서 URL 보조 흐름:
 1. `/resume`에서 URL 입력
@@ -153,6 +174,8 @@ STEP 3 `/result`:
 - `POST /api/company` -> `Company`
 - `POST /api/company/fetch-url` -> `FetchedCompanyPage`
 - `POST /api/intro` -> `Intro`
+- `POST /api/pdf/preview` -> `SvgPreview`
+- `POST /api/pdf` -> PDF 파일 응답
 
 스트림 API(SSE):
 - `POST /api/resume/stream`
@@ -187,6 +210,13 @@ SSE 이벤트:
 - `matchedSkills[]`
 - `gapNotes[]`
 - `missingButRelevant[]`
+
+`PdfExportDraft`(요약):
+- `templateId`, `themeId`, `customAccentHex`
+- `headline`, `careerDurationText`, `contacts[]`
+- `pdfHighlights[]`, `pdfStrengths[]`
+- `pdfProfileImageDataUrl`, `pdfProfileImageVisible`
+- `projects[].subtitle`, `projects[].link`, `projects[].linkLabel`, `projects[].highlights[]`
 
 ## 9. 상태 전이 규칙(중요)
 
@@ -242,6 +272,9 @@ R3. 생성 JSON 품질 편차:
 - 2026-03-07: 소개글에 아직 덜 반영된 연결 포인트를 `missingButRelevant[]`로 계산하고, 결과 화면의 `더 살릴 수 있는 점` 섹션으로 표시하도록 확장.
 - 2026-03-07: 소개글 생성 톤 선택과 마지막 저장/생성 시각 표시를 추가.
 - 2026-03-07: 작업 중 중앙 모달에 단계형 진행 상태를 추가하고, stream 오류를 더 구체적인 사용자 문구로 정리.
+- 2026-03-15: `src/` 기반 구조와 `app / features / entities / shared / server` 분리를 기준 구조로 확정.
+- 2026-03-16: step 4 PDF 편집에 템플릿 선택, 색상 선택, 프로필 이미지 업로드를 추가.
+- 2026-03-17: PDF 소개 섹션 제목을 `About Me`로 정리하고, 헤더 메타는 회사명/포지션 값만 남기는 방향으로 단순화.
 
 ## 12. 다음 마일스톤
 

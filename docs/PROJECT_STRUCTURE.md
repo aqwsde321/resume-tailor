@@ -1,7 +1,7 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.6
-- 마지막 업데이트: 2026-03-15
+- 문서 버전: v0.7
+- 마지막 업데이트: 2026-03-17
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
@@ -234,7 +234,7 @@ step별 화면 기능을 모읍니다.
 3. `src/features/pdf/hooks/use-pdf-workspace-state.ts`
 4. `src/entities/pdf/model/view-model.ts`
 5. `src/app/api/pdf/* -> src/server/pdf/build.ts`
-6. `src/templates/typst/resume.typ`
+6. `src/templates/typst/<template-id>/resume.typ`
 
 ## 5. 테스트 구조
 
