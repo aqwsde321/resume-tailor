@@ -1,53 +1,29 @@
 # 문서 인덱스
 
-- 문서 버전: v0.6
-- 마지막 업데이트: 2026-03-17
+- 문서 버전: v0.7
+- 마지막 업데이트: 2026-03-24
 - 기준 범위: 현재 로컬 MVP 문서 세트
 
-ResumeTailor 문서는 `설치/실행 -> 구조 이해 -> 제품 기준 -> 운영/품질 -> 변경 이력` 순서로 읽습니다.
+ResumeTailor 문서는 역할이 겹치지 않도록 `설치/실행 -> 제품 기준 -> 구현 구조 -> 운영/품질 -> 변경 이력` 순서로 읽습니다.
 
-## 1. 권장 읽기 순서
+## 1. 문서 안내
 
-1. [루트 README](../README.md)
-   - 설치, 실행, 기본 사용 흐름
-2. [프로젝트 구조](./PROJECT_STRUCTURE.md)
-   - 폴더 역할, 주요 진입점, 실행 경로
-3. [서비스 기획서](./SERVICE_PLAN.md)
-   - 기능 범위, 상태 전이 규칙, API/스키마 기준
-4. [운영 런북](./OPS_RUNBOOK.md)
-   - 운영 점검, Typst 미리보기/PDF 장애 대응, 복구
-5. [채용공고 불러오기 가이드](./COMPANY_FETCH_GUIDE.md)
-   - URL 추출 방식과 사이트별 처리 이유
-6. [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md)
-   - 결과 품질 기준과 금지 규칙
-7. [릴리즈 노트](./RELEASE_NOTES.md)
-   - 반영 이력과 검증 내역
-8. [다음 작업 로드맵](./NEXT_STEPS.md)
-   - 남은 우선순위와 후속 작업
+| 문서 | 목적 | 언제 읽는지 | 기준 문서 여부 |
+| --- | --- | --- | --- |
+| [루트 README](../README.md) | 설치, 실행, 첫 사용 흐름 | 앱을 처음 실행하거나 실행 방식을 바꿀 때 | 예 |
+| [서비스 기획서](./SERVICE_PLAN.md) | 기능 범위, 상태 전이, API/스키마 기준 | 기능 변경 영향이나 제품 범위를 확인할 때 | 예 |
+| [프로젝트 구조](./PROJECT_STRUCTURE.md) | 코드 구조와 파일 배치 규칙 | 구현 위치나 파일 배치 기준이 필요할 때 | 예 |
+| [운영 런북](./OPS_RUNBOOK.md) | 실행 이후 점검, 장애 대응, 복구 | 앱이 이미 실행 중이거나 문제를 진단할 때 | 예 |
+| [채용공고 불러오기 가이드](./COMPANY_FETCH_GUIDE.md) | `/company` URL 추출과 OCR fallback 기준 | URL 불러오기 정확도나 사이트별 예외를 볼 때 | 보조 |
+| [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md) | `generate-intro` 출력 품질 기준 | 소개글 품질 회귀나 프롬프트 기준을 볼 때 | 보조 |
+| [릴리즈 노트](./RELEASE_NOTES.md) | 버전별 완료 이력과 검증 기록 | 무엇이 이미 반영됐는지 확인할 때 | 예 |
+| [다음 작업 로드맵](./NEXT_STEPS.md) | 남은 작업과 우선순위 | 다음 개발 우선순위를 정할 때 | 예 |
 
-## 2. 문서 역할
+## 2. 문서 관리 원칙
 
-- [루트 README](../README.md)
-  - 설치, 실행, 기본 사용 흐름
-- [프로젝트 구조](./PROJECT_STRUCTURE.md)
-  - `app / features / entities / shared / server` 기준의 구현 지도
-- [서비스 기획서](./SERVICE_PLAN.md)
-  - MVP 범위, 요구사항, 아키텍처, 상태 전이 규칙의 기준 문서
-- [다음 작업 로드맵](./NEXT_STEPS.md)
-  - 개선 우선순위와 후속 작업
-- [운영 런북](./OPS_RUNBOOK.md)
-  - 운영 점검, Typst 미리보기/PDF 장애 대응, 복구 절차
-- [채용공고 불러오기 가이드](./COMPANY_FETCH_GUIDE.md)
-  - `/company`의 URL 추출 흐름과 fallback 설명
-- [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md)
-  - `generate-intro` 결과 품질 점검 기준
-- [릴리즈 노트](./RELEASE_NOTES.md)
-  - 버전별 추가/변경/검증 기록
-
-## 3. 문서 관리 원칙
-
-- 설치와 사용법은 `README.md`를 기준으로 유지합니다.
-- 구조와 파일 배치는 `PROJECT_STRUCTURE.md`를 기준으로 유지합니다.
-- 기능 범위와 상태 규칙은 `SERVICE_PLAN.md`를 기준으로 유지합니다.
-- 운영 절차와 장애 대응은 `OPS_RUNBOOK.md`를 기준으로 유지합니다.
-- 변경 이력은 `RELEASE_NOTES.md`에 누적합니다.
+- 설치와 실행은 `README.md`를 기준으로 유지합니다.
+- 기능 범위, 상태 규칙, API/스키마는 `SERVICE_PLAN.md`를 기준으로 유지합니다.
+- 폴더 책임과 파일 배치 규칙은 `PROJECT_STRUCTURE.md`를 기준으로 유지합니다.
+- 운영 점검과 장애 대응은 `OPS_RUNBOOK.md`를 기준으로 유지합니다.
+- 완료 이력은 `RELEASE_NOTES.md`, 남은 작업은 `NEXT_STEPS.md`에서만 관리합니다.
+- 세부 동작 가이드는 필요한 문서에서만 다루고, 루트 문서에 장문으로 반복하지 않습니다.

@@ -1,7 +1,7 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.7
-- 마지막 업데이트: 2026-03-17
+- 문서 버전: v0.8
+- 마지막 업데이트: 2026-03-24
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
@@ -18,16 +18,17 @@
 resume-tailor/
 ├─ .github/
 │  └─ workflows/                 # main push 시 검증 후 Docker Hub publish
+├─ skills/                       # Codex 로컬 스킬 3종
 ├─ src/
 │  ├─ app/                       # Next.js App Router 진입점
 │  ├─ features/                  # step 전용 화면 기능
 │  ├─ entities/                  # 전역 도메인 모델과 상태
 │  ├─ shared/                    # 여러 feature가 공유하는 UI/훅/유틸/스타일
 │  ├─ server/                    # 서버 전용 실행/연동 코드
-│  └─ templates/typst/           # Typst PDF 템플릿 4종(classic/compact[Sidebar]/modern/typographic)
-├─ tests/                        # API/lib/E2E 테스트
+│  └─ templates/typst/           # Typst PDF 템플릿
 ├─ docs/                         # 운영, 구조, 품질, 릴리즈 문서
 ├─ scripts/                      # 보조 스크립트
+├─ tests/                        # API/lib/E2E 테스트와 fixture
 ├─ Dockerfile
 ├─ docker-compose.yml
 ├─ package.json
@@ -44,6 +45,7 @@ resume-tailor/
 - 여러 step이 같이 쓰는 상태나 모델만 `src/entities/`에 둡니다.
 - 두 feature 이상이 공유하지 않으면 `src/shared/`에 두지 않습니다.
 - 서버에서만 쓰는 fetch, OCR, Codex 실행, PDF 빌드는 `src/server/`에 둡니다.
+- 사용자 흐름, 상태 전이, API 계약은 [서비스 기획서](./SERVICE_PLAN.md)에서 관리하고 이 문서에는 중복하지 않습니다.
 
 ## 3. 폴더별 역할
 
@@ -52,17 +54,19 @@ resume-tailor/
 라우트와 HTTP API의 엔트리만 둡니다.
 
 - `src/app/resume/page.tsx`
-  - `src/features/resume/page.tsx`를 그대로 노출하는 STEP 1 엔트리
+  - `src/features/resume/page.tsx`를 노출하는 STEP 1 엔트리
 - `src/app/company/page.tsx`
   - STEP 2 엔트리
 - `src/app/result/page.tsx`
   - STEP 3 엔트리
 - `src/app/pdf/page.tsx`
   - STEP 4 엔트리
-- `src/app/api/*`
-  - resume/company/intro/pdf route
+- `src/app/api/*/route.ts`
+  - resume / company / intro / pdf 관련 HTTP API 엔트리와 fetch-url, stream, preview, export route 포함
 - `src/app/providers.tsx`
   - `PipelineProvider` 연결
+- `src/app/layout.tsx`
+  - 앱 공통 레이아웃
 - `src/app/globals.css`
   - `src/shared/styles/*`를 불러오는 전역 CSS import 진입점
 
@@ -181,14 +185,14 @@ step별 화면 기능을 모읍니다.
 
 - `codex-client.ts`
   - Codex SDK 실행, SKILL.md 로드, 스트림 로그 변환
+- `resume-url-fetch.ts`
+  - URL 기반 이력서 본문 추출
 - `company-url-fetch.ts`
   - URL 기반 공고 본문 추출
 - `company-image-ocr.ts`
   - 공고 이미지 OCR fallback
 - `company-normalize.ts`
   - 구조화된 공고 후처리
-- `resume-url-fetch.ts`
-  - URL 기반 이력서 본문 추출
 - `http.ts`
   - API 에러/응답 유틸
 - `sse.ts`
@@ -199,55 +203,42 @@ step별 화면 기능을 모읍니다.
   - 로컬 `skills/*/SKILL.md` 탐색과 로드
 - `pdf/build.ts`
   - Typst compile, SVG preview, PDF 파일 생성
+- `pdf/preview-cache.ts`
+  - Typst preview 캐시
 
-## 4. 주요 실행 흐름
+### `src/templates/typst/`
 
-### STEP 1 이력서
+- `classic`, `sidebar`, `modern`, `typographic`
+  - 실제 PDF preview/export에 사용하는 Typst 템플릿
 
-1. `src/app/resume/page.tsx`
-2. `src/features/resume/page.tsx`
-3. `src/shared/ui/workflow/source-input-card.tsx`
-4. `src/shared/hooks/use-pipeline-stream-task.ts`
-5. `src/app/api/resume/*`
-6. `src/server/codex-client.ts`
+### `skills/`
 
-### STEP 2 공고
+- `resume-to-json`
+- `company-to-json`
+- `generate-intro`
 
-1. `src/app/company/page.tsx`
-2. `src/features/company/page.tsx`
-3. URL이면 `src/app/api/company/fetch-url/route.ts`
-4. `src/server/company-url-fetch.ts`
-5. 분석은 `src/app/api/company/* -> src/server/codex-client.ts`
-
-### STEP 3 소개글
-
-1. `src/app/result/page.tsx`
-2. `src/features/result/page.tsx`
-3. `src/features/result/hooks/use-result-page-view.ts`
-4. `src/entities/intro/model/intro-insights.ts`
-5. `src/app/api/intro/* -> src/server/codex-client.ts`
-
-### STEP 4 PDF
-
-1. `src/app/pdf/page.tsx`
-2. `src/features/pdf/page.tsx`
-3. `src/features/pdf/hooks/use-pdf-workspace-state.ts`
-4. `src/entities/pdf/model/view-model.ts`
-5. `src/app/api/pdf/* -> src/server/pdf/build.ts`
-6. `src/templates/typst/<template-id>/resume.typ`
-
-## 5. 테스트 구조
+### `tests/`
 
 - `tests/api`
   - route/API 테스트
 - `tests/lib`
   - entities/shared/server의 순수 로직 테스트
 - `tests/e2e`
-  - step 1~4 실제 사용자 흐름 회귀
+  - step 1~4 사용자 흐름 회귀
 - `tests/fixtures`
-  - 공고와 소개글 샘플 데이터
+  - 공고, 소개글, PDF 시각 회귀 샘플 데이터
 
-## 6. 파일 배치 규칙
+## 4. 주요 진입점
+
+- 사용자 페이지: `src/app/resume/page.tsx`, `src/app/company/page.tsx`, `src/app/result/page.tsx`, `src/app/pdf/page.tsx`
+- API 엔트리: `src/app/api/*/route.ts`
+- 전역 상태: `src/entities/pipeline/model/pipeline-context.tsx`
+- 소개글 근거 계산: `src/entities/intro/model/intro-insights.ts`
+- PDF view model: `src/entities/pdf/model/view-model.ts`
+- 서버 연동 진입점: `src/server/codex-client.ts`, `src/server/resume-url-fetch.ts`, `src/server/company-url-fetch.ts`, `src/server/pdf/build.ts`
+- Typst 템플릿: `src/templates/typst/<template-id>/resume.typ`
+
+## 5. 파일 배치 규칙
 
 - 새 라우트 엔트리는 `src/app/`
 - step 전용 화면/훅/모델은 `src/features/<step>/`
@@ -255,9 +246,10 @@ step별 화면 기능을 모읍니다.
 - 두 feature 이상이 공유하는 UI와 유틸은 `src/shared/`
 - 서버 전용 실행/외부 연동은 `src/server/`
 - Typst 템플릿은 `src/templates/typst/<template-id>/resume.typ`
+- 로컬 스킬은 `skills/<skill>/SKILL.md`
 - 회귀 검증은 `tests/`
 
-## 7. 구조 점검 기준
+## 6. 구조 점검 기준
 
 구조가 다시 흐트러졌다고 판단하는 기준은 아래와 같습니다.
 

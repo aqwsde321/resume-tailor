@@ -1,19 +1,19 @@
 # 서비스 기획서
 
-- 문서 버전: v0.6
-- 마지막 업데이트: 2026-03-17
+- 문서 버전: v0.7
+- 마지막 업데이트: 2026-03-24
 - 기준 범위: 로컬 MVP
 
 ## 1. 서비스 정의
 
 정의:
-`Next.js` 기반 로컬 웹앱. 이력서/채용공고를 텍스트 입력, txt 업로드, URL 불러오기로 받아, `@openai/codex-sdk + SKILL.md` 파이프라인으로 구조화 JSON을 생성하고, 회사 맞춤 자기소개를 만든 뒤 step 4에서 실제 Typst PDF까지 확인하고 내보낼 수 있다.
+`Next.js` 기반 로컬 웹앱. 이력서와 채용공고를 텍스트 입력, `txt` 업로드, URL 불러오기로 받아 구조화 JSON을 만들고, 회사 맞춤 자기소개와 PDF까지 생성한다.
 
 핵심 가치:
 - 이력서와 공고의 핵심 정보를 빠르게 구조화한다.
 - 생성 결과를 사용자가 수정하고 확정할 수 있게 둔다.
 - 회사별 반복 지원 시 `회사 공고만 교체 -> 결과 재생성` 비용을 낮춘다.
-- raw JSON을 사용자에게 직접 노출하지 않고, 한글 폼 중심 편집 경험으로 조작 부담을 줄인다.
+- raw JSON을 직접 노출하지 않고, 한글 폼 중심 편집 경험으로 조작 부담을 줄인다.
 
 ## 2. 대상 사용자와 사용 시나리오
 
@@ -34,10 +34,7 @@ MVP 포함:
 - 페이지 분리 4단계 플로우(`/resume` -> `/company` -> `/result` -> `/pdf`)
 - JSON 확정 상태 관리(`resumeConfirmedJson`, `companyConfirmedJson`)
 - 일반 API, fetch-url API, SSE 스트림 API, PDF preview/export API
-- txt 업로드 -> textarea 반영
-- 이력서 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
-- 공고 URL 불러오기 -> 본문 텍스트 추출 -> textarea 반영
-- 작업 중 상태 표시(스피너/경과시간)
+- 이력서와 공고의 `textarea` 입력, `txt` 업로드, URL 불러오기
 - AI 분석 로그 실시간 표시(SSE)
 - 작업 중 중앙 모달 + 하단 접이식 작업 기록
 - 상단 고정 스텝/상태 셸
@@ -64,7 +61,7 @@ MVP 제외(후순위):
 STEP 1 `/resume`:
 - 이력서: textarea / txt 업로드 / URL 불러오기 탭 전환
 - 구조화 결과 생성
-- 한글 폼 기반 인라인 수정
+- 한글 폼 기반 수정
 - 필수 항목(`희망 직무`, `기술 스택`) 강조 표시
 - 저장 전 확인에서 누락 항목을 누르면 해당 입력 위치로 스크롤 및 포커스 이동
 - 카드 하단 `이력서 저장` 버튼
@@ -74,7 +71,7 @@ STEP 2 `/company`:
 - STEP 1 확정 전 진입 제한
 - 채용공고: textarea / txt 업로드 / URL 불러오기 탭 전환
 - 구조화 결과 생성
-- 한글 폼 기반 인라인 수정
+- 한글 폼 기반 수정
 - 필수 항목(`회사명`, `포지션`, `필수 조건`) 강조 표시
 - 저장 전 확인에서 누락 항목을 누르면 해당 입력 위치로 스크롤 및 포커스 이동
 - 카드 하단 `공고 저장` 버튼
@@ -115,56 +112,30 @@ STEP 4 `/pdf`:
 
 ## 5. 비기능 요구사항
 
-- 실행 환경: 로컬(Node.js 기반)
+- 실행 환경: 로컬(Node.js 기반)과 Docker
 - API 런타임: Node runtime 고정(Edge 미사용)
 - 실패 처리: 요청 유효성 검증 + 명확한 에러 메시지 + 빈 결과/형식 오류 재시도 안내
 - 응답 형식: 스키마 기반 JSON 고정
 - 안정성: Codex 호출 직렬 큐로 충돌 최소화
 - 관측성: 분석 이벤트를 SSE로 스트리밍
 
-## 6. 아키텍처
+## 6. 시스템 개요
 
 구성:
-- React UI(페이지 분리 + 전역 파이프라인 상태)
+- React UI와 전역 파이프라인 상태
 - Next.js API Routes
-- `@openai/codex-sdk`
-- SKILL.md 3종(`resume-to-json`, `company-to-json`, `generate-intro`)
+- `@openai/codex-sdk`와 로컬 `SKILL.md`
+- URL fetch / OCR 보조 처리
 - `typst` CLI 기반 SVG preview / PDF export
 
-데이터 흐름:
-1. UI 입력
-2. `/api/resume/stream`, `/api/company/stream`, `/api/intro/stream` 호출
-3. SSE 로그(`log`) 실시간 반영
-4. 결과(`result`) 수신 후 내부 JSON/자기소개 갱신
-5. 확정 상태와 stale 상태를 기반으로 단계 가드
+주요 흐름:
+1. 사용자가 `/resume`, `/company`, `/result`, `/pdf`에서 단계별 입력과 확인을 진행한다.
+2. 구조화와 소개글 생성은 일반 API 또는 SSE 스트림 API를 통해 실행된다.
+3. 사용자는 생성 결과를 폼으로 수정하고 확정한 뒤 다음 단계로 이동한다.
+4. `/result`는 현재 확정된 이력서와 공고를 기준으로 소개글을 생성하고 stale 여부를 계산한다.
+5. `/pdf`는 확정된 데이터와 소개글을 기반으로 실제 Typst 미리보기와 최종 PDF 내보내기를 제공한다.
 
-소개글 생성 보조 흐름:
-1. `resumeConfirmedJson`, `companyConfirmedJson` 확보
-2. `buildIntroGuidance()`로 매칭 기술, 필수/우대 근거, gap 후보 계산
-3. 내부 `작성 앵커`로 필수/우대 요건과 이력서 근거를 묶어 프롬프트에 전달
-4. `generate-intro`가 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`, `matchedSkills`, `gapNotes`, `missingButRelevant` 생성
-5. 결과를 후처리해 실제 근거 범위 안으로 다시 정규화
-
-PDF 보조 흐름:
-1. `/pdf`에서 templateId, themeId, customAccentHex와 PDF 전용 draft를 조정
-2. `POST /api/pdf/preview`
-3. 서버가 view model 변환 후 `typst compile --format svg` 실행
-4. 실제 Typst 미리보기 SVG를 반환하고, 동일 입력은 preview 캐시로 재사용
-5. `POST /api/pdf`로 최종 PDF export
-
-이력서 URL 보조 흐름:
-1. `/resume`에서 URL 입력
-2. `POST /api/resume/fetch-url`
-3. 서버가 정적 HTML, 공개 포트폴리오 레이아웃, 브라우저 렌더링 결과를 기준으로 본문 추출
-4. 추출된 텍스트를 textarea에 채움
-5. 이후 `POST /api/resume` 또는 `/api/resume/stream`으로 동일 분석 플로우 진행
-
-공고 URL 보조 흐름:
-1. `/company`에서 URL 입력
-2. `POST /api/company/fetch-url`
-3. 서버가 정적 HTML, 숨겨진 JSON, 사이트 전용 상세 경로, 브라우저 렌더링, OCR fallback 순서로 본문 추출
-4. 추출된 텍스트를 textarea에 채움
-5. 이후 `POST /api/company` 또는 `/api/company/stream`으로 동일 분석 플로우 진행
+세부 구현 위치는 [프로젝트 구조](./PROJECT_STRUCTURE.md), URL 불러오기 세부 규칙은 [채용공고 불러오기 가이드](./COMPANY_FETCH_GUIDE.md), 소개글 품질 기준은 [자기소개 품질 가이드](./INTRO_QUALITY_GUIDE.md)를 기준으로 관리한다.
 
 ## 7. API 명세(현재 기준)
 
@@ -211,7 +182,7 @@ SSE 이벤트:
 - `gapNotes[]`
 - `missingButRelevant[]`
 
-`PdfExportDraft`(요약):
+`PdfExportDraft`:
 - `templateId`, `themeId`, `customAccentHex`
 - `headline`, `careerDurationText`, `contacts[]`
 - `pdfHighlights[]`, `pdfStrengths[]`
@@ -249,33 +220,6 @@ R3. 생성 JSON 품질 편차:
 - 영향: 후속 자기소개 품질 저하
 - 대응: output schema 강제 + 사용자 확정 단계 유지
 
-## 11. 운영/관리 규칙
-
-문서 업데이트 규칙:
-- 요구사항/범위/리스크 변경 시 이 문서를 먼저 갱신한다.
-- API/스키마/상태 전이 규칙 변경 시 `7~9`장을 함께 수정한다.
-- 주요 의사결정은 아래 결정 로그에 기록한다.
-
-결정 로그:
-- 2026-03-06: MVP 입력 포맷을 txt로 제한, PDF는 후순위 처리.
-- 2026-03-06: 인증/DB 없이 로컬 실행 시나리오 우선.
-- 2026-03-06: API 3개 + 3단계 UI 구조 확정.
-- 2026-03-06: 페이지 분리(`/resume`, `/company`, `/result`) 및 JSON 확정 기반 플로우로 전환.
-- 2026-03-06: SSE 기반 분석 로그 실시간 표시 도입.
-- 2026-03-06: 사용자 편집 UI는 raw JSON 대신 한글 폼 기반으로 고정.
-- 2026-03-06: 확정 버튼은 각 단계 카드 하단에 배치하고, 확정 후에만 다음 단계 이동을 허용.
-- 2026-03-06: 상단 스텝/확정/최신 상태 영역을 sticky로 고정.
-- 2026-03-06: 결과 페이지에 이전/현재 자기소개 비교 영역 추가.
-- 2026-03-07: 공고 URL 불러오기와 사이트별 상세 추출, OCR fallback을 도입.
-- 2026-03-07: 자기소개 생성 전에 필수/우대 요건과 이력서 근거를 묶는 내부 작성 앵커와 결과 화면의 `공고와 연결한 내 경험` 섹션을 추가.
-- 2026-03-07: 저장 전 확인 문구에서 누락 항목을 누르면 해당 필드로 이동하도록 수정.
-- 2026-03-07: 소개글에 아직 덜 반영된 연결 포인트를 `missingButRelevant[]`로 계산하고, 결과 화면의 `더 살릴 수 있는 점` 섹션으로 표시하도록 확장.
-- 2026-03-07: 소개글 생성 톤 선택과 마지막 저장/생성 시각 표시를 추가.
-- 2026-03-07: 작업 중 중앙 모달에 단계형 진행 상태를 추가하고, stream 오류를 더 구체적인 사용자 문구로 정리.
-- 2026-03-15: `src/` 기반 구조와 `app / features / entities / shared / server` 분리를 기준 구조로 확정.
-- 2026-03-16: step 4 PDF 편집에 템플릿 선택, 색상 선택, 프로필 이미지 업로드를 추가.
-- 2026-03-17: PDF 소개 섹션 제목을 `About Me`로 정리하고, 헤더 메타는 회사명/포지션 값만 남기는 방향으로 단순화.
-
-## 12. 다음 마일스톤
-
-우선순위와 세부 작업은 [다음 작업 로드맵](./NEXT_STEPS.md)에서 관리한다.
+R4. URL 불러오기와 OCR 품질 편차:
+- 영향: 사이트 구조 변경이나 이미지 본문 때문에 현재 공고가 약하게 추출될 수 있음
+- 대응: 사이트 전용 경로, 품질 점수화, OCR fallback, 직접 붙여넣기 안내를 함께 유지

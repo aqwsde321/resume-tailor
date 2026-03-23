@@ -1,12 +1,14 @@
 # 자기소개 품질 가이드
 
-- 문서 버전: v0.3
-- 마지막 업데이트: 2026-03-17
+- 문서 버전: v0.4
+- 마지막 업데이트: 2026-03-24
 - 기준 범위: `generate-intro` 결과 품질 기준
 
 ## 1. 목적
 
-`generate-intro` 결과(`oneLineIntro`, `shortIntro`, `longIntro`)의 일관성과 신뢰도를 높이기 위한 기준 문서입니다.
+`README`와 [서비스 기획서](./SERVICE_PLAN.md)가 제품 사용 흐름과 기능 범위를 다룬다면, 이 문서는 `generate-intro` 결과의 품질 기준만 정의합니다.
+
+대상 범위는 `oneLineIntro`, `shortIntro`, `longIntro`, `fitReasons`의 문장 품질과 근거 연결입니다.
 
 ## 2. 품질 원칙
 
