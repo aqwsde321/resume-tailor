@@ -1,12 +1,38 @@
 # ResumeTailor (Local MVP)
 
-로컬에서 이력서와 채용공고 텍스트를 구조화하고, 회사 맞춤 자기소개와 PDF까지 만드는 Next.js 앱입니다.
+로컬에서 이력서와 채용공고 텍스트를 `@openai/codex-sdk`와 로컬 `SKILL.md` 파이프라인으로 구조화하고, 회사 맞춤 자기소개와 PDF까지 만드는 Next.js 앱입니다.
 
 문의사항이나 오류 제보는 [qrqrq23r@gmail.com](mailto:qrqrq23r@gmail.com) 으로 보내 주세요.
 
 ## 화면 미리보기
 
+전체 흐름과 각 단계의 실제 화면을 순서대로 볼 수 있습니다.
+
 ![ResumeTailor 전체 흐름](./docs/images/app-flow-overview.png)
+
+### Step 1. 이력서 정리
+
+이력서 원문을 붙여넣거나 불러온 뒤 구조화하고 저장합니다.
+
+<img src="./docs/images/step-1-resume.gif" alt="Step 1 이력서 정리" width="100%" />
+
+### Step 2. 공고 정리
+
+채용공고 본문을 구조화하고 요구사항과 기술 스택을 정리합니다.
+
+<img src="./docs/images/step-2-company.gif" alt="Step 2 공고 정리" width="100%" />
+
+### Step 3. 소개글 생성
+
+확정된 이력서와 공고를 바탕으로 맞춤 소개글과 근거를 생성합니다.
+
+<img src="./docs/images/step-3-intro.gif" alt="Step 3 소개글 생성" width="100%" />
+
+### Step 4. PDF 내보내기
+
+최종 내용을 다듬으면서 실제 미리보기를 확인하고 PDF를 내보냅니다.
+
+<img src="./docs/images/step-4-pdf.gif" alt="Step 4 PDF 내보내기" width="100%" />
 
 ## 1. 빠른 시작
 
