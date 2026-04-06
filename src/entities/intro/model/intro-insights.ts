@@ -36,6 +36,42 @@ const GENERIC_MATCH_TOKENS = new Set([
   "운영"
 ]);
 
+const REFERENCE_STRUCTURAL_TOKENS = new Set([
+  "역량",
+  "활용",
+  "기반",
+  "중심",
+  "개발",
+  "사용"
+]);
+
+const SOFT_QUALIFIER_TOKENS = new Set([
+  "서비스",
+  "제품",
+  "프로덕트",
+  "화면",
+  "도구",
+  "시스템",
+  "플랫폼"
+]);
+
+const GENERIC_SKILL_TOKENS = new Set([
+  "api",
+  "sdk",
+  "app",
+  "web",
+  "service",
+  "tool",
+  "platform",
+  "system"
+]);
+
+const TOKEN_EQUIVALENTS: Record<string, string[]> = {
+  "문화": ["환경"],
+  "성능": ["개선", "로딩", "응답"],
+  "최적화": ["개선", "효율화"]
+};
+
 type EvidenceEntry = {
   label: string;
   text: string;
@@ -118,6 +154,10 @@ function normalizePhrase(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function normalizeCompact(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9가-힣+#]+/gi, "");
+}
+
 function tokenize(value: string): string[] {
   return normalizePhrase(value)
     .split(/[^a-z0-9가-힣+#.]+/i)
@@ -127,6 +167,16 @@ function tokenize(value: string): string[] {
 
 function getMeaningfulTokens(value: string): string[] {
   return tokenize(value).filter((token) => !GENERIC_MATCH_TOKENS.has(token));
+}
+
+function getCoverageTokens(value: string): string[] {
+  return tokenize(value).filter(
+    (token) => !REFERENCE_STRUCTURAL_TOKENS.has(token) && !SOFT_QUALIFIER_TOKENS.has(token)
+  );
+}
+
+function getDistinctiveSkillTokens(value: string): string[] {
+  return getCoverageTokens(value).filter((token) => !GENERIC_SKILL_TOKENS.has(token));
 }
 
 function truncate(value: string, maxLength = 140): string {
@@ -212,8 +262,8 @@ function buildEvidenceEntries(resume: Resume): EvidenceEntry[] {
   return entries;
 }
 
-function collectResumeKeywords(resume: Resume): Set<string> {
-  const raw = [
+function getResumeTextFragments(resume: Resume): string[] {
+  return [
     resume.desiredPosition,
     resume.summary,
     ...resume.techStack,
@@ -222,8 +272,18 @@ function collectResumeKeywords(resume: Resume): Set<string> {
     ...resume.experience.flatMap((item) => [item.company, item.role, item.period, item.description]),
     ...resume.projects.flatMap((item) => [item.name, item.description, ...item.techStack])
   ];
+}
 
-  return new Set(unique(raw.flatMap(tokenize)));
+function collectResumeKeywords(resume: Resume): Set<string> {
+  return new Set(unique(getResumeTextFragments(resume).flatMap(tokenize)));
+}
+
+function collectResumePhrases(resume: Resume): string[] {
+  return unique(
+    getResumeTextFragments(resume)
+      .map((item) => normalizePhrase(item))
+      .filter(Boolean)
+  );
 }
 
 function collectResumeTech(resume: Resume): Set<string> {
@@ -299,6 +359,92 @@ function countEvidenceBonus(evidence: string[]): number {
   return score;
 }
 
+function getRequiredTokenOverlap(targetTokens: string[]): number {
+  if (targetTokens.length <= 1) {
+    return targetTokens.length;
+  }
+
+  if (targetTokens.length === 2) {
+    return 2;
+  }
+
+  return Math.max(2, Math.ceil(targetTokens.length * 0.6));
+}
+
+function skillsEquivalent(left: string, right: string): boolean {
+  const normalizedLeft = normalizePhrase(left);
+  const normalizedRight = normalizePhrase(right);
+
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+
+  if (normalizedLeft === normalizedRight || normalizeCompact(left) === normalizeCompact(right)) {
+    return true;
+  }
+
+  const leftTokens = getDistinctiveSkillTokens(left);
+  const rightTokens = getDistinctiveSkillTokens(right);
+
+  return (
+    leftTokens.length > 0 &&
+    leftTokens.length === rightTokens.length &&
+    leftTokens.every((token) => rightTokens.includes(token))
+  );
+}
+
+function skillAppearsInText(text: string, skill: string): boolean {
+  const normalizedText = normalizePhrase(text);
+  const normalizedSkill = normalizePhrase(skill);
+
+  if (!normalizedText || !normalizedSkill) {
+    return false;
+  }
+
+  if (
+    normalizedText.includes(normalizedSkill) ||
+    normalizeCompact(normalizedText).includes(normalizeCompact(skill))
+  ) {
+    return true;
+  }
+
+  const skillTokens = getDistinctiveSkillTokens(skill);
+  if (skillTokens.length === 0) {
+    return false;
+  }
+
+  const textTokens = new Set(tokenize(text));
+  return skillTokens.every((token) => textTokens.has(token));
+}
+
+function getQualifierTokens(target: string, anchors: string[]): string[] {
+  const anchorTokens = new Set(anchors.flatMap(getDistinctiveSkillTokens));
+  return getCoverageTokens(target).filter((token) => !anchorTokens.has(token));
+}
+
+function tokenMatchesSet(token: string, textTokens: Set<string>): boolean {
+  const aliases = [token, ...(TOKEN_EQUIVALENTS[token] ?? [])];
+
+  return aliases.some((alias) =>
+    Array.from(textTokens).some(
+      (textToken) =>
+        textToken === alias || textToken.includes(alias) || alias.includes(textToken)
+    )
+  );
+}
+
+function hasResumeTokenEvidence(
+  token: string,
+  resumeKeywords: Set<string>,
+  entries: EvidenceEntry[]
+): boolean {
+  if (tokenMatchesSet(token, resumeKeywords)) {
+    return true;
+  }
+
+  return entries.some((entry) => tokenMatchesSet(token, new Set(entry.tokens)) || entry.normalized.includes(token));
+}
+
 function buildPriorityReason(
   type: "requirement" | "preferred",
   index: number,
@@ -350,45 +496,53 @@ function scoreEvidenceMatch(
 }
 
 function findTechAnchors(target: string, company: Company): string[] {
-  const normalizedTarget = normalizePhrase(target);
-  const targetTokens = tokenize(target);
+  const anchors = company.techStack.filter((skill) => skillAppearsInText(target, skill));
 
-  return company.techStack.filter((skill) => {
-    const normalizedSkill = normalizePhrase(skill);
+  return anchors.filter((skill) => {
+    const skillTokens = getDistinctiveSkillTokens(skill);
+
+    return !anchors.some((otherSkill) => {
+      if (otherSkill === skill) {
+        return false;
+      }
+
+      const otherTokens = getDistinctiveSkillTokens(otherSkill);
+      return (
+        skillTokens.length > 0 &&
+        skillTokens.length < otherTokens.length &&
+        skillTokens.every((token) => otherTokens.includes(token))
+      );
+    });
+  });
+}
+
+function hasSkillEvidence(skill: string, resumePhrases: string[], resumeTech: Set<string>): boolean {
+  if (Array.from(resumeTech).some((item) => skillsEquivalent(skill, item))) {
+    return true;
+  }
+
+  const normalizedSkill = normalizePhrase(skill);
+  const compactSkill = normalizeCompact(skill);
+  const skillTokens = getDistinctiveSkillTokens(skill);
+
+  if (skillTokens.length === 0) {
+    return false;
+  }
+
+  return resumePhrases.some((phrase) => {
+    const phraseTokens = new Set(tokenize(phrase));
+
     return (
-      normalizedTarget.includes(normalizedSkill) ||
-      tokenize(skill).some((token) => targetTokens.includes(token))
+      phrase.includes(normalizedSkill) ||
+      normalizeCompact(phrase).includes(compactSkill) ||
+      skillTokens.every((token) => phraseTokens.has(token))
     );
   });
 }
 
-function hasSkillEvidence(skill: string, resumeKeywords: Set<string>, resumeTech: Set<string>): boolean {
-  const normalizedSkill = normalizePhrase(skill);
-  return resumeTech.has(normalizedSkill) || tokenize(skill).some((token) => resumeKeywords.has(token));
-}
-
 function canonicalizeSkill(skill: string, allowedSkills: string[]): string | null {
-  const normalizedSkill = normalizePhrase(skill);
-  const skillTokens = tokenize(skill);
-
   for (const allowedSkill of allowedSkills) {
-    const normalizedAllowed = normalizePhrase(allowedSkill);
-    const allowedTokens = tokenize(allowedSkill);
-
-    if (
-      normalizedSkill === normalizedAllowed ||
-      normalizedSkill.includes(normalizedAllowed) ||
-      normalizedAllowed.includes(normalizedSkill)
-    ) {
-      return allowedSkill;
-    }
-
-    if (
-      skillTokens.length > 0 &&
-      allowedTokens.length > 0 &&
-      (skillTokens.every((token) => allowedTokens.includes(token)) ||
-        allowedTokens.every((token) => skillTokens.includes(token)))
-    ) {
+    if (skillsEquivalent(skill, allowedSkill)) {
       return allowedSkill;
     }
   }
@@ -404,24 +558,29 @@ function referencesTarget(text: string, target: string): boolean {
     return false;
   }
 
-  if (normalizedText.includes(normalizedTarget) || normalizedTarget.includes(normalizedText)) {
+  if (
+    normalizedText.includes(normalizedTarget) ||
+    normalizeCompact(normalizedText).includes(normalizeCompact(normalizedTarget))
+  ) {
     return true;
   }
 
-  const textTokens = tokenize(text);
-  const targetTokens = getMeaningfulTokens(target);
+  const textTokens = new Set(getCoverageTokens(text));
+  const targetTokens = unique(getCoverageTokens(target));
 
   if (targetTokens.length === 0) {
     return false;
   }
 
-  return targetTokens.some((token) => textTokens.includes(token) || normalizedText.includes(token));
+  const overlapCount = targetTokens.filter((token) => tokenMatchesSet(token, textTokens)).length;
+  return overlapCount >= getRequiredTokenOverlap(targetTokens);
 }
 
 function buildEvidenceMatches(
   items: string[],
   type: "requirement" | "preferred",
   resumeKeywords: Set<string>,
+  resumePhrases: string[],
   resumeTech: Set<string>,
   entries: EvidenceEntry[],
   company: Company
@@ -430,11 +589,22 @@ function buildEvidenceMatches(
     .map((target, index) => {
       // 기술 스택 앵커가 있으면 그쪽을 우선 보고, 없으면 일반 키워드 겹침으로 근거를 찾는다.
       const anchors = findTechAnchors(target, company);
-      const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumeKeywords, resumeTech));
-      const meaningfulTokens = getMeaningfulTokens(target);
-      const fallbackTokens = meaningfulTokens.filter((token) => resumeKeywords.has(token));
-      const evidenceTokens = anchorMatched.length > 0 ? anchorMatched.flatMap(tokenize) : fallbackTokens;
+      const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumePhrases, resumeTech));
+      const qualifierTokens = getQualifierTokens(target, anchors);
+      const matchedQualifierTokens = qualifierTokens.filter((token) =>
+        hasResumeTokenEvidence(token, resumeKeywords, entries)
+      );
+      const evidenceTokens = unique([
+        ...anchorMatched.flatMap(getDistinctiveSkillTokens),
+        ...matchedQualifierTokens
+      ]);
       const evidence = findEvidence(entries, unique(evidenceTokens));
+      const hasAnchorCoverage = anchors.length === 0 || anchorMatched.length > 0;
+      const hasQualifierCoverage =
+        anchors.length > 0
+          ? qualifierTokens.length === 0 || matchedQualifierTokens.length > 0
+          : matchedQualifierTokens.length > 0;
+
       const priorityScore = scoreEvidenceMatch(
         target,
         type,
@@ -453,7 +623,22 @@ function buildEvidenceMatches(
         priorityReason
       };
     })
-    .filter((item) => item.evidence.length > 0)
+    .filter((item, index) => {
+      const target = items[index];
+      const anchors = findTechAnchors(target, company);
+      const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumePhrases, resumeTech));
+      const qualifierTokens = getQualifierTokens(target, anchors);
+      const matchedQualifierTokens = qualifierTokens.filter((token) =>
+        hasResumeTokenEvidence(token, resumeKeywords, entries)
+      );
+      const hasAnchorCoverage = anchors.length === 0 || anchorMatched.length > 0;
+      const hasQualifierCoverage =
+        anchors.length > 0
+          ? qualifierTokens.length === 0 || matchedQualifierTokens.length > 0
+          : matchedQualifierTokens.length > 0;
+
+      return item.evidence.length > 0 && hasAnchorCoverage && hasQualifierCoverage;
+    })
     .sort((left, right) => right.priorityScore - left.priorityScore || right.evidence.length - left.evidence.length);
 }
 
@@ -681,6 +866,7 @@ export function evaluateIntroQuality(intro: Intro, resume: Resume, company: Comp
 export function buildIntroGuidance(resume: Resume, company: Company): IntroGuidance {
   // 소개글 생성 전에 겹치는 강점, 직접 근거, 부족한 항목을 구조화해 프롬프트 힌트로 만든다.
   const resumeKeywords = collectResumeKeywords(resume);
+  const resumePhrases = collectResumePhrases(resume);
   const resumeTech = collectResumeTech(resume);
   const entries = buildEvidenceEntries(resume);
   const jobTokens = tokenize(company.jobTitle);
@@ -689,14 +875,14 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
   const roleOverlap = unique(desiredTokens.filter((token) => jobTokens.includes(token))).slice(0, 4);
   const matchedSkills = unique(
     company.techStack.filter((skill) => {
-      const normalized = normalizePhrase(skill);
-      return resumeTech.has(normalized) || tokenize(skill).some((token) => resumeKeywords.has(token));
+      return hasSkillEvidence(skill, resumePhrases, resumeTech);
     })
   ).slice(0, 6);
   const requirementMatches = buildEvidenceMatches(
     company.requirements,
     "requirement",
     resumeKeywords,
+    resumePhrases,
     resumeTech,
     entries,
     company
@@ -705,6 +891,7 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
     company.preferredSkills,
     "preferred",
     resumeKeywords,
+    resumePhrases,
     resumeTech,
     entries,
     company
@@ -718,7 +905,13 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
     .filter((item) => {
       const anchors = findTechAnchors(item, company);
       if (anchors.length > 0) {
-        return anchors.some((skill) => !hasSkillEvidence(skill, resumeKeywords, resumeTech));
+        const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumePhrases, resumeTech));
+        const qualifierTokens = getQualifierTokens(item, anchors);
+        const matchedQualifierTokens = qualifierTokens.filter((token) =>
+          hasResumeTokenEvidence(token, resumeKeywords, entries)
+        );
+
+        return anchorMatched.length === 0 || (qualifierTokens.length > 0 && matchedQualifierTokens.length === 0);
       }
 
       return getMeaningfulTokens(item).every((token) => !resumeKeywords.has(token));
@@ -728,7 +921,13 @@ export function buildIntroGuidance(resume: Resume, company: Company): IntroGuida
     .filter((item) => {
       const anchors = findTechAnchors(item, company);
       if (anchors.length > 0) {
-        return anchors.some((skill) => !hasSkillEvidence(skill, resumeKeywords, resumeTech));
+        const anchorMatched = anchors.filter((skill) => hasSkillEvidence(skill, resumePhrases, resumeTech));
+        const qualifierTokens = getQualifierTokens(item, anchors);
+        const matchedQualifierTokens = qualifierTokens.filter((token) =>
+          hasResumeTokenEvidence(token, resumeKeywords, entries)
+        );
+
+        return anchorMatched.length === 0 || (qualifierTokens.length > 0 && matchedQualifierTokens.length === 0);
       }
 
       return getMeaningfulTokens(item).every((token) => !resumeKeywords.has(token));

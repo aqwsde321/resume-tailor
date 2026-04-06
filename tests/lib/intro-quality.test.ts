@@ -76,4 +76,67 @@ describe("intro quality evaluator", () => {
     expect(normalized.matchedSkills).toEqual(["Node.js", "TypeScript"]);
     expect(normalized.gapNotes).toEqual(["AWS 운영 경험은 이력서에서 직접 확인되지 않습니다."]);
   });
+
+  it("요건 일부 토큰만 언급한 문장은 coverage로 보지 않는다", () => {
+    const report = evaluateIntroQuality(
+      {
+        oneLineIntro: "협업형 프론트엔드 엔지니어",
+        shortIntro: "협업을 바탕으로 제품 화면을 개선해 온 프론트엔드 엔지니어입니다.",
+        longIntro:
+          "협업을 바탕으로 제품 화면을 개선해 온 프론트엔드 엔지니어입니다. 다양한 이해관계자와 소통하며 화면 구조를 정리했습니다.",
+        fitReasons: [],
+        matchedSkills: [],
+        gapNotes: [],
+        missingButRelevant: []
+      },
+      {
+        name: "김프론트",
+        headline: "",
+        summary: "React 프론트엔드 엔지니어",
+        desiredPosition: "Frontend Engineer",
+        careerYears: 4,
+        careerDurationText: "",
+        contacts: [],
+        techStack: ["React", "TypeScript"],
+        experience: [
+          {
+            company: "Alpha",
+            role: "Frontend Engineer",
+            period: "2022-2025",
+            description: "기획, 디자인과 협업하며 React 화면을 개발했습니다."
+          }
+        ],
+        projects: [
+          {
+            name: "채용 대시보드",
+            description: "React와 TypeScript로 운영 화면을 개발했습니다.",
+            subtitle: "",
+            link: "",
+            linkLabel: "",
+            techStack: ["React", "TypeScript"],
+            highlights: []
+          }
+        ],
+        achievements: [],
+        pdfHighlights: [],
+        strengths: ["협업 상황에서 요구사항을 빠르게 정리합니다."],
+        pdfStrengths: []
+      },
+      {
+        companyName: "Hiring Cloud",
+        companyDescription: "채용 SaaS",
+        jobTitle: "Frontend Engineer",
+        jobDescription: "채용 운영 제품을 개선합니다.",
+        requirements: ["협업 중심 개발 문화 적응"],
+        preferredSkills: [],
+        techStack: ["React", "TypeScript"]
+      }
+    );
+
+    expect(report.shortCoverageTargets).toEqual([]);
+    expect(report.longCoverageTargets).toEqual([]);
+    expect(report.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(["short_missing_requirement_reference", "long_missing_anchor_coverage"])
+    );
+  });
 });

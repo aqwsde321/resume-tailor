@@ -182,4 +182,101 @@ describe("intro insight helpers", () => {
     expect(insights.opportunities).toEqual([]);
     expect(insights.keywords).toEqual(expect.arrayContaining(["backend", "Node.js", "TypeScript"]));
   });
+
+  it("복합 기술명은 일부 토큰만으로 매칭하지 않는다", () => {
+    const guidance = buildIntroGuidance(
+      {
+        name: "김앱",
+        headline: "",
+        summary: "React로 웹 제품을 개발해 온 프론트엔드 엔지니어",
+        desiredPosition: "Frontend Engineer",
+        careerYears: 4,
+        careerDurationText: "",
+        contacts: [],
+        techStack: ["React", "TypeScript"],
+        experience: [],
+        projects: [
+          {
+            name: "웹 어드민",
+            description: "React와 TypeScript로 관리자 화면을 개발했습니다.",
+            subtitle: "",
+            link: "",
+            linkLabel: "",
+            techStack: ["React", "TypeScript"],
+            highlights: []
+          }
+        ],
+        achievements: [],
+        pdfHighlights: [],
+        strengths: [],
+        pdfStrengths: []
+      },
+      {
+        companyName: "모바일팀",
+        companyDescription: "앱 개발 조직",
+        jobTitle: "Mobile Engineer",
+        jobDescription: "React Native 기반 앱을 개발합니다.",
+        requirements: ["React Native 기반 앱 개발 경험"],
+        preferredSkills: [],
+        techStack: ["React Native", "TypeScript"]
+      }
+    );
+
+    expect(guidance.matchedSkills).toEqual(["TypeScript"]);
+    expect(guidance.requirementMatches).toEqual([]);
+    expect(guidance.gapCandidates).toEqual(
+      expect.arrayContaining(["React Native", "React Native 기반 앱 개발 경험"])
+    );
+  });
+
+  it("기술 이름만 같아도 복합 요구사항 qualifier가 없으면 gap으로 남긴다", () => {
+    const guidance = buildIntroGuidance(
+      {
+        name: "박서버",
+        headline: "",
+        summary: "백엔드 개발자",
+        desiredPosition: "Backend Engineer",
+        careerYears: 3,
+        careerDurationText: "",
+        contacts: [],
+        techStack: ["Node.js", "AWS"],
+        experience: [
+          {
+            company: "Acme",
+            role: "Backend Engineer",
+            period: "2022-2025",
+            description: "Node.js API를 개발했습니다."
+          }
+        ],
+        projects: [
+          {
+            name: "API 서버",
+            description: "Node.js 서버를 구현했습니다.",
+            subtitle: "",
+            link: "",
+            linkLabel: "",
+            techStack: ["Node.js", "AWS"],
+            highlights: []
+          }
+        ],
+        achievements: [],
+        pdfHighlights: [],
+        strengths: [],
+        pdfStrengths: []
+      },
+      {
+        companyName: "Cloud Ops",
+        companyDescription: "클라우드 인프라 팀",
+        jobTitle: "Backend Engineer",
+        jobDescription: "AWS 운영과 API 안정화를 담당합니다.",
+        requirements: ["AWS 운영 경험", "Node.js 기반 API 개발 경험"],
+        preferredSkills: [],
+        techStack: ["AWS", "Node.js"]
+      }
+    );
+
+    expect(guidance.matchedSkills).toEqual(["AWS", "Node.js"]);
+    expect(guidance.requirementMatches.map((item) => item.target)).toEqual(["Node.js 기반 API 개발 경험"]);
+    expect(guidance.gapCandidates).toEqual(expect.arrayContaining(["AWS 운영 경험"]));
+  });
 });
