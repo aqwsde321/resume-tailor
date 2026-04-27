@@ -1,7 +1,7 @@
 # 운영 런북
 
-- 문서 버전: v0.8
-- 마지막 업데이트: 2026-03-24
+- 문서 버전: v0.9
+- 마지막 업데이트: 2026-04-27
 - 기준 범위: 로컬 MVP 운영 점검, 장애 대응, 복구
 
 ## 1. 목적
@@ -222,6 +222,34 @@ typst --version
 - 브라우저 새로고침 후 `/pdf` step 4를 다시 엽니다.
 - 최종 PDF 다운로드가 정상 동작하는지 먼저 확인합니다.
 - fallback 안내가 계속 보이면 preview API 실패 원인을 먼저 좁힌 뒤 재시도합니다.
+
+### K. PDF 레이아웃이 바뀐 것 같은데 baseline과 비교하고 싶다
+
+진단:
+
+```bash
+typst --version
+pdftoppm -v
+```
+
+```bash
+npm run test:pdf-visual
+```
+
+- `tests/lib/pdf-visual.test.ts`는 대표 PDF의 첫 페이지를 PNG로 렌더해 baseline과 비교합니다.
+- `typst` 또는 `pdftoppm`이 없으면 이 검증은 자동으로 skip 됩니다.
+- diff가 기준을 넘기면 비교용 PNG가 `output/pdf-visual/*.actual.png`에 남습니다.
+
+조치:
+
+- 의도하지 않은 변경이면 `output/pdf-visual/*.actual.png`를 열어 어떤 템플릿이 흔들렸는지 먼저 확인합니다.
+- 의도한 레이아웃 변경이면 검토 후 아래 명령으로 baseline을 갱신합니다.
+
+```bash
+UPDATE_PDF_VISUAL_BASELINES=1 npm run test:pdf-visual
+```
+
+- baseline 갱신 후에는 `npm run test:pdf-visual`을 한 번 더 실행해 새 기준이 안정적으로 통과하는지 확인합니다.
 
 ## 5. SSE 로그 점검 팁
 

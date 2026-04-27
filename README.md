@@ -206,6 +206,9 @@ npm run build
 
 - 실제 Typst SVG/PDF smoke test는 `tests/lib/pdf-build.test.ts`에 포함되어 있습니다.
 - PDF 시각 회귀 baseline 검증은 `tests/lib/pdf-visual.test.ts`와 `npm run test:pdf-visual`로 실행할 수 있습니다.
+- PDF 시각 회귀 검증은 `typst`와 `pdftoppm`이 둘 다 PATH에 있을 때만 실행됩니다.
+- baseline을 의도적으로 갱신할 때는 `UPDATE_PDF_VISUAL_BASELINES=1 npm run test:pdf-visual`을 사용합니다.
+- 시각 diff가 기준을 넘기면 비교용 PNG가 `output/pdf-visual/*.actual.png`에 저장됩니다.
 
 ## 6. 배포
 

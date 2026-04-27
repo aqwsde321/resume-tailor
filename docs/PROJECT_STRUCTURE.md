@@ -1,7 +1,7 @@
 # 프로젝트 구조
 
-- 문서 버전: v0.8
-- 마지막 업데이트: 2026-03-24
+- 문서 버전: v0.9
+- 마지막 업데이트: 2026-04-27
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
@@ -208,8 +208,9 @@ step별 화면 기능을 모읍니다.
 
 ### `src/templates/typst/`
 
-- `classic`, `sidebar`, `modern`, `typographic`
+- `classic`, `compact`, `modern`, `typographic`
   - 실제 PDF preview/export에 사용하는 Typst 템플릿
+  - 사용자 UI 라벨 기준으로는 `compact`가 `Sidebar` 템플릿입니다.
 
 ### `skills/`
 
