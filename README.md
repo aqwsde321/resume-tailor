@@ -2,8 +2,6 @@
 
 로컬에서 이력서와 채용공고 텍스트를 `@openai/codex-sdk`와 로컬 `SKILL.md` 파이프라인으로 구조화하고, 회사 맞춤 자기소개와 PDF까지 만드는 Next.js 앱입니다.
 
-문의사항이나 오류 제보는 [qrqrq23r@gmail.com](mailto:qrqrq23r@gmail.com) 으로 보내 주세요.
-
 ## 화면 미리보기
 
 전체 흐름과 각 단계의 실제 화면을 순서대로 볼 수 있습니다.
