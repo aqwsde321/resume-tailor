@@ -238,6 +238,7 @@ npm run test:pdf-visual
 
 - `tests/lib/pdf-visual.test.ts`는 대표 PDF의 첫 페이지를 PNG로 렌더해 baseline과 비교합니다.
 - `typst` 또는 `pdftoppm`이 없으면 이 검증은 자동으로 skip 됩니다.
+- Typst·Poppler 버전이나 시스템 폰트가 달라지면 같은 템플릿도 다른 PNG를 만들 수 있으므로, baseline diff를 볼 때 실행 환경도 함께 확인합니다.
 - diff가 기준을 넘기면 비교용 PNG가 `output/pdf-visual/*.actual.png`에 남습니다.
 
 조치:
