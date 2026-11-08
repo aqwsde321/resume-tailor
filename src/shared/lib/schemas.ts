@@ -84,6 +84,54 @@ export const IntroSchema = z
   })
   .strict();
 
+export const ExperienceDiscoveryMessageSchema = z
+  .object({
+    role: z.enum(["assistant", "user"]),
+    content: z.string().trim().min(1).max(2000)
+  })
+  .strict();
+
+export const DiscoveredExperienceDraftSchema = z
+  .object({
+    category: z.enum(["experience", "project"]),
+    title: z.string().max(160),
+    organization: z.string().max(160),
+    role: z.string().max(160),
+    period: z.string().max(100),
+    description: z.string().max(1600),
+    techStack: z.array(z.string().max(80)).max(30).default([])
+  })
+  .strict();
+
+export const ExperienceDiscoveryTurnSchema = z
+  .object({
+    status: z.enum(["question", "draft", "done"]),
+    message: z.string().trim().min(1).max(1000),
+    draft: DiscoveredExperienceDraftSchema.nullable()
+  })
+  .strict()
+  .superRefine((turn, context) => {
+    if (turn.status === "draft" && !turn.draft) {
+      context.addIssue({ code: "custom", message: "draft 상태에는 경험 초안이 필요합니다.", path: ["draft"] });
+    }
+
+    if (turn.status !== "draft" && turn.draft) {
+      context.addIssue({ code: "custom", message: "draft 외 상태에는 경험 초안을 넣을 수 없습니다.", path: ["draft"] });
+    }
+  });
+
+export const ExperienceDiscoverySessionSchema = z
+  .object({
+    requirement: z.string().trim().min(1).max(300),
+    messages: z.array(ExperienceDiscoveryMessageSchema).max(16),
+    status: z.enum(["question", "draft", "done"]),
+    message: z.string().max(1000),
+    draft: DiscoveredExperienceDraftSchema.nullable(),
+    sourceResumeSnapshot: z.string().max(200_000),
+    sourceCompanyJson: z.string().max(50_000)
+  })
+  .strict();
+
 export const resumeOutputSchema = {
   type: "object",
   additionalProperties: false,
@@ -211,6 +259,35 @@ export const introOutputSchema = {
     missingButRelevant: {
       type: "array",
       items: { type: "string" }
+    }
+  }
+} as const;
+
+export const experienceDiscoveryOutputSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["status", "message", "draft"],
+  properties: {
+    status: { type: "string", enum: ["question", "draft", "done"] },
+    message: { type: "string" },
+    draft: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["category", "title", "organization", "role", "period", "description", "techStack"],
+          properties: {
+            category: { type: "string", enum: ["experience", "project"] },
+            title: { type: "string" },
+            organization: { type: "string" },
+            role: { type: "string" },
+            period: { type: "string" },
+            description: { type: "string" },
+            techStack: { type: "array", items: { type: "string" } }
+          }
+        },
+        { type: "null" }
+      ]
     }
   }
 } as const;

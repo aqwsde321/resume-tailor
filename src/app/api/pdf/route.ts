@@ -10,6 +10,7 @@ import {
   PDF_THEME_IDS
 } from "@/entities/pdf/model/themes";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { auditResumePdf } from "@/server/pdf/ats-audit";
 import { buildPdfContentDisposition, buildResumePdf } from "@/server/pdf/build";
 import { buildPdfDownloadName } from "@/entities/pdf/model/view-model";
 import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
       body.themeId,
       body.customAccentHex
     );
+    const atsAudit = await auditResumePdf(pdf, body.resume, body.company);
     const filename = buildPdfDownloadName(body.company, body.resume);
 
     return new NextResponse(new Uint8Array(pdf), {
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/pdf",
         "Content-Length": String(pdf.byteLength),
         "Content-Disposition": buildPdfContentDisposition(filename),
+        "X-Resume-Pdf-Ats-Audit": Buffer.from(JSON.stringify(atsAudit), "utf8").toString("base64url"),
         "Cache-Control": "no-store"
       }
     });

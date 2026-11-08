@@ -1,6 +1,6 @@
-export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro";
+export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro" | "discover-experience";
 export type InputMode = "text" | "file" | "url";
-export type TaskKind = "resume" | "company" | "intro";
+export type TaskKind = "resume" | "company" | "intro" | "experienceDiscovery";
 export type LogLevel = "info" | "success" | "error";
 export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 export type IntroTone = "balanced" | "confident" | "collaborative" | "problemSolving";
@@ -75,6 +75,36 @@ export interface Intro {
   matchedSkills: string[];
   gapNotes: string[];
   missingButRelevant: string[];
+}
+
+export type ExperienceDiscoveryStatus = "question" | "draft" | "done";
+
+export interface ExperienceDiscoveryMessage {
+  role: "assistant" | "user";
+  content: string;
+}
+
+export interface DiscoveredExperienceDraft {
+  category: "experience" | "project";
+  title: string;
+  organization: string;
+  role: string;
+  period: string;
+  description: string;
+  techStack: string[];
+}
+
+export interface ExperienceDiscoveryTurn {
+  status: ExperienceDiscoveryStatus;
+  message: string;
+  draft: DiscoveredExperienceDraft | null;
+}
+
+export interface ExperienceDiscoverySession extends ExperienceDiscoveryTurn {
+  requirement: string;
+  messages: ExperienceDiscoveryMessage[];
+  sourceResumeSnapshot: string;
+  sourceCompanyJson: string;
 }
 
 export interface ApiSuccess<T> {

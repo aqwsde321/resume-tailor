@@ -8,6 +8,7 @@ import {
 import { serializeResume, serializeResumeIntroSnapshot } from "@/entities/resume/model/resume-utils";
 
 const baseState: PipelineState = {
+  applications: [],
   agentSettings: {
     model: "",
     modelReasoningEffort: "medium"
@@ -30,6 +31,7 @@ const baseState: PipelineState = {
   companySavedAt: null,
   introSavedAt: null,
   intro: null,
+  experienceDiscovery: null,
   previousIntro: null,
   introSource: null,
   currentTask: null,

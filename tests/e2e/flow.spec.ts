@@ -7,6 +7,29 @@ let lastPdfRequestBody: unknown = null;
 const PROFILE_IMAGE_BUFFER = readFileSync(
   path.join(process.cwd(), "docs", "images", "app-flow-overview.png")
 );
+const PDF_ATS_AUDIT_HEADER = Buffer.from(
+  JSON.stringify({
+    status: "checked",
+    message: "PDF에서 텍스트를 추출했어요.",
+    textCharacterCount: 240,
+    nameFound: true,
+    contacts: [{ label: "GitHub", found: true }],
+    requiredTerms: {
+      total: 3,
+      matchedCount: 2,
+      matched: ["React", "TypeScript"],
+      missing: ["GraphQL"]
+    },
+    preferredTerms: {
+      total: 1,
+      matchedCount: 1,
+      matched: ["Next.js"],
+      missing: []
+    },
+    textPreview: "김테스트 React TypeScript"
+  }),
+  "utf8"
+).toString("base64url");
 
 function toSse(events: Array<{ event: string; data: unknown }>) {
   return events
@@ -343,6 +366,9 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: "application/pdf",
+      headers: {
+        "X-Resume-Pdf-Ats-Audit": PDF_ATS_AUDIT_HEADER
+      },
       body: "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"
     });
   });
@@ -365,7 +391,7 @@ test("3단계 흐름을 완료하면 AI 근거와 소개문이 표시된다", as
 
   await expect(anchorSection.getByRole("heading", { name: "공고와 연결한 내 경험" })).toBeVisible();
   await expect(anchorSection.locator(".anchor-type.requirement").first()).toBeVisible();
-  await expect(anchorSection.getByText("React 실무 경험")).toBeVisible();
+  await expect(anchorSection.getByText("TypeScript 사용 경험")).toBeVisible();
   await expect(
     anchorSection
       .getByText("프로젝트: Admin Console / 운영 데이터를 시각화하는 관리 도구를 구축했습니다. / 기술: React, Next.js, TypeScript")
@@ -375,7 +401,7 @@ test("3단계 흐름을 완료하면 AI 근거와 소개문이 표시된다", as
   await expect(
     page.getByText("React와 TypeScript 기반 관리자 도구 개발 경험이 공고 요구사항과 직접 연결됩니다.")
   ).toBeVisible();
-  await expect(page.getByText("디자인 시스템 운영 경험은 자기소개에서 추가로 보강하면 좋습니다.")).toBeVisible();
+  await expect(page.getByText("디자인 시스템 운영 경험은 자기소개에서 추가로 보강하면 좋습니다.").first()).toBeVisible();
   await expect(page.getByText("더 살릴 수 있는 점")).toBeVisible();
   await expect(page.getByText("우대 조건 'Next.js 경험'은 Admin Console 프로젝트 근거를 써서 한 문장 더 보강할 수 있습니다.")).toBeVisible();
   await expect(page.getByText("React 기반 대시보드 경험의 프론트엔드 개발자")).toBeVisible();
@@ -386,6 +412,88 @@ test("3단계 흐름을 완료하면 AI 근거와 소개문이 표시된다", as
   await expect(page.locator(".keyword-chip").filter({ hasText: "Next.js" }).first()).toBeVisible();
 });
 
+test("부족한 요건을 질문으로 확인하고 승인한 경험만 이력서에 추가한다", async ({ page }) => {
+  const discoveryRequests: Array<{ requirement: string; messages: Array<{ role: string; content: string }> }> = [];
+
+  await page.route("**/api/experience-discovery", async (route) => {
+    const requestBody = route.request().postDataJSON() as {
+      requirement: string;
+      messages: Array<{ role: string; content: string }>;
+    };
+    discoveryRequests.push(requestBody);
+
+    const turn = discoveryRequests.length === 1
+      ? {
+          status: "question",
+          message: "디자인 시스템을 운영하거나 개선한 경험이 있나요?",
+          draft: null
+        }
+      : {
+          status: "draft",
+          message: "말씀해 주신 내용을 초안으로 정리했습니다. 사실과 다른 부분을 확인해 주세요.",
+          draft: {
+            category: "experience",
+            title: "디자인 시스템 개선",
+            organization: "Acme",
+            role: "Frontend Engineer",
+            period: "2024",
+            description: "공통 버튼과 폼 컴포넌트를 정리해 화면별 구현 차이를 줄였습니다.",
+            techStack: ["React", "Storybook"]
+          }
+        };
+
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: toSse([
+        { event: "result", data: { data: turn } },
+        { event: "done", data: { ok: true, elapsedMs: 12 } }
+      ])
+    });
+  });
+
+  await completeIntroFlow(page);
+
+  const discoveryCard = page.locator("section.experience-discovery-card");
+  await discoveryCard.getByRole("button", { name: "경험 찾아보기" }).first().click();
+  await expect(discoveryCard.getByText("디자인 시스템을 운영하거나 개선한 경험이 있나요?")).toBeVisible();
+
+  await discoveryCard.getByLabel("답변").fill("공통 버튼과 폼 컴포넌트를 정리한 적이 있습니다.");
+  await discoveryCard.getByRole("button", { name: "답변 보내기" }).click();
+  await expect(discoveryCard.getByLabel("경험 설명")).toHaveValue(
+    "공통 버튼과 폼 컴포넌트를 정리해 화면별 구현 차이를 줄였습니다."
+  );
+
+  expect(discoveryRequests).toHaveLength(2);
+  expect(discoveryRequests[1]?.requirement).toContain("디자인 시스템 운영 경험");
+  expect(discoveryRequests[1]?.messages.at(-1)).toEqual({
+    role: "user",
+    content: "공통 버튼과 폼 컴포넌트를 정리한 적이 있습니다."
+  });
+
+  const resumeCountBeforeApproval = await page.evaluate(() => {
+    const state = JSON.parse(window.localStorage.getItem("resume-tailor.pipeline.v2") ?? "{}");
+    return JSON.parse(state.resumeConfirmedJson).experience.length;
+  });
+  expect(resumeCountBeforeApproval).toBe(1);
+
+  await discoveryCard.getByLabel("경험 설명").fill("수정한 경험 설명입니다.");
+  await discoveryCard.getByRole("button", { name: "이력서에 추가" }).click();
+
+  const savedResume = await page.evaluate(() => {
+    const state = JSON.parse(window.localStorage.getItem("resume-tailor.pipeline.v2") ?? "{}");
+    return JSON.parse(state.resumeConfirmedJson);
+  });
+  expect(savedResume.experience).toHaveLength(2);
+  expect(savedResume.experience[1]).toMatchObject({
+    company: "Acme",
+    role: "Frontend Engineer",
+    period: "2024",
+    description: "수정한 경험 설명입니다."
+  });
+  await expect(page.getByRole("button", { name: "소개글 만들기" })).toBeVisible();
+});
+
 test("최신 소개글이 있으면 step 4 PDF 화면으로 이동해 바로 미리볼 수 있다", async ({ page }) => {
   await completeIntroFlow(page);
 
@@ -394,6 +502,36 @@ test("최신 소개글이 있으면 step 4 PDF 화면으로 이동해 바로 미
   await expect(page.getByRole("heading", { name: "PDF 내보내기" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "출력 미리보기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "PDF 내보내기" })).toBeVisible();
+});
+
+test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관 PDF를 내려받을 수 있다", async ({ page }) => {
+  await completeIntroFlow(page);
+  await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
+
+  await page.getByRole("button", { name: "지원 기록 저장" }).click();
+  await expect(page.getByText("지원 기록과 PDF를 저장했어요.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "지원 기록 1" })).toBeVisible();
+  await page.goto("/applications");
+
+  const record = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
+  await expect(record).toBeVisible();
+  await expect(record.getByText("Frontend Engineer")).toBeVisible();
+  await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
+  await record.getByLabel("Beta Corp 메모").fill("1차 면접 일정 조율 중");
+  await page.reload();
+
+  const persistedRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
+  await expect(persistedRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
+  await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
+
+  const downloadPromise = page.waitForEvent("download");
+  await persistedRecord.getByRole("button", { name: "PDF 다운로드" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain("Beta-Corp");
+
+  await persistedRecord.getByRole("button", { name: "기록 삭제" }).click();
+  await expect(page.locator("article.application-card")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "PDF를 만들 때 지원 기록으로 저장해 보세요." })).toBeVisible();
 });
 
 test("이력서 URL을 불러와 정리한 뒤 수정하고 저장할 수 있다", async ({ page }) => {
@@ -653,6 +791,8 @@ test("URL 기반으로 step 1~4를 진행하고 PDF export 요청까지 보낼 �
   await page.getByRole("button", { name: "PDF 내보내기" }).click();
 
   await expect(page.getByText("PDF를 내려받았어요.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "PDF 텍스트를 확인했어요" })).toBeVisible();
+  await expect(page.getByText("찾지 못함: GraphQL")).toBeVisible();
 
   const download = await downloadPromise;
   if (download) {

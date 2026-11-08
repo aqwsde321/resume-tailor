@@ -1,4 +1,5 @@
 export { CompareCard } from "@/features/result/ui/compare-card";
+export { ExperienceDiscoveryCard } from "@/features/result/ui/experience-discovery-card";
 export { InsightCard } from "@/features/result/ui/insight-card";
 export { IntroActionCard } from "@/features/result/ui/intro-action-card";
 export { IntroOutputCard } from "@/features/result/ui/intro-output-card";

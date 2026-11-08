@@ -213,7 +213,7 @@ export function useAppFrameView(step: StepKey) {
       ? step === "result"
         ? "blocked"
         : "locked"
-      : state.currentTask === "intro"
+      : state.currentTask === "intro" || state.currentTask === "experienceDiscovery"
         ? "working"
       : introFresh
         ? "done"

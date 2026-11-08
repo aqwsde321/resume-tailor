@@ -13,6 +13,10 @@ import {
 
 import { normalizeAgentSettings } from "@/shared/lib/agent-settings";
 import {
+  normalizeApplicationRecords,
+  type ApplicationRecord
+} from "@/entities/application/model/application-record";
+import {
   DEFAULT_PDF_TEMPLATE_ID,
   isPdfTemplateId,
   type PdfTemplateId
@@ -24,6 +28,7 @@ import {
   type PdfThemeId
 } from "@/entities/pdf/model/themes";
 import { isIntroTone } from "@/entities/intro/model/intro-tone";
+import { normalizeExperienceDiscoverySession } from "@/entities/intro/model/experience-discovery";
 import {
   matchesResumeIntroSnapshot,
   parseResumeJson,
@@ -32,6 +37,7 @@ import {
 import type {
   AgentSettings,
   Company,
+  ExperienceDiscoverySession,
   InputMode,
   Intro,
   IntroTone,
@@ -55,6 +61,7 @@ export interface IntroRefreshReason {
 }
 
 export interface PipelineState {
+  applications: ApplicationRecord[];
   agentSettings: AgentSettings;
   introTone: IntroTone;
   pdfTemplateId: PdfTemplateId;
@@ -74,6 +81,7 @@ export interface PipelineState {
   companySavedAt: string | null;
   introSavedAt: string | null;
   intro: Intro | null;
+  experienceDiscovery: ExperienceDiscoverySession | null;
   previousIntro: Intro | null;
   introSource: IntroSource | null;
   currentTask: TaskKind | null;
@@ -85,6 +93,7 @@ export interface PipelineState {
 }
 
 const initialState: PipelineState = {
+  applications: [],
   agentSettings: {
     model: "",
     modelReasoningEffort: "medium"
@@ -107,6 +116,7 @@ const initialState: PipelineState = {
   companySavedAt: null,
   introSavedAt: null,
   intro: null,
+  experienceDiscovery: null,
   previousIntro: null,
   introSource: null,
   currentTask: null,
@@ -155,6 +165,7 @@ function normalizeState(raw: unknown): PipelineState {
   return {
     ...initialState,
     ...value,
+    applications: normalizeApplicationRecords(value.applications),
     agentSettings: normalizeAgentSettings(value.agentSettings),
     introTone: isIntroTone(value.introTone) ? value.introTone : "balanced",
     pdfTemplateId: isPdfTemplateId(value.pdfTemplateId)
@@ -171,6 +182,7 @@ function normalizeState(raw: unknown): PipelineState {
     companySavedAt: typeof value.companySavedAt === "string" ? value.companySavedAt : null,
     introSavedAt: typeof value.introSavedAt === "string" ? value.introSavedAt : null,
     intro: normalizeIntro(value.intro),
+    experienceDiscovery: normalizeExperienceDiscoverySession(value.experienceDiscovery),
     previousIntro: normalizeIntro(value.previousIntro),
     isCancellingTask: value.isCancellingTask === true,
     logs: Array.isArray(value.logs)

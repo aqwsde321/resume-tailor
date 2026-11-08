@@ -28,7 +28,7 @@
 
 ### Step 4. PDF 내보내기
 
-최종 내용을 다듬으면서 실제 미리보기를 확인하고 PDF를 내보냅니다.
+최종 내용을 다듬고 실제 미리보기를 확인한 뒤 PDF를 내보내면, PDF 텍스트와 공고 키워드도 검사합니다.
 
 <img src="./docs/images/step-4-pdf.gif" alt="Step 4 PDF 내보내기" width="100%" />
 
@@ -117,6 +117,7 @@ Docker를 쓰지 않고 직접 실행하려면 아래가 필요합니다.
 - Codex 앱 또는 Codex CLI
 - Codex 로그인 가능한 계정
 - `typst` CLI: `/pdf`의 실제 Typst 미리보기와 PDF 내보내기를 로컬에서 쓰려면 PATH에 있어야 합니다.
+- `pdftotext` (Poppler): PDF 텍스트 검사용입니다. 설치하지 않아도 PDF 내보내기는 가능하지만 검사는 건너뜁니다.
 
 Node.js는 LTS 설치를 권장합니다.
 
@@ -187,6 +188,7 @@ Docker 실행에서는 `CODEX_CLI_PATH`가 필요하지 않습니다. Codex CLI�
 
 - 로컬 단일 사용자 시나리오를 기준으로 설계되어 있습니다.
 - 로컬 실행에서 `/pdf`의 실제 Typst 미리보기와 PDF 내보내기를 쓰려면 `typst` CLI가 필요합니다.
+- 로컬에서 PDF 텍스트 검사를 쓰려면 macOS는 `brew install poppler`, Debian/Ubuntu는 `apt install poppler-utils`로 `pdftotext`를 설치하세요. Docker 이미지에는 포함되어 있습니다.
 - 공고 URL 불러오기는 사이트 구조에 따라 정확도가 달라질 수 있습니다. 처리 방식은 [채용공고 불러오기 가이드](./docs/COMPANY_FETCH_GUIDE.md)를 참고하세요.
 - 서버리스나 원격 배포용 문서는 아직 포함하지 않습니다.
 - Docker 실행도 최초 1회 Codex 인증은 필요합니다.

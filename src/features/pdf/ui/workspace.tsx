@@ -10,6 +10,8 @@ import {
 
 import type { PdfTemplateId } from "@/entities/pdf/model/templates";
 import type { PdfThemeId } from "@/entities/pdf/model/themes";
+import type { PdfAtsAudit } from "@/entities/pdf/model/ats-audit";
+import { PdfAtsAuditPanel } from "@/features/pdf/ui/ats-audit-panel";
 import { PdfPreviewPane } from "@/features/pdf/ui/preview-pane";
 import {
   ContactsSectionForm,
@@ -31,13 +33,16 @@ import { parseInlineItems, stringifyInlineList } from "@/shared/lib/list-input";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 interface PdfEditorWorkspaceProps {
+  atsAudit: PdfAtsAudit | null;
   company: Company;
   customAccentHex: string;
   error: string;
   exporting: boolean;
+  savingApplication: boolean;
   intro: Intro;
   onCompanyChange: (nextCompany: Company) => void;
   onExport: () => void;
+  onSaveApplication: () => void;
   onIntroChange: (nextIntro: Intro) => void;
   onResumeChange: (nextResume: Resume) => void;
   onTemplateChange: (nextTemplateId: PdfTemplateId) => void;
@@ -65,13 +70,16 @@ function buildInlineListSignature(values: string[]) {
 }
 
 export function PdfEditorWorkspace({
+  atsAudit,
   company,
   customAccentHex,
   error,
   exporting,
+  savingApplication,
   intro,
   onCompanyChange,
   onExport,
+  onSaveApplication,
   onIntroChange,
   onResumeChange,
   onTemplateChange,
@@ -370,11 +378,21 @@ export function PdfEditorWorkspace({
           <span>미리보기 기준으로 확인한 뒤 최종 PDF를 내보냅니다.</span>
         </div>
         <div className="action-row">
+          <button
+            type="button"
+            className="nav-btn"
+            onClick={onSaveApplication}
+            disabled={exporting || savingApplication}
+          >
+            {savingApplication ? "지원 기록 저장 중..." : "지원 기록 저장"}
+          </button>
           <button type="button" className="primary" onClick={onExport} disabled={exporting}>
             {exporting ? "PDF 만드는 중..." : "PDF 내보내기"}
           </button>
         </div>
       </div>
+
+      {atsAudit && <PdfAtsAuditPanel audit={atsAudit} />}
     </section>
   );
 }

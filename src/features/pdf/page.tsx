@@ -17,16 +17,20 @@ export default function PdfPage() {
     confirmedCompany,
     confirmedResume,
     exportPdf,
+    isApplicationSaving,
     isPdfExporting,
+    pdfAtsAudit,
     pdfCompany,
     pdfError,
     pdfIntro,
     pdfResume,
+    saveApplication,
     setPdfCompany,
     setPdfIntro,
     setPdfResume
   } = usePdfWorkspaceState({
     clearStatus,
+    patch,
     setMessage,
     state,
     templateId: state.pdfTemplateId,
@@ -75,12 +79,15 @@ export default function PdfPage() {
         <>
           {pdfResume && pdfIntro && pdfCompany && (
             <PdfEditorWorkspace
+              atsAudit={pdfAtsAudit}
               company={pdfCompany}
               error={pdfError}
               exporting={isPdfExporting}
+              savingApplication={isApplicationSaving}
               intro={pdfIntro}
               onCompanyChange={setPdfCompany}
               onExport={() => void exportPdf()}
+              onSaveApplication={() => void saveApplication()}
               onIntroChange={setPdfIntro}
               onResumeChange={setPdfResume}
               onTemplateChange={(nextTemplateId) =>

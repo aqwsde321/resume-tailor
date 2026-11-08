@@ -28,6 +28,7 @@ RUN apt-get update \
     ca-certificates \
     curl \
     git \
+    poppler-utils \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-kor \

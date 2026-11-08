@@ -1,6 +1,6 @@
 "use client";
 
-import type { PipelineLog } from "@/shared/lib/types";
+import type { PipelineLog, TaskKind } from "@/shared/lib/types";
 
 export type StepKey = "resume" | "company" | "result" | "pdf";
 export type StepRoute = "/resume" | "/company" | "/result" | "/pdf";
@@ -9,10 +9,11 @@ export type BusyStageKey = "prepare" | "analyze" | "finalize";
 
 export const LIVE_MODAL_CLOSE_MS = 220;
 
-export const TASK_LABEL: Record<"resume" | "company" | "intro", string> = {
+export const TASK_LABEL: Record<TaskKind, string> = {
   resume: "이력서 정리",
   company: "공고 정리",
-  intro: "소개글 만들기"
+  intro: "소개글 만들기",
+  experienceDiscovery: "경험 발굴"
 };
 
 export const PHASE_LABEL: Record<string, string> = {
@@ -41,7 +42,7 @@ const ANALYSIS_PHASES = new Set(["turn", "reasoning", "command", "mcp", "search"
 const FINALIZE_PHASES = new Set(["patch", "response"]);
 
 export const TASK_PROGRESS_LABELS: Record<
-  "resume" | "company" | "intro",
+  TaskKind,
   Record<BusyStageKey, string>
 > = {
   resume: {
@@ -58,10 +59,15 @@ export const TASK_PROGRESS_LABELS: Record<
     prepare: "입력 준비",
     analyze: "근거 연결",
     finalize: "소개글 생성"
+  },
+  experienceDiscovery: {
+    prepare: "질문 준비",
+    analyze: "경험 확인",
+    finalize: "초안 정리"
   }
 };
 
-export function getBusyStage(task: "resume" | "company" | "intro", logs: PipelineLog[]): BusyStageKey {
+export function getBusyStage(task: TaskKind, logs: PipelineLog[]): BusyStageKey {
   const taskLogs = logs.filter((log) => log.task === task);
 
   if (taskLogs.some((log) => FINALIZE_PHASES.has(log.phase))) {

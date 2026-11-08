@@ -17,6 +17,8 @@ interface AppFrameProps {
   layout?: "default" | "wide";
   stickyShell?: boolean;
   showSaveSummary?: boolean;
+  showWorkflowSteps?: boolean;
+  applicationsActive?: boolean;
   children: ReactNode;
 }
 
@@ -27,6 +29,8 @@ export function AppFrame({
   layout = "default",
   stickyShell = true,
   showSaveSummary = true,
+  showWorkflowSteps = true,
+  applicationsActive = false,
   children
 }: AppFrameProps) {
   const {
@@ -83,8 +87,11 @@ export function AppFrame({
       <div className={`container ${layout === "wide" ? "container-wide" : ""}`}>
         <FrameShell
           description={description}
+          applicationsActive={applicationsActive}
+          applicationsCount={state.applications.length}
           saveSummaryItems={saveSummaryItems}
           showSaveSummary={showSaveSummary}
+          showWorkflowSteps={showWorkflowSteps}
           steps={steps}
           stickyShell={stickyShell}
           title={title}

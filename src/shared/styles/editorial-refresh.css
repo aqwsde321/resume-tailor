@@ -45,6 +45,45 @@ body {
   box-shadow: none;
 }
 
+.hero-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-applications-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hero-applications-link span {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.06);
+  font-size: 0.7rem;
+}
+
+.hero-applications-link:hover,
+.hero-applications-link.active {
+  border-color: rgba(36, 72, 191, 0.24);
+  background: rgba(36, 72, 191, 0.07);
+  color: var(--primary-strong);
+}
+
 .hero h1 {
   max-width: 14ch;
   font-size: clamp(1.9rem, 3.4vw, 3rem);
@@ -1330,6 +1369,137 @@ button {
   box-shadow: none;
 }
 
+.pdf-ats-audit {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 251, 0.88);
+}
+
+.pdf-ats-audit-head,
+.pdf-ats-coverage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pdf-ats-audit-kicker {
+  margin: 0 0 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.pdf-ats-audit h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pdf-ats-audit p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.pdf-ats-audit-count {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(44, 88, 221, 0.08);
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pdf-ats-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.pdf-ats-check-row span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.pdf-ats-check-row .is-found {
+  background: rgba(18, 123, 95, 0.1);
+  color: var(--ok);
+}
+
+.pdf-ats-check-row .is-missing {
+  background: rgba(169, 90, 22, 0.1);
+  color: var(--warn);
+}
+
+.pdf-ats-coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pdf-ats-coverage {
+  padding: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 12px;
+  background: rgba(250, 248, 243, 0.7);
+}
+
+.pdf-ats-coverage-head strong,
+.pdf-ats-coverage-head span {
+  font-size: 0.82rem;
+}
+
+.pdf-ats-coverage-head span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pdf-ats-preview {
+  padding-top: 12px;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.pdf-ats-preview summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.pdf-ats-preview p {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.035);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.pdf-ats-footnote {
+  font-size: 0.76rem !important;
+}
+
+.pdf-ats-audit.is-unavailable {
+  border-color: rgba(169, 90, 22, 0.18);
+}
+
+@media (max-width: 680px) {
+  .pdf-ats-audit-head {
+    flex-direction: column;
+  }
+
+  .pdf-ats-coverage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .log-drawer {
   gap: 10px;
   background: rgba(250, 248, 243, 0.76);
@@ -1729,5 +1899,352 @@ button {
 @keyframes busy-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.experience-discovery-card h2,
+.discovery-session h3 {
+  margin: 0;
+}
+
+.discovery-intro,
+.discovery-draft-note,
+.discovery-status,
+.discovery-requirement-label,
+.discovery-done p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.discovery-gap-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.discovery-gap-row,
+.discovery-session-head,
+.discovery-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.discovery-gap-row {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(248, 246, 240, 0.72);
+}
+
+.discovery-gap-row span {
+  min-width: 0;
+}
+
+.discovery-session {
+  display: grid;
+  gap: 14px;
+}
+
+.discovery-session-head {
+  align-items: flex-start;
+}
+
+.discovery-session-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.discovery-requirement-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.discovery-transcript {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.discovery-message {
+  width: min(100%, 760px);
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(248, 246, 240, 0.72);
+}
+
+.discovery-message.user {
+  justify-self: end;
+  border-color: rgba(36, 72, 191, 0.16);
+  background: rgba(36, 72, 191, 0.06);
+}
+
+.discovery-message span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.discovery-message p {
+  margin: 4px 0 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.discovery-answer-form,
+.discovery-draft {
+  display: grid;
+  gap: 10px;
+}
+
+.discovery-answer-form label,
+.discovery-draft-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.discovery-answer-form textarea,
+.discovery-draft-grid textarea {
+  min-height: 104px;
+}
+
+.discovery-draft-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.discovery-draft-grid input,
+.discovery-draft-grid select {
+  min-height: 42px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 251, 0.88);
+  color: var(--text);
+  font: inherit;
+}
+
+.discovery-tech-stack,
+.discovery-description {
+  grid-column: 1 / -1;
+}
+
+.discovery-done {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 680px) {
+  .discovery-gap-row,
+  .discovery-form-actions,
+  .discovery-done {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .discovery-gap-row button,
+  .discovery-form-actions button,
+  .discovery-done button {
+    width: 100%;
+  }
+
+  .discovery-draft-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discovery-tech-stack,
+  .discovery-description {
+    grid-column: auto;
+  }
+}
+.applications-list {
+  display: grid;
+  gap: 12px;
+}
+
+.applications-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.application-card {
+  gap: 14px;
+}
+
+.application-card-head,
+.application-card-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.application-card-head h2,
+.applications-empty h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+}
+
+.application-job-title {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.application-status-badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(36, 72, 191, 0.08);
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.application-status-badge.status-applied {
+  background: rgba(15, 107, 87, 0.09);
+  color: var(--ok);
+}
+
+.application-status-badge.status-interviewing {
+  background: rgba(139, 91, 29, 0.1);
+  color: var(--warn);
+}
+
+.application-status-badge.status-closed {
+  background: rgba(17, 24, 39, 0.07);
+  color: var(--muted);
+}
+
+.application-snapshot {
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+  padding: 10px 0;
+}
+
+.application-snapshot summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.application-snapshot-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.application-snapshot-body section {
+  min-width: 0;
+}
+
+.application-snapshot-body h3 {
+  margin: 0 0 5px;
+  font-size: 0.76rem;
+}
+
+.application-snapshot-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.application-snapshot-body .application-template-note {
+  grid-column: 1 / -1;
+  font-size: 0.74rem;
+}
+
+.application-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.application-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.application-field .form-select,
+.application-field .application-notes {
+  width: 100%;
+  font-weight: 500;
+}
+
+.application-field .application-notes {
+  min-height: 76px;
+  padding: 9px 11px;
+  resize: vertical;
+}
+
+.application-card-footer {
+  align-items: center;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 12px;
+}
+
+.application-pdf-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.application-delete-button {
+  color: #8a3c31;
+}
+
+.applications-empty {
+  align-content: start;
+  min-height: 190px;
+}
+
+@media (max-width: 760px) {
+  .applications-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .application-card-head,
+  .application-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .application-card-footer .action-row {
+    flex-direction: row;
+  }
+
+  .application-snapshot-body,
+  .application-controls {
+    grid-template-columns: 1fr;
   }
 }

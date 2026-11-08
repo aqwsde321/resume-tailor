@@ -3,10 +3,13 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 import { buildResumePdf, buildResumeSvgPreview } from "@/server/pdf/build";
+import { auditResumePdf } from "@/server/pdf/ats-audit";
 import { companyFixture, createPdfResumeFixture, introFixture, PROFILE_IMAGE_DATA_URL } from "../fixtures/pdf-fixture";
 
 const hasTypst = spawnSync("typst", ["--version"], { encoding: "utf8" }).status === 0;
+const hasPdfTextExtractor = spawnSync("pdftotext", ["-v"], { encoding: "utf8" }).status === 0;
 const describeWithTypst = hasTypst ? describe : describe.skip;
+const describeWithPdfTools = hasTypst && hasPdfTextExtractor ? describe : describe.skip;
 const resumeFixture = createPdfResumeFixture({
   pdfProfileImageDataUrl: PROFILE_IMAGE_DATA_URL,
   pdfProfileImageVisible: true
@@ -39,5 +42,17 @@ describeWithTypst("pdf build smoke", () => {
 
     expect(pdf.byteLength).toBeGreaterThan(0);
     expect(pdf.subarray(0, 4).toString("utf8")).toBe("%PDF");
+  });
+});
+
+describeWithPdfTools("pdf ATS text extraction", () => {
+  it("checks the text layer of a generated PDF", async () => {
+    const pdf = await buildResumePdf(resumeFixture, introFixture, companyFixture, "classic", "cobalt");
+    const audit = await auditResumePdf(pdf, resumeFixture, companyFixture);
+
+    expect(audit.status).toBe("checked");
+    expect(audit.textCharacterCount).toBeGreaterThan(100);
+    expect(audit.nameFound).toBe(true);
+    expect(audit.requiredTerms.matched).toEqual(expect.arrayContaining(["Java", "PostgreSQL"]));
   });
 });

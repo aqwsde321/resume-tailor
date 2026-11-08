@@ -15,8 +15,11 @@ export interface FrameStepItem {
 
 interface FrameShellProps {
   description: string;
+  applicationsActive: boolean;
+  applicationsCount: number;
   saveSummaryItems: string[];
   showSaveSummary: boolean;
+  showWorkflowSteps: boolean;
   steps: FrameStepItem[];
   stickyShell: boolean;
   title: string;
@@ -24,8 +27,11 @@ interface FrameShellProps {
 
 export function FrameShell({
   description,
+  applicationsActive,
+  applicationsCount,
   saveSummaryItems,
   showSaveSummary,
+  showWorkflowSteps,
   steps,
   stickyShell,
   title
@@ -33,12 +39,21 @@ export function FrameShell({
   return (
     <>
       <header className="hero">
-        <p className="eyebrow">ResumeTailor</p>
+        <div className="hero-topline">
+          <p className="eyebrow">ResumeTailor</p>
+          <Link
+            href={"/applications" as Route}
+            className={`hero-applications-link ${applicationsActive ? "active" : ""}`.trim()}
+            aria-current={applicationsActive ? "page" : undefined}
+          >
+            지원 기록 <span>{applicationsCount}</span>
+          </Link>
+        </div>
         <h1>{title}</h1>
         <p>{description}</p>
       </header>
 
-      <section className={`sticky-shell ${stickyShell ? "" : "static-shell"}`.trim()}>
+      {showWorkflowSteps && <section className={`sticky-shell ${stickyShell ? "" : "static-shell"}`.trim()}>
         <ol className="steps">
           {steps.map((item) => (
             <li
@@ -74,7 +89,7 @@ export function FrameShell({
             </div>
           </details>
         )}
-      </section>
+      </section>}
     </>
   );
 }

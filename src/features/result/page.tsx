@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import { AppFrame } from "@/shared/ui/frame/app-frame";
 import {
   CompareCard,
+  ExperienceDiscoveryCard,
   InsightCard,
   IntroActionCard,
   IntroOutputCard,
@@ -14,19 +17,39 @@ import { ToneInline } from "@/shared/ui/tone-inline";
 import { usePipelineStreamTask } from "@/shared/hooks/use-pipeline-stream-task";
 import { useResultPageView } from "@/features/result/hooks/use-result-page-view";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
-import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
-import { serializeResumeIntroSnapshot } from "@/entities/resume/model/resume-utils";
+import {
+  getResumeIntroSnapshot,
+  usePipeline
+} from "@/entities/pipeline/model/pipeline-context";
+import {
+  addDiscoveredExperienceToResume,
+  isExperienceDiscoverySessionCurrent as isDiscoverySourceCurrent
+} from "@/entities/intro/model/experience-discovery";
+import {
+  parseResumeJson,
+  serializeResume,
+  serializeResumeIntroSnapshot
+} from "@/entities/resume/model/resume-utils";
 import { CompanySchema, ResumeSchema } from "@/shared/lib/schemas";
-import type { Intro } from "@/shared/lib/types";
+import type {
+  Company,
+  DiscoveredExperienceDraft,
+  ExperienceDiscoveryMessage,
+  ExperienceDiscoveryTurn,
+  Intro,
+  Resume
+} from "@/shared/lib/types";
 
 export default function ResultPage() {
   const {
     state,
     patch,
     clearStatus,
-    setError
+    setError,
+    setMessage
   } = usePipeline();
   const runStreamTask = usePipelineStreamTask();
+  const [discoveryAnswer, setDiscoveryAnswer] = useState("");
 
   const isBusy = state.currentTask !== null;
   const isIntroWorking = state.currentTask === "intro";
@@ -46,6 +69,16 @@ export default function ResultPage() {
     refreshReasonBadges,
     writingAnchorView
   } = useResultPageView(state);
+
+  const currentResumeSnapshot = getResumeIntroSnapshot(state);
+  const discoverySession = isDiscoverySourceCurrent(
+    state.experienceDiscovery,
+    currentResumeSnapshot,
+    state.companyConfirmedJson
+  )
+    ? state.experienceDiscovery
+    : null;
+  const discoveryGaps = introFresh ? state.intro?.gapNotes ?? [] : [];
 
   const handleGenerate = async () => {
     clearStatus();
@@ -107,6 +140,221 @@ export default function ResultPage() {
     });
   };
 
+  const requestExperienceDiscoveryTurn = async (params: {
+    resume: Resume;
+    company: Company;
+    requirement: string;
+    messages: ExperienceDiscoveryMessage[];
+    sourceResumeSnapshot: string;
+    sourceCompanyJson: string;
+  }) => {
+    let completed = false;
+
+    await runStreamTask<ExperienceDiscoveryTurn>({
+      task: "experienceDiscovery",
+      endpoint: "/api/experience-discovery",
+      requestBody: {
+        resume: params.resume,
+        company: params.company,
+        requirement: params.requirement,
+        messages: params.messages,
+        agent: toAgentRunOptions(state.agentSettings)
+      },
+      startMessage: "부족한 요건과 연결할 경험을 살펴보고 있어요.",
+      successMessage: "경험 발굴 답변을 준비했어요.",
+      abortMessage: "경험 발굴을 중단했어요.",
+      fallbackErrorMessage: "경험을 찾는 중 문제가 생겼어요.",
+      onSuccess: (turn) => {
+        completed = true;
+        patch((prev) => {
+          const active = prev.experienceDiscovery;
+          if (
+            !isDiscoverySourceCurrent(active, getResumeIntroSnapshot(prev), prev.companyConfirmedJson) ||
+            active.requirement !== params.requirement ||
+            active.sourceResumeSnapshot !== params.sourceResumeSnapshot ||
+            active.sourceCompanyJson !== params.sourceCompanyJson
+          ) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            experienceDiscovery: {
+              ...active,
+              ...turn,
+              messages: [...params.messages, { role: "assistant", content: turn.message }]
+            }
+          };
+        });
+      }
+    });
+
+    return completed;
+  };
+
+  const handleStartExperienceDiscovery = async (requirement: string) => {
+    clearStatus();
+
+    if (!introFresh || !state.resumeConfirmedJson || !state.companyConfirmedJson) {
+      setError("최신 소개글을 만든 뒤 부족한 요건을 확인해 주세요.");
+      return;
+    }
+
+    let resumeRaw: unknown;
+    let companyRaw: unknown;
+    try {
+      resumeRaw = JSON.parse(state.resumeConfirmedJson);
+      companyRaw = JSON.parse(state.companyConfirmedJson);
+    } catch {
+      setError("저장된 이력서와 공고를 읽지 못했어요. 다시 확인해 주세요.");
+      return;
+    }
+
+    const resume = ResumeSchema.safeParse(resumeRaw);
+    const company = CompanySchema.safeParse(companyRaw);
+    if (!resume.success || !company.success) {
+      setError("저장한 이력서와 공고 내용을 다시 확인해 주세요.");
+      return;
+    }
+
+    const sourceResumeSnapshot = serializeResumeIntroSnapshot(resume.data);
+    const sourceCompanyJson = state.companyConfirmedJson;
+    const session = {
+      requirement,
+      messages: [],
+      status: "question" as const,
+      message: "",
+      draft: null,
+      sourceResumeSnapshot,
+      sourceCompanyJson
+    };
+
+    patch((prev) => ({
+      ...prev,
+      experienceDiscovery: session
+    }));
+    setDiscoveryAnswer("");
+
+    const completed = await requestExperienceDiscoveryTurn({
+      resume: resume.data,
+      company: company.data,
+      requirement,
+      messages: [],
+      sourceResumeSnapshot,
+      sourceCompanyJson
+    });
+
+    if (!completed) {
+      patch((prev) =>
+        prev.experienceDiscovery?.requirement === requirement &&
+        prev.experienceDiscovery.sourceResumeSnapshot === sourceResumeSnapshot &&
+        prev.experienceDiscovery.sourceCompanyJson === sourceCompanyJson
+          ? { ...prev, experienceDiscovery: null }
+          : prev
+      );
+    }
+  };
+
+  const handleSubmitDiscoveryAnswer = async () => {
+    const answer = discoveryAnswer.trim();
+    const session = discoverySession;
+    const resume = parseResumeJson(state.resumeConfirmedJson);
+    let companyResult: ReturnType<typeof CompanySchema.safeParse> | null = null;
+    try {
+      companyResult = state.companyConfirmedJson
+        ? CompanySchema.safeParse(JSON.parse(state.companyConfirmedJson))
+        : null;
+    } catch {
+      setError("저장된 공고 내용을 읽지 못했어요. 다시 확인해 주세요.");
+      return;
+    }
+
+    if (!answer || !session || session.status !== "question" || !resume || !companyResult?.success) {
+      return;
+    }
+
+    const messages = [...session.messages, { role: "user" as const, content: answer }];
+    const completed = await requestExperienceDiscoveryTurn({
+      resume,
+      company: companyResult.data,
+      requirement: session.requirement,
+      messages,
+      sourceResumeSnapshot: session.sourceResumeSnapshot,
+      sourceCompanyJson: session.sourceCompanyJson
+    });
+
+    if (completed) {
+      setDiscoveryAnswer("");
+    }
+  };
+
+  const handleChangeDiscoveryDraft = (draft: DiscoveredExperienceDraft) => {
+    patch((prev) => {
+      const active = prev.experienceDiscovery;
+      if (
+        !isDiscoverySourceCurrent(active, getResumeIntroSnapshot(prev), prev.companyConfirmedJson) ||
+        !active.draft
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        experienceDiscovery: {
+          ...active,
+          draft
+        }
+      };
+    });
+  };
+
+  const handleApproveDiscoveryDraft = () => {
+    const session = discoverySession;
+    const resume = parseResumeJson(state.resumeConfirmedJson);
+    if (!session || session.status !== "draft" || !session.draft || !resume) {
+      return;
+    }
+
+    const updatedResume = addDiscoveredExperienceToResume(resume, session.draft);
+    if (updatedResume === resume) {
+      setError("초안에 제목과 경험 설명을 채운 뒤 이력서에 추가해 주세요.");
+      return;
+    }
+
+    const normalized = serializeResume(updatedResume);
+    const savedAt = new Date().toISOString();
+    patch((prev) => {
+      if (
+        !isDiscoverySourceCurrent(
+          prev.experienceDiscovery,
+          getResumeIntroSnapshot(prev),
+          prev.companyConfirmedJson
+        ) ||
+        prev.experienceDiscovery.requirement !== session.requirement
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        resumeJsonText: normalized,
+        resumeConfirmedJson: normalized,
+        resumeSavedAt: savedAt,
+        experienceDiscovery: null
+      };
+    });
+    setDiscoveryAnswer("");
+    setMessage("경험을 이력서에 추가했어요. 소개글을 다시 만들어 주세요.");
+  };
+
+  const handleDiscardDiscovery = () => {
+    patch((prev) => ({
+      ...prev,
+      experienceDiscovery: null
+    }));
+    setDiscoveryAnswer("");
+  };
+
   return (
     <AppFrame
       step="result"
@@ -156,6 +404,19 @@ export default function ResultPage() {
       {writingAnchorView && <WritingAnchorsCard view={writingAnchorView} />}
 
       {insightView && <InsightCard view={insightView} />}
+
+      <ExperienceDiscoveryCard
+        answer={discoveryAnswer}
+        gaps={discoveryGaps}
+        isBusy={isBusy}
+        session={discoverySession}
+        onAnswerChange={setDiscoveryAnswer}
+        onApproveDraft={handleApproveDiscoveryDraft}
+        onDiscard={handleDiscardDiscovery}
+        onDraftChange={handleChangeDiscoveryDraft}
+        onStart={(requirement) => void handleStartExperienceDiscovery(requirement)}
+        onSubmitAnswer={() => void handleSubmitDiscoveryAnswer()}
+      />
 
       {state.previousIntro && state.intro && <CompareCard sections={compareSections} />}
 
