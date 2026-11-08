@@ -534,6 +534,41 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.getByRole("heading", { name: "PDF를 만들 때 지원 기록으로 저장해 보세요." })).toBeVisible();
 });
 
+test("지원 기록 백업 파일에서 상태·메모와 PDF를 복원할 수 있다", async ({ page }) => {
+  await completeIntroFlow(page);
+  await page.getByRole("link", { name: "PDF 단계로 가기" }).click();
+  await page.getByRole("button", { name: "지원 기록 저장" }).click();
+  await expect(page.getByText("지원 기록과 PDF를 저장했어요.")).toBeVisible();
+  await page.goto("/applications");
+
+  const record = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
+  await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
+  await record.getByLabel("Beta Corp 메모").fill("백업 후 복원할 메모");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "백업 내보내기" }).click();
+  const backupDownload = await downloadPromise;
+  const backupPath = await backupDownload.path();
+  expect(backupDownload.suggestedFilename()).toMatch(/resume-tailor-applications-.*\.json/);
+  expect(backupPath).not.toBeNull();
+
+  await record.getByRole("button", { name: "기록 삭제" }).click();
+  await expect(page.getByRole("heading", { name: "PDF를 만들 때 지원 기록으로 저장해 보세요." })).toBeVisible();
+  await page.getByLabel("지원 기록 백업 파일").setInputFiles({
+    name: backupDownload.suggestedFilename(),
+    mimeType: "application/json",
+    buffer: readFileSync(backupPath!)
+  });
+
+  const restoredRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
+  await expect(restoredRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
+  await expect(restoredRecord.getByLabel("Beta Corp 메모")).toHaveValue("백업 후 복원할 메모");
+
+  const restoredPdfDownload = page.waitForEvent("download");
+  await restoredRecord.getByRole("button", { name: "PDF 다운로드" }).click();
+  expect((await restoredPdfDownload).suggestedFilename()).toContain("Beta-Corp");
+});
+
 test("이력서 URL을 불러와 정리한 뒤 수정하고 저장할 수 있다", async ({ page }) => {
   await completeResumeStepByUrl(page);
 

@@ -60,6 +60,37 @@ function runTransaction<T>(
   );
 }
 
+function runBatchTransaction(operation: (store: IDBObjectStore) => void): Promise<void> {
+  return openDatabase().then(
+    (database) =>
+      new Promise<void>((resolve, reject) => {
+        let transaction: IDBTransaction | null = null;
+        try {
+          transaction = database.transaction(STORE_NAME, "readwrite");
+          operation(transaction.objectStore(STORE_NAME));
+        } catch (error) {
+          transaction?.abort();
+          database.close();
+          reject(error);
+          return;
+        }
+
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error ?? new Error("지원 PDF 저장소에 접근하지 못했어요."));
+        };
+        transaction.onabort = () => {
+          database.close();
+          reject(transaction.error ?? new Error("지원 PDF 처리가 취소됐어요."));
+        };
+      })
+  );
+}
+
 export async function saveApplicationPdf(id: string, blob: Blob) {
   await runTransaction(
     (store) => store.put({ id, blob } satisfies StoredApplicationPdf),
@@ -70,6 +101,28 @@ export async function saveApplicationPdf(id: string, blob: Blob) {
 export async function getApplicationPdf(id: string): Promise<Blob | null> {
   const record = await runTransaction<StoredApplicationPdf | undefined>((store) => store.get(id), "readonly");
   return record?.blob ?? null;
+}
+
+export async function getApplicationPdfs(ids: string[]) {
+  const wantedIds = new Set(ids);
+  const records = await runTransaction<StoredApplicationPdf[]>(
+    (store) => store.getAll(),
+    "readonly"
+  );
+
+  return records.filter((record) => wantedIds.has(record.id));
+}
+
+export async function saveApplicationPdfs(records: StoredApplicationPdf[]) {
+  if (records.length === 0) {
+    return;
+  }
+
+  await runBatchTransaction((store) => {
+    for (const record of records) {
+      store.put(record satisfies StoredApplicationPdf);
+    }
+  });
 }
 
 export async function deleteApplicationPdf(id: string) {

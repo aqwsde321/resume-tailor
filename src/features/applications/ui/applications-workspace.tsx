@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import {
+  createApplicationBackup,
+  decodeApplicationBackupPdfs,
+  MAX_APPLICATION_BACKUP_BYTES,
+  mergeApplicationBackupEntries,
+  parseApplicationBackup,
+  serializeApplicationBackup,
+  type ApplicationBackupEntry
+} from "@/entities/application/model/application-backup";
 import {
   APPLICATION_STATUS_OPTIONS,
   deleteApplicationRecord,
@@ -13,7 +22,9 @@ import {
 } from "@/entities/application/model/application-record";
 import {
   deleteApplicationPdf,
-  getApplicationPdf
+  getApplicationPdf,
+  getApplicationPdfs,
+  saveApplicationPdfs
 } from "@/entities/application/model/application-pdf-store";
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
 
@@ -30,6 +41,9 @@ function formatCreatedAt(value: string) {
 export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[] }) {
   const { patch, setError, setMessage } = usePipeline();
   const [busyRecordId, setBusyRecordId] = useState<string | null>(null);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   const updateRecord = (
     id: string,
@@ -81,33 +95,118 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     }
   };
 
-  if (records.length === 0) {
-    return (
-      <section className="card applications-empty">
-        <p className="card-kicker">아직 기록이 없어요</p>
-        <h2>PDF를 만들 때 지원 기록으로 저장해 보세요.</h2>
-        <p className="card-copy">
-          저장한 시점의 공고, 이력서, 소개글과 PDF가 한 건으로 보관됩니다.
-        </p>
-        <div className="action-row">
-          <Link href={"/resume" as Route} className="nav-btn">
-            작업 화면으로 돌아가기
-          </Link>
-        </div>
-      </section>
-    );
-  }
+  const exportBackup = async () => {
+    if (records.length === 0) {
+      setError("백업할 지원 기록이 없어요.");
+      return;
+    }
+
+    setIsBackingUp(true);
+    try {
+      const storedPdfs = await getApplicationPdfs(records.map((record) => record.id));
+      const pdfs = new Map(storedPdfs.map((record) => [record.id, record.blob]));
+      const backup = await createApplicationBackup(records, pdfs);
+      const blob = new Blob([serializeApplicationBackup(backup)], {
+        type: "application/json;charset=utf-8"
+      });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `resume-tailor-applications-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      setMessage(`지원 기록 ${records.length}건을 백업했어요.`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "지원 기록 백업을 만들지 못했어요.");
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const importBackup = async (file: File) => {
+    setIsRestoring(true);
+    try {
+      if (file.size > MAX_APPLICATION_BACKUP_BYTES) {
+        throw new Error("백업 파일이 너무 커서 불러올 수 없어요.");
+      }
+
+      const backup = parseApplicationBackup(await file.text());
+      const merged = mergeApplicationBackupEntries(records, backup.entries);
+      const entriesWithPdf: ApplicationBackupEntry[] = merged.filter(
+        (entry): entry is ApplicationBackupEntry => typeof entry.pdfBase64 === "string"
+      );
+      const restoredPdfs = decodeApplicationBackupPdfs({ ...backup, entries: entriesWithPdf });
+      await saveApplicationPdfs(restoredPdfs);
+
+      patch((previous) => ({
+        ...previous,
+        applications: mergeApplicationBackupEntries(previous.applications, backup.entries).map(
+          (entry) => entry.record
+        )
+      }));
+      setMessage(`지원 기록 ${backup.entries.length}건을 백업에서 가져왔어요.`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "지원 기록을 복원하지 못했어요.");
+    } finally {
+      setIsRestoring(false);
+      if (backupInputRef.current) {
+        backupInputRef.current.value = "";
+      }
+    }
+  };
 
   return (
     <>
       <div className="applications-toolbar">
         <span>{records.length}건 저장됨</span>
-        <Link href={"/resume" as Route} className="nav-btn">
-          작업 화면으로 돌아가기
-        </Link>
+        <div className="action-row">
+          <button
+            type="button"
+            className="nav-btn"
+            disabled={records.length === 0 || isBackingUp || isRestoring}
+            onClick={() => void exportBackup()}
+          >
+            {isBackingUp ? "백업 만드는 중..." : "백업 내보내기"}
+          </button>
+          <button
+            type="button"
+            className="nav-btn"
+            disabled={isBackingUp || isRestoring}
+            onClick={() => backupInputRef.current?.click()}
+          >
+            {isRestoring ? "복원 중..." : "백업 불러오기"}
+          </button>
+          <input
+            ref={backupInputRef}
+            aria-label="지원 기록 백업 파일"
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                void importBackup(file);
+              }
+            }}
+          />
+          <Link href={"/resume" as Route} className="nav-btn">
+            작업 화면으로 돌아가기
+          </Link>
+        </div>
       </div>
-      <section className="applications-list" aria-label="지원 기록 목록">
-        {records.map((record) => (
+      {records.length === 0 ? (
+        <section className="card applications-empty">
+          <p className="card-kicker">아직 기록이 없어요</p>
+          <h2>PDF를 만들 때 지원 기록으로 저장해 보세요.</h2>
+          <p className="card-copy">
+            저장한 시점의 공고, 이력서, 소개글과 PDF가 한 건으로 보관됩니다.
+          </p>
+        </section>
+      ) : (
+        <section className="applications-list" aria-label="지원 기록 목록">
+          {records.map((record) => (
         <article className="card application-card" key={record.id}>
           <header className="application-card-head">
             <div>
@@ -195,8 +294,9 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </div>
           </footer>
         </article>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
     </>
   );
 }
