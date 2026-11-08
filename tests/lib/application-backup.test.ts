@@ -72,6 +72,22 @@ describe("application backups", () => {
     );
   });
 
+  it("loads older backup records without follow-up fields using safe defaults", async () => {
+    const record = createRecord();
+    const pdf = new Blob(["%PDF-1.4\nexample"], { type: "application/pdf" });
+    const backup = await createApplicationBackup([record], new Map([[record.id, pdf]]), {});
+    const legacy = JSON.parse(JSON.stringify(backup)) as {
+      entries: Array<{ record: Record<string, unknown> }>;
+    };
+    delete legacy.entries[0]?.record.nextAction;
+    delete legacy.entries[0]?.record.nextActionDate;
+
+    expect(parseApplicationBackup(JSON.stringify(legacy)).entries[0]?.record).toMatchObject({
+      nextAction: "",
+      nextActionDate: null
+    });
+  });
+
   it("merges by record id and keeps the most recently updated version", async () => {
     const existing = createRecord("application-1", "2026-11-10T00:00:00.000Z");
     const older = createRecord("application-1", "2026-11-09T00:00:00.000Z");

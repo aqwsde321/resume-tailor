@@ -518,11 +518,16 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(record.getByText("Frontend Engineer")).toBeVisible();
   await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
   await record.getByLabel("Beta Corp 메모").fill("1차 면접 일정 조율 중");
+  await record.getByLabel("Beta Corp 다음 할 일").fill("결과 문의 메일 보내기");
+  await record.getByLabel("Beta Corp 예정일").fill("2099-12-31");
   await page.reload();
 
   const persistedRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await expect(persistedRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
   await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
+  await expect(persistedRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("결과 문의 메일 보내기");
+  await expect(persistedRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");
+  await expect(persistedRecord.locator(".application-deadline-badge")).toContainText("예정");
 
   const search = page.getByLabel("지원 기록 검색");
   await search.fill("Beta");
@@ -536,6 +541,7 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.locator("article.application-card")).toHaveCount(0);
   await statusFilter.selectOption("interviewing");
   await expect(persistedRecord).toBeVisible();
+  await page.getByLabel("지원 기록 정렬").selectOption("due-date");
 
   const downloadPromise = page.waitForEvent("download");
   await persistedRecord.getByRole("button", { name: "PDF 다운로드" }).click();
@@ -557,6 +563,8 @@ test("지원 기록 백업 파일에서 상태·메모와 PDF를 복원할 수 �
   const record = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
   await record.getByLabel("Beta Corp 메모").fill("백업 후 복원할 메모");
+  await record.getByLabel("Beta Corp 다음 할 일").fill("면접 결과 확인");
+  await record.getByLabel("Beta Corp 예정일").fill("2099-12-31");
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "백업 내보내기" }).click();
@@ -576,6 +584,8 @@ test("지원 기록 백업 파일에서 상태·메모와 PDF를 복원할 수 �
   const restoredRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await expect(restoredRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
   await expect(restoredRecord.getByLabel("Beta Corp 메모")).toHaveValue("백업 후 복원할 메모");
+  await expect(restoredRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("면접 결과 확인");
+  await expect(restoredRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");
 
   const restoredPdfDownload = page.waitForEvent("download");
   await restoredRecord.getByRole("button", { name: "PDF 다운로드" }).click();

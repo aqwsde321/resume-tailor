@@ -17,8 +17,12 @@ import {
   APPLICATION_STATUS_OPTIONS,
   deleteApplicationRecord,
   filterApplicationRecords,
+  getApplicationDeadlineStatus,
+  sortApplicationRecords,
   updateApplicationRecord,
+  type ApplicationDeadlineStatus,
   type ApplicationRecord,
+  type ApplicationRecordSort,
   type ApplicationStatus,
   type ApplicationStatusFilter
 } from "@/entities/application/model/application-record";
@@ -40,6 +44,12 @@ function formatCreatedAt(value: string) {
   });
 }
 
+const DEADLINE_STATUS_LABELS: Record<Exclude<ApplicationDeadlineStatus, "none">, string> = {
+  overdue: "기한 지남",
+  today: "오늘",
+  upcoming: "예정"
+};
+
 export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[] }) {
   const { patch, setError, setMessage } = usePipeline();
   const [busyRecordId, setBusyRecordId] = useState<string | null>(null);
@@ -47,15 +57,22 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [isRestoring, setIsRestoring] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
+  const [sortOrder, setSortOrder] = useState<ApplicationRecordSort>("recent");
   const backupInputRef = useRef<HTMLInputElement>(null);
   const filteredRecords = useMemo(
-    () => filterApplicationRecords(records, searchQuery, statusFilter),
-    [records, searchQuery, statusFilter]
+    () =>
+      sortApplicationRecords(
+        filterApplicationRecords(records, searchQuery, statusFilter),
+        sortOrder
+      ),
+    [records, searchQuery, sortOrder, statusFilter]
   );
 
   const updateRecord = (
     id: string,
-    changes: Partial<Pick<ApplicationRecord, "status" | "notes">>
+    changes: Partial<
+      Pick<ApplicationRecord, "status" | "notes" | "nextAction" | "nextActionDate">
+    >
   ) => {
     patch((previous) => ({
       ...previous,
@@ -212,7 +229,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               aria-label="지원 기록 검색"
               className="form-input"
               type="search"
-              placeholder="회사명, 직무, 메모 검색"
+              placeholder="회사명, 직무, 메모, 다음 할 일 검색"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
@@ -231,6 +248,18 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                   {option.label}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="application-field">
+            <span>일정 정렬</span>
+            <select
+              aria-label="지원 기록 정렬"
+              className="form-select"
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value as ApplicationRecordSort)}
+            >
+              <option value="recent">최근 저장순</option>
+              <option value="due-date">일정 임박순</option>
             </select>
           </label>
           <span className="applications-filter-count">
@@ -259,6 +288,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("all");
+                  setSortOrder("recent");
                 }}
               >
                 필터 초기화
@@ -267,7 +297,10 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           </section>
         ) : (
           <section className="applications-list" aria-label="지원 기록 목록">
-            {filteredRecords.map((record) => (
+            {filteredRecords.map((record) => {
+              const deadlineStatus = getApplicationDeadlineStatus(record.nextActionDate);
+
+              return (
         <article className="card application-card" key={record.id}>
           <header className="application-card-head">
             <div>
@@ -275,9 +308,18 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               <h2>{record.companyName}</h2>
               <p className="application-job-title">{record.jobTitle}</p>
             </div>
-            <span className={`application-status-badge status-${record.status}`}>
-              {APPLICATION_STATUS_OPTIONS.find((option) => option.id === record.status)?.label}
-            </span>
+            <div className="application-card-badges">
+              <span className={`application-status-badge status-${record.status}`}>
+                {APPLICATION_STATUS_OPTIONS.find((option) => option.id === record.status)?.label}
+              </span>
+              {deadlineStatus !== "none" && record.nextActionDate && (
+                <span
+                  className={`application-deadline-badge deadline-${deadlineStatus}`}
+                >
+                  {DEADLINE_STATUS_LABELS[deadlineStatus]} · {record.nextActionDate}
+                </span>
+              )}
+            </div>
           </header>
 
           <details className="application-snapshot">
@@ -333,6 +375,33 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </label>
           </div>
 
+          <div className="application-follow-up">
+            <label className="application-field">
+              <span>다음 할 일</span>
+              <input
+                aria-label={`${record.companyName} 다음 할 일`}
+                className="form-input"
+                type="text"
+                maxLength={5000}
+                placeholder="예: 면접 결과 문의"
+                value={record.nextAction}
+                onChange={(event) => updateRecord(record.id, { nextAction: event.target.value })}
+              />
+            </label>
+            <label className="application-field">
+              <span>예정일</span>
+              <input
+                aria-label={`${record.companyName} 예정일`}
+                className="form-input"
+                type="date"
+                value={record.nextActionDate ?? ""}
+                onChange={(event) =>
+                  updateRecord(record.id, { nextActionDate: event.target.value || null })
+                }
+              />
+            </label>
+          </div>
+
           <footer className="application-card-footer">
             <span className="application-pdf-name">{record.pdfFileName}</span>
             <div className="action-row">
@@ -355,7 +424,8 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </div>
           </footer>
         </article>
-            ))}
+              );
+            })}
           </section>
         )
       )}
