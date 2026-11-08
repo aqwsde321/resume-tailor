@@ -524,6 +524,19 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(persistedRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
   await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
 
+  const search = page.getByLabel("지원 기록 검색");
+  await search.fill("Beta");
+  await expect(persistedRecord).toBeVisible();
+  await search.fill("일치하지 않는 검색어");
+  await expect(page.getByRole("heading", { name: "검색 결과가 없어요." })).toBeVisible();
+  await search.fill("");
+
+  const statusFilter = page.getByLabel("지원 상태 필터");
+  await statusFilter.selectOption("applied");
+  await expect(page.locator("article.application-card")).toHaveCount(0);
+  await statusFilter.selectOption("interviewing");
+  await expect(persistedRecord).toBeVisible();
+
   const downloadPromise = page.waitForEvent("download");
   await persistedRecord.getByRole("button", { name: "PDF 다운로드" }).click();
   const download = await downloadPromise;

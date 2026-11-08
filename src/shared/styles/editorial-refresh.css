@@ -2086,6 +2086,29 @@ button {
   font-weight: 700;
 }
 
+.applications-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.35fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 251, 0.66);
+}
+
+.applications-filters .application-field {
+  min-width: 0;
+}
+
+.applications-filter-count {
+  padding: 10px 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .application-card {
   gap: 14px;
 }
@@ -2231,6 +2254,14 @@ button {
   .applications-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .applications-filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .applications-filters .application-field:first-child {
+    grid-column: 1 / -1;
   }
 
   .application-card-head,

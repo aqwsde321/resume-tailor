@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createApplicationRecord,
   deleteApplicationRecord,
+  filterApplicationRecords,
   normalizeApplicationRecords,
   updateApplicationRecord
 } from "@/entities/application/model/application-record";
@@ -88,5 +89,23 @@ describe("application records", () => {
     const second = { ...createRecord(), id: "application-2" };
 
     expect(deleteApplicationRecord([first, second], first.id)).toEqual([second]);
+  });
+
+  it("searches company, job title, and notes, then applies the selected status filter", () => {
+    const beta = createRecord();
+    const alpha = {
+      ...createRecord(),
+      id: "application-2",
+      companyName: "Alpha Labs",
+      jobTitle: "Backend Engineer",
+      status: "applied" as const,
+      notes: "Referral from a former teammate"
+    };
+    const records = [beta, alpha];
+
+    expect(filterApplicationRecords(records, "BETA")).toEqual([beta]);
+    expect(filterApplicationRecords(records, "former", "applied")).toEqual([alpha]);
+    expect(filterApplicationRecords(records, "former", "preparing")).toEqual([]);
+    expect(filterApplicationRecords(records, "", "all")).toEqual(records);
   });
 });

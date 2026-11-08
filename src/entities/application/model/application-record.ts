@@ -45,6 +45,7 @@ export const ApplicationRecordSchema = z
   .strict();
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
+export type ApplicationStatusFilter = ApplicationStatus | "all";
 export type ApplicationSnapshot = z.infer<typeof ApplicationSnapshotSchema>;
 export type ApplicationRecord = z.infer<typeof ApplicationRecordSchema>;
 
@@ -125,6 +126,32 @@ export function updateApplicationRecord(
         })
       : record
   );
+}
+
+export function filterApplicationRecords(
+  records: ApplicationRecord[],
+  query: string,
+  status: ApplicationStatusFilter = "all"
+): ApplicationRecord[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
+
+  return records.filter((record) => {
+    if (status !== "all" && record.status !== status) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    return [
+      record.companyName,
+      record.jobTitle,
+      record.notes,
+      record.snapshot.resume.name,
+      record.snapshot.resume.desiredPosition
+    ].some((value) => value.toLocaleLowerCase("ko-KR").includes(normalizedQuery));
+  });
 }
 
 export function deleteApplicationRecord(records: ApplicationRecord[], id: string): ApplicationRecord[] {

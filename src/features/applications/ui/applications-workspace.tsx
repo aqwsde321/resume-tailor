@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -16,9 +16,11 @@ import {
 import {
   APPLICATION_STATUS_OPTIONS,
   deleteApplicationRecord,
+  filterApplicationRecords,
   updateApplicationRecord,
   type ApplicationRecord,
-  type ApplicationStatus
+  type ApplicationStatus,
+  type ApplicationStatusFilter
 } from "@/entities/application/model/application-record";
 import {
   deleteApplicationPdf,
@@ -43,7 +45,13 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [busyRecordId, setBusyRecordId] = useState<string | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
   const backupInputRef = useRef<HTMLInputElement>(null);
+  const filteredRecords = useMemo(
+    () => filterApplicationRecords(records, searchQuery, statusFilter),
+    [records, searchQuery, statusFilter]
+  );
 
   const updateRecord = (
     id: string,
@@ -196,6 +204,40 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           </Link>
         </div>
       </div>
+      {records.length > 0 && (
+        <div className="applications-filters">
+          <label className="application-field">
+            <span>기록 검색</span>
+            <input
+              aria-label="지원 기록 검색"
+              className="form-input"
+              type="search"
+              placeholder="회사명, 직무, 메모 검색"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+          <label className="application-field">
+            <span>진행 상태</span>
+            <select
+              aria-label="지원 상태 필터"
+              className="form-select"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as ApplicationStatusFilter)}
+            >
+              <option value="all">모든 상태</option>
+              {APPLICATION_STATUS_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="applications-filter-count">
+            {filteredRecords.length} / {records.length}건
+          </span>
+        </div>
+      )}
       {records.length === 0 ? (
         <section className="card applications-empty">
           <p className="card-kicker">아직 기록이 없어요</p>
@@ -205,8 +247,27 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           </p>
         </section>
       ) : (
-        <section className="applications-list" aria-label="지원 기록 목록">
-          {records.map((record) => (
+        filteredRecords.length === 0 ? (
+          <section className="card applications-empty">
+            <p className="card-kicker">조건에 맞는 기록이 없어요</p>
+            <h2>검색 결과가 없어요.</h2>
+            <p className="card-copy">검색어를 바꾸거나 상태 필터를 초기화해 보세요.</p>
+            <div className="action-row">
+              <button
+                type="button"
+                className="nav-btn"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+              >
+                필터 초기화
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="applications-list" aria-label="지원 기록 목록">
+            {filteredRecords.map((record) => (
         <article className="card application-card" key={record.id}>
           <header className="application-card-head">
             <div>
@@ -294,8 +355,9 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </div>
           </footer>
         </article>
-          ))}
-        </section>
+            ))}
+          </section>
+        )
       )}
     </>
   );
