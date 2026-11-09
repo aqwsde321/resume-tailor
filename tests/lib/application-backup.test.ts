@@ -85,6 +85,7 @@ describe("application backups", () => {
     delete legacy.entries[0]?.record.statusHistory;
     delete legacy.entries[0]?.record.interviewPrep;
     delete legacy.entries[0]?.record.followUpDrafts;
+    delete legacy.entries[0]?.record.outcomeReview;
 
     expect(parseApplicationBackup(JSON.stringify(legacy)).entries[0]?.record).toMatchObject({
       nextAction: "",
@@ -92,7 +93,8 @@ describe("application backups", () => {
       appliedAt: null,
       statusHistory: [{ status: "preparing", changedAt: record.updatedAt }],
       interviewPrep: null,
-      followUpDrafts: []
+      followUpDrafts: [],
+      outcomeReview: null
     });
   });
 

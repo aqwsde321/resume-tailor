@@ -9,6 +9,22 @@ import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 const APPLICATION_STATUSES = ["preparing", "applied", "interviewing", "closed"] as const;
+const APPLICATION_OUTCOMES = ["pending", "offer", "rejected", "withdrawn"] as const;
+
+export const APPLICATION_OUTCOME_OPTIONS = [
+  { id: "pending", label: "결과 미정" },
+  { id: "offer", label: "오퍼" },
+  { id: "rejected", label: "불합격" },
+  { id: "withdrawn", label: "지원 철회" }
+] as const;
+
+export const APPLICATION_OUTCOME_STAGE_OPTIONS = [
+  { id: "document", label: "서류" },
+  { id: "screening", label: "전화·과제 전형" },
+  { id: "interview", label: "면접" },
+  { id: "final-interview", label: "최종 면접" },
+  { id: "other", label: "기타" }
+] as const;
 
 export const APPLICATION_STATUS_OPTIONS: Array<{ id: ApplicationStatus; label: string }> = [
   { id: "preparing", label: "준비 중" },
@@ -18,6 +34,16 @@ export const APPLICATION_STATUS_OPTIONS: Array<{ id: ApplicationStatus; label: s
 ];
 
 export const ApplicationStatusSchema = z.enum(APPLICATION_STATUSES);
+export const ApplicationOutcomeSchema = z.enum(APPLICATION_OUTCOMES);
+
+export const ApplicationOutcomeReviewSchema = z
+  .object({
+    outcome: ApplicationOutcomeSchema,
+    lastStage: z.enum(["document", "screening", "interview", "final-interview", "other"]),
+    feedback: z.string().max(3000),
+    reflection: z.string().max(3000)
+  })
+  .strict();
 
 const ApplicationStatusHistoryEntrySchema = z
   .object({
@@ -63,6 +89,7 @@ export const ApplicationRecordSchema = z
     statusHistory: z.array(ApplicationStatusHistoryEntrySchema).default([]),
     interviewPrep: ApplicationInterviewPrepSchema.nullable().default(null),
     followUpDrafts: z.array(ApplicationFollowUpDraftSchema).default([]),
+    outcomeReview: ApplicationOutcomeReviewSchema.nullable().default(null),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     pdfFileName: z.string().trim().min(1),
@@ -71,6 +98,8 @@ export const ApplicationRecordSchema = z
   .strict();
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
+export type ApplicationOutcome = z.infer<typeof ApplicationOutcomeSchema>;
+export type ApplicationOutcomeReview = z.infer<typeof ApplicationOutcomeReviewSchema>;
 export type ApplicationStatusHistoryEntry = z.infer<typeof ApplicationStatusHistoryEntrySchema>;
 export type { ApplicationInterviewPrep } from "@/entities/application/model/interview-prep";
 export type { ApplicationFollowUpDraft } from "@/entities/application/model/follow-up-draft";
@@ -124,6 +153,7 @@ export function createApplicationRecord(
     statusHistory: [{ status: "preparing", changedAt: now }],
     interviewPrep: null,
     followUpDrafts: [],
+    outcomeReview: null,
     createdAt: now,
     updatedAt: now,
     pdfFileName: buildPdfDownloadName(input.company, input.resume),
@@ -176,6 +206,7 @@ export function updateApplicationRecord(
       | "appliedAt"
       | "interviewPrep"
       | "followUpDrafts"
+      | "outcomeReview"
     >
   >,
   updatedAt = new Date().toISOString()
@@ -302,6 +333,7 @@ export interface ApplicationDashboardSummary {
   interviewedApplications: number;
   interviewConversionRate: number;
   statusCounts: Record<ApplicationStatus, number>;
+  outcomeCounts: Record<ApplicationOutcome, number>;
   companies: ApplicationCompanySummary[];
 }
 
@@ -329,12 +361,19 @@ export function buildApplicationDashboard(
     interviewing: 0,
     closed: 0
   };
+  const outcomeCounts: Record<ApplicationOutcome, number> = {
+    pending: 0,
+    offer: 0,
+    rejected: 0,
+    withdrawn: 0
+  };
   const companies = new Map<string, ApplicationCompanySummary>();
   let submittedApplications = 0;
   let interviewedApplications = 0;
 
   for (const record of records) {
     statusCounts[record.status] += 1;
+    outcomeCounts[record.outcomeReview?.outcome ?? "pending"] += 1;
 
     const submitted = hasBeenSubmitted(record);
     const interviewed = hasBeenInterviewed(record);
@@ -369,6 +408,7 @@ export function buildApplicationDashboard(
         ? Math.round((interviewedApplications / submittedApplications) * 100)
         : 0,
     statusCounts,
+    outcomeCounts,
     companies: [...companies.values()].sort(
       (left, right) =>
         right.totalApplications - left.totalApplications ||

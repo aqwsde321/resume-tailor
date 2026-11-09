@@ -2149,6 +2149,27 @@ button {
   color: var(--primary-strong);
 }
 
+.application-outcome-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.035);
+  font-size: 0.72rem;
+}
+
+.application-outcome-summary strong {
+  margin-right: auto;
+  font-size: 0.74rem;
+}
+
+.application-outcome-summary span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .application-company-summary {
   display: grid;
   gap: 9px;
@@ -2822,6 +2843,36 @@ button {
   white-space: pre-wrap;
 }
 
+.application-outcome-review {
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.application-outcome-review summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.application-outcome-review-content {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.application-outcome-review-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.application-outcome-textarea {
+  min-height: 84px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 .application-field {
   display: grid;
   gap: 6px;
@@ -2876,6 +2927,10 @@ button {
 
   .application-dashboard-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .application-outcome-review-fields {
+    grid-template-columns: 1fr;
   }
 
   .application-dashboard-metric {

@@ -14,9 +14,13 @@ import {
   type ApplicationBackupEntry
 } from "@/entities/application/model/application-backup";
 import {
+  APPLICATION_OUTCOME_OPTIONS,
+  APPLICATION_OUTCOME_STAGE_OPTIONS,
   APPLICATION_STATUS_OPTIONS,
   type ApplicationFollowUpDraft,
   type ApplicationInterviewPrep,
+  type ApplicationOutcome,
+  type ApplicationOutcomeReview,
   buildApplicationDashboard,
   deleteApplicationRecord,
   filterApplicationRecords,
@@ -96,6 +100,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
         | "appliedAt"
         | "interviewPrep"
         | "followUpDrafts"
+        | "outcomeReview"
       >
     >
   ) => {
@@ -293,6 +298,19 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     }
   };
 
+  const updateOutcomeReview = (
+    record: ApplicationRecord,
+    changes: Partial<ApplicationOutcomeReview>
+  ) => {
+    const current: ApplicationOutcomeReview = record.outcomeReview ?? {
+      outcome: "pending",
+      lastStage: "document",
+      feedback: "",
+      reflection: ""
+    };
+    updateRecord(record.id, { outcomeReview: { ...current, ...changes } });
+  };
+
   const selectApplicationRecord = (recordId: string) => {
     setViewMode("list");
     window.setTimeout(() => {
@@ -334,6 +352,14 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               <strong>{dashboard.interviewConversionRate}%</strong>
               <small>면접 경험 ÷ 지원 완료</small>
             </article>
+          </div>
+          <div className="application-outcome-summary" aria-label="지원 결과 기록 요약">
+            <strong>결과 기록</strong>
+            {APPLICATION_OUTCOME_OPTIONS.map((option) => (
+              <span key={option.id}>
+                {option.label} {dashboard.outcomeCounts[option.id]}
+              </span>
+            ))}
           </div>
           {dashboard.companies.length > 0 && (
             <div className="application-company-summary">
@@ -756,6 +782,67 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                     ? "이 목적의 초안 다시 만들기"
                     : "후속 메일 초안 만들기"}
               </button>
+            </div>
+          </details>
+
+          <details className="application-outcome-review">
+            <summary>면접 결과와 회고{record.outcomeReview ? " · 기록됨" : ""}</summary>
+            <div className="application-outcome-review-content">
+              <div className="application-outcome-review-fields">
+                <label className="application-field">
+                  <span>지원 결과</span>
+                  <select
+                    aria-label={`${record.companyName} 결과`}
+                    className="form-select"
+                    value={record.outcomeReview?.outcome ?? "pending"}
+                    onChange={(event) =>
+                      updateOutcomeReview(record, { outcome: event.target.value as ApplicationOutcome })
+                    }
+                  >
+                    {APPLICATION_OUTCOME_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="application-field">
+                  <span>마지막 단계</span>
+                  <select
+                    aria-label={`${record.companyName} 마지막 단계`}
+                    className="form-select"
+                    value={record.outcomeReview?.lastStage ?? "document"}
+                    onChange={(event) =>
+                      updateOutcomeReview(record, {
+                        lastStage: event.target.value as ApplicationOutcomeReview["lastStage"]
+                      })
+                    }
+                  >
+                    {APPLICATION_OUTCOME_STAGE_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="application-field">
+                <span>받은 피드백 또는 기억할 질문</span>
+                <textarea
+                  aria-label={`${record.companyName} 받은 피드백`}
+                  className="form-input application-outcome-textarea"
+                  maxLength={3000}
+                  value={record.outcomeReview?.feedback ?? ""}
+                  onChange={(event) => updateOutcomeReview(record, { feedback: event.target.value })}
+                />
+              </label>
+              <label className="application-field">
+                <span>다음 지원에서 배울 점</span>
+                <textarea
+                  aria-label={`${record.companyName} 다음 지원에서 배울 점`}
+                  className="form-input application-outcome-textarea"
+                  maxLength={3000}
+                  value={record.outcomeReview?.reflection ?? ""}
+                  onChange={(event) => updateOutcomeReview(record, { reflection: event.target.value })}
+                />
+              </label>
+              <p className="application-artifact-date">입력한 내용은 자동 저장됩니다.</p>
             </div>
           </details>
 

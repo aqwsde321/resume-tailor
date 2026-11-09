@@ -45,6 +45,7 @@ describe("application records", () => {
       notes: "",
       interviewPrep: null,
       followUpDrafts: [],
+      outcomeReview: null,
       createdAt: "2026-11-09T00:00:00.000Z",
       updatedAt: "2026-11-09T00:00:00.000Z",
       pdfFileName: expect.stringContaining("Beta-Corp")
@@ -103,6 +104,7 @@ describe("application records", () => {
     delete legacyRecord.statusHistory;
     delete legacyRecord.interviewPrep;
     delete legacyRecord.followUpDrafts;
+    delete legacyRecord.outcomeReview;
 
     expect(normalizeApplicationRecords([legacyRecord])[0]).toMatchObject({
       nextAction: "",
@@ -110,7 +112,8 @@ describe("application records", () => {
       appliedAt: null,
       statusHistory: [{ status: "preparing", changedAt: record.updatedAt }],
       interviewPrep: null,
-      followUpDrafts: []
+      followUpDrafts: [],
+      outcomeReview: null
     });
   });
 
@@ -199,13 +202,32 @@ describe("application records", () => {
       { status: "closed" },
       "2026-11-13T00:00:00.000Z"
     )[0]!;
-    const alpha = { ...createRecord(), id: "alpha", companyName: "Alpha Labs" };
+    const rejected = {
+      ...closedAfterInterview,
+      outcomeReview: {
+        outcome: "rejected" as const,
+        lastStage: "interview" as const,
+        feedback: "운영 경험을 더 구체적으로 설명해 달라는 피드백",
+        reflection: "성과를 먼저 요약한 뒤 문제 해결 과정을 설명하기"
+      }
+    };
+    const alpha = {
+      ...createRecord(),
+      id: "alpha",
+      companyName: "Alpha Labs",
+      outcomeReview: {
+        outcome: "offer" as const,
+        lastStage: "final-interview" as const,
+        feedback: "",
+        reflection: ""
+      }
+    };
 
     const dashboard = buildApplicationDashboard([
       preparing,
       applied,
       interviewing,
-      closedAfterInterview,
+      rejected,
       alpha
     ]);
 
@@ -214,6 +236,12 @@ describe("application records", () => {
       submittedApplications: 3,
       interviewedApplications: 2,
       interviewConversionRate: 67,
+      outcomeCounts: {
+        pending: 3,
+        offer: 1,
+        rejected: 1,
+        withdrawn: 0
+      },
       statusCounts: {
         preparing: 2,
         applied: 1,

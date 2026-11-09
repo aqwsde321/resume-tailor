@@ -604,6 +604,13 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await record.getByLabel("Beta Corp 메모").fill("1차 면접 일정 조율 중");
   await record.getByLabel("Beta Corp 다음 할 일").fill("결과 문의 메일 보내기");
   await record.getByLabel("Beta Corp 예정일").fill("2099-12-31");
+  const outcomeReview = record.locator(".application-outcome-review");
+  await outcomeReview.locator("summary").click();
+  await outcomeReview.getByLabel("Beta Corp 결과").selectOption("rejected");
+  await outcomeReview.getByLabel("Beta Corp 마지막 단계").selectOption("interview");
+  await outcomeReview.getByLabel("Beta Corp 받은 피드백").fill("성과 설명을 더 구체적으로 해 달라는 피드백");
+  await outcomeReview.getByLabel("Beta Corp 다음 지원에서 배울 점").fill("성과 수치를 먼저 말하기");
+  await expect(page.locator(".application-outcome-summary")).toContainText("불합격 1");
   await page.reload();
 
   const persistedRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
@@ -622,6 +629,12 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(persistedRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("결과 문의 메일 보내기");
   await expect(persistedRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");
   await expect(persistedRecord.locator(".application-deadline-badge")).toContainText("예정");
+  const persistedOutcomeReview = persistedRecord.locator(".application-outcome-review");
+  await persistedOutcomeReview.locator("summary").click();
+  await expect(persistedOutcomeReview.getByLabel("Beta Corp 결과")).toHaveValue("rejected");
+  await expect(persistedOutcomeReview.getByLabel("Beta Corp 받은 피드백")).toHaveValue(
+    "성과 설명을 더 구체적으로 해 달라는 피드백"
+  );
 
   const search = page.getByLabel("지원 기록 검색");
   await search.fill("Beta");
