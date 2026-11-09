@@ -57,8 +57,8 @@ const FIT_LABELS: Record<RankedJobListing["fit"], string> = {
 };
 
 const PORTAL_LINKS = [
-  { label: "원티드", href: "https://www.wanted.co.kr/" },
-  { label: "점핏", href: "https://jumpit.saramin.co.kr/" },
+  { label: "원티드 검색", href: "https://recruit.wanted.co.kr/" },
+  { label: "점핏 검색", href: "https://jumpit.saramin.co.kr/search" },
   { label: "잡코리아", href: "https://www.jobkorea.co.kr/" }
 ];
 
