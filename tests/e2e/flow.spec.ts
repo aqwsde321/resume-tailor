@@ -37,6 +37,13 @@ function toSse(events: Array<{ event: string; data: unknown }>) {
     .join("");
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getResumeOverviewSection(page: Page) {
   return page
     .locator("section.card")
@@ -563,6 +570,21 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await page.getByRole("button", { name: "지원 기록 저장" }).click();
   await expect(page.getByText("지원 기록과 PDF를 저장했어요.")).toBeVisible();
   await expect(page.getByRole("link", { name: "지원 기록 1" })).toBeVisible();
+  await page.addInitScript(() => {
+    class TestNotification {
+      static permission: NotificationPermission = "default";
+      static requestPermission = async () => {
+        TestNotification.permission = "granted";
+        return TestNotification.permission;
+      };
+
+      constructor(title: string, options?: NotificationOptions) {
+        window.localStorage.setItem("__e2e_notification__", JSON.stringify({ title, body: options?.body }));
+      }
+    }
+
+    Object.defineProperty(window, "Notification", { configurable: true, value: TestNotification });
+  });
   await page.goto("/applications");
   await expect(page.getByRole("heading", { name: "지원 성과" })).toBeVisible();
 
@@ -572,7 +594,7 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
   await expect(record.getByLabel("Beta Corp 지원일")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
   await page.getByRole("button", { name: "달력 보기" }).click();
-  await expect(page.getByRole("heading", { name: "지원 일정" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "지원 일정", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Beta Corp · 지원일" })).toBeVisible();
   await page.getByRole("button", { name: "목록 보기" }).click();
   await page.getByRole("button", { name: "보드 보기" }).click();
@@ -603,6 +625,20 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.locator(".application-company-summary")).toContainText("Beta Corp");
   await record.getByLabel("Beta Corp 메모").fill("1차 면접 일정 조율 중");
   await record.getByLabel("Beta Corp 다음 할 일").fill("결과 문의 메일 보내기");
+  await record.getByLabel("Beta Corp 예정일").fill(formatLocalDate(new Date()));
+  await expect(page.locator(".application-reminder-panel")).toContainText("오늘");
+  await expect(page.locator(".application-reminder-panel")).toContainText("결과 문의 메일 보내기");
+  const notificationButton = page.locator(".application-reminder-panel .nav-btn");
+  await expect(notificationButton).toHaveText("브라우저 알림 켜기");
+  await notificationButton.click();
+  await expect(notificationButton).toContainText("켜짐");
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("__e2e_notification__")))
+    .toContain("지원 일정");
+  const recordId = (await record.getAttribute("id"))?.replace("application-record-", "");
+  await expect
+    .poll(() => page.evaluate((date) => window.localStorage.getItem(`resume-tailor.application-reminder.${date}`), formatLocalDate(new Date())))
+    .toContain(recordId);
   await record.getByLabel("Beta Corp 예정일").fill("2099-12-31");
   const outcomeReview = record.locator(".application-outcome-review");
   await outcomeReview.locator("summary").click();

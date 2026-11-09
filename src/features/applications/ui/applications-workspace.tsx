@@ -49,6 +49,7 @@ import {
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
 import { ApplicationBoardView } from "@/features/applications/ui/application-board-view";
 import { ApplicationCalendarView } from "@/features/applications/ui/application-calendar-view";
+import { ApplicationRemindersPanel } from "@/features/applications/ui/application-reminders-panel";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 
 function formatCreatedAt(value: string) {
@@ -392,6 +393,9 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </div>
           )}
         </section>
+      )}
+      {records.length > 0 && (
+        <ApplicationRemindersPanel records={records} onSelectRecord={selectApplicationRecord} />
       )}
       <div className="applications-toolbar">
         <span>{records.length}건 저장됨</span>
