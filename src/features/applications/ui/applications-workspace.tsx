@@ -15,6 +15,7 @@ import {
 } from "@/entities/application/model/application-backup";
 import {
   APPLICATION_STATUS_OPTIONS,
+  type ApplicationInterviewPrep,
   buildApplicationDashboard,
   deleteApplicationRecord,
   filterApplicationRecords,
@@ -27,6 +28,7 @@ import {
   type ApplicationStatus,
   type ApplicationStatusFilter
 } from "@/entities/application/model/application-record";
+import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import {
   deleteApplicationPdf,
   getApplicationPdf,
@@ -35,6 +37,7 @@ import {
 } from "@/entities/application/model/application-pdf-store";
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
 import { ApplicationCalendarView } from "@/features/applications/ui/application-calendar-view";
+import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 
 function formatCreatedAt(value: string) {
   return new Date(value).toLocaleString("ko-KR", {
@@ -53,7 +56,7 @@ const DEADLINE_STATUS_LABELS: Record<Exclude<ApplicationDeadlineStatus, "none">,
 };
 
 export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[] }) {
-  const { patch, setError, setMessage } = usePipeline();
+  const { state, patch, setError, setMessage } = usePipeline();
   const [busyRecordId, setBusyRecordId] = useState<string | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -75,7 +78,10 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const updateRecord = (
     id: string,
     changes: Partial<
-      Pick<ApplicationRecord, "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt">
+      Pick<
+        ApplicationRecord,
+        "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt" | "interviewPrep"
+      >
     >
   ) => {
     patch((previous) => ({
@@ -183,6 +189,37 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
       if (backupInputRef.current) {
         backupInputRef.current.value = "";
       }
+    }
+  };
+
+  const generateInterviewPrep = async (record: ApplicationRecord) => {
+    setBusyRecordId(record.id);
+    try {
+      const response = await fetch("/api/application/interview-prep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: record.snapshot.resume,
+          company: record.snapshot.company,
+          agent: toAgentRunOptions(state.agentSettings)
+        })
+      });
+      const body = (await response.json()) as {
+        ok?: boolean;
+        data?: unknown;
+        error?: { message?: string };
+      };
+      if (!response.ok || body.ok !== true) {
+        throw new Error(body.error?.message ?? "면접 준비 자료를 만들지 못했어요.");
+      }
+
+      const interviewPrep: ApplicationInterviewPrep = ApplicationInterviewPrepSchema.parse(body.data);
+      updateRecord(record.id, { interviewPrep });
+      setMessage("면접 준비 자료를 저장했어요.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "면접 준비 자료를 만들지 못했어요.");
+    } finally {
+      setBusyRecordId(null);
     }
   };
 
@@ -510,6 +547,62 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               />
             </label>
           </div>
+
+          <details className="application-interview-prep">
+            <summary>면접 준비 자료{record.interviewPrep ? " · 저장됨" : ""}</summary>
+            <div className="application-interview-prep-content">
+              {record.interviewPrep ? (
+                <>
+                  <p className="application-artifact-date">
+                    {formatCreatedAt(record.interviewPrep.generatedAt)} 생성
+                  </p>
+                  <section>
+                    <h3>면접 시작 30초 소개</h3>
+                    <p>{record.interviewPrep.openingPitch}</p>
+                  </section>
+                  <section>
+                    <h3>예상 질문과 답변 개요</h3>
+                    <ol className="application-interview-questions">
+                      {record.interviewPrep.questions.map((question, index) => (
+                        <li key={`${question.question}-${index}`}>
+                          <h4>{question.question}</h4>
+                          <p><strong>확인 포인트:</strong> {question.focus}</p>
+                          <p><strong>이력서 근거:</strong> {question.resumeEvidence}</p>
+                          <ol>
+                            {question.answerOutline.map((step, stepIndex) => (
+                              <li key={`${step}-${stepIndex}`}>{step}</li>
+                            ))}
+                          </ol>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                  <section>
+                    <h3>회사에 물어볼 질문</h3>
+                    <ul>
+                      {record.interviewPrep.questionsToAsk.map((question, index) => (
+                        <li key={`${question}-${index}`}>{question}</li>
+                      ))}
+                    </ul>
+                  </section>
+                </>
+              ) : (
+                <p>저장한 이력서와 공고를 바탕으로 예상 질문과 답변 개요를 만듭니다.</p>
+              )}
+              <button
+                type="button"
+                className="nav-btn"
+                disabled={busyRecordId === record.id}
+                onClick={() => void generateInterviewPrep(record)}
+              >
+                {busyRecordId === record.id
+                  ? "면접 자료 만드는 중..."
+                  : record.interviewPrep
+                    ? "면접 준비 자료 다시 만들기"
+                    : "면접 준비 자료 만들기"}
+              </button>
+            </div>
+          </details>
 
           <details className="application-status-history">
             <summary>상태 변경 이력</summary>

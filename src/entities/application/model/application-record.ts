@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import { PDF_TEMPLATE_IDS, type PdfTemplateId } from "@/entities/pdf/model/templates";
 import { PDF_THEME_IDS, type PdfThemeId } from "@/entities/pdf/model/themes";
 import { buildPdfDownloadName } from "@/entities/pdf/model/view-model";
@@ -59,6 +60,7 @@ export const ApplicationRecordSchema = z
     nextActionDate: ApplicationDateSchema,
     appliedAt: ApplicationDateSchema,
     statusHistory: z.array(ApplicationStatusHistoryEntrySchema).default([]),
+    interviewPrep: ApplicationInterviewPrepSchema.nullable().default(null),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     pdfFileName: z.string().trim().min(1),
@@ -68,6 +70,7 @@ export const ApplicationRecordSchema = z
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
 export type ApplicationStatusHistoryEntry = z.infer<typeof ApplicationStatusHistoryEntrySchema>;
+export type { ApplicationInterviewPrep } from "@/entities/application/model/interview-prep";
 export type ApplicationStatusFilter = ApplicationStatus | "all";
 export type ApplicationRecordSort = "recent" | "due-date";
 export type ApplicationDeadlineStatus = "none" | "overdue" | "today" | "upcoming";
@@ -116,6 +119,7 @@ export function createApplicationRecord(
     nextActionDate: null,
     appliedAt: null,
     statusHistory: [{ status: "preparing", changedAt: now }],
+    interviewPrep: null,
     createdAt: now,
     updatedAt: now,
     pdfFileName: buildPdfDownloadName(input.company, input.resume),
@@ -161,7 +165,7 @@ export function updateApplicationRecord(
   changes: Partial<
     Pick<
       ApplicationRecord,
-      "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt"
+      "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt" | "interviewPrep"
     >
   >,
   updatedAt = new Date().toISOString()

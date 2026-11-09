@@ -2565,6 +2565,84 @@ button {
   text-align: right;
 }
 
+.application-interview-prep {
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.application-interview-prep summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.application-interview-prep-content {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.application-interview-prep-content section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.application-interview-prep-content h3 {
+  margin: 0 0 7px;
+  font-size: 0.82rem;
+}
+
+.application-interview-prep-content h4 {
+  margin: 0 0 6px;
+  font-size: 0.79rem;
+}
+
+.application-interview-prep-content p,
+.application-interview-prep-content li {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.application-interview-prep-content p {
+  margin: 0;
+}
+
+.application-interview-prep-content p + p {
+  margin-top: 4px;
+}
+
+.application-interview-questions {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 19px;
+}
+
+.application-interview-questions > li {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(17, 24, 39, 0.035);
+}
+
+.application-interview-questions ol,
+.application-interview-prep-content ul {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.application-artifact-date {
+  color: var(--muted);
+  font-size: 0.69rem;
+}
+
 .application-field {
   display: grid;
   gap: 6px;

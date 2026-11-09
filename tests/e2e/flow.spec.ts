@@ -284,6 +284,41 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
+  await page.route("**/api/application/interview-prep", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          generatedAt: "2026-11-09T00:00:00.000Z",
+          openingPitch: "Beta Corp의 결제 API 경험을 설명하는 30초 소개입니다.",
+          questions: [
+            {
+              question: "대시보드 성능을 어떻게 개선했나요?",
+              focus: "성능 문제를 분석하고 해결한 과정을 확인합니다.",
+              resumeEvidence: "운영 대시보드 초기 로딩 성능 개선 경험",
+              answerOutline: ["문제와 영향을 설명합니다.", "개선 방법을 설명합니다.", "결과를 수치로 설명합니다."]
+            },
+            {
+              question: "React 컴포넌트 구조를 어떻게 설계했나요?",
+              focus: "재사용성과 유지보수 기준을 확인합니다.",
+              resumeEvidence: "React 기반 관리자 화면 개발 경험",
+              answerOutline: ["요구사항을 나눕니다.", "설계와 협업을 설명합니다."]
+            },
+            {
+              question: "디자인 시스템 운영 경험을 설명해 주세요.",
+              focus: "우대 조건과 연결되는 경험을 확인합니다.",
+              resumeEvidence: "이력서에서 직접 확인되지 않음",
+              answerOutline: ["관련 경험을 솔직히 구분합니다.", "유사한 경험을 연결합니다."]
+            }
+          ],
+          questionsToAsk: ["팀의 첫 3개월 목표는 무엇인가요?", "제품 화면 개선의 우선순위는 어떻게 정하나요?"]
+        }
+      })
+    });
+  });
+
   await page.route("**/api/resume/fetch-url", async (route) => {
     await route.fulfill({
       status: 200,
@@ -523,6 +558,11 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.getByRole("heading", { name: "지원 일정" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Beta Corp · 지원일" })).toBeVisible();
   await page.getByRole("button", { name: "목록 보기" }).click();
+  const interviewPrep = record.locator(".application-interview-prep");
+  await interviewPrep.locator("summary").click();
+  await interviewPrep.getByRole("button", { name: "면접 준비 자료 만들기" }).click();
+  await expect(interviewPrep.getByText("면접 시작 30초 소개")).toBeVisible();
+  await expect(interviewPrep.getByText("Beta Corp의 결제 API 경험을 설명하는 30초 소개입니다.")).toBeVisible();
   const statusHistory = record.locator(".application-status-history");
   await statusHistory.locator("summary").click();
   await expect(statusHistory.getByText("면접 중")).toBeVisible();
@@ -538,6 +578,9 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   const persistedRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await expect(persistedRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
   await expect(persistedRecord.getByLabel("Beta Corp 지원일")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
+  const persistedInterviewPrep = persistedRecord.locator(".application-interview-prep");
+  await persistedInterviewPrep.locator("summary").click();
+  await expect(persistedInterviewPrep.getByText("Beta Corp의 결제 API 경험을 설명하는 30초 소개입니다.")).toBeVisible();
   await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
   await expect(persistedRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("결과 문의 메일 보내기");
   await expect(persistedRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");

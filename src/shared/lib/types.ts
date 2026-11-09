@@ -1,4 +1,9 @@
-export type SkillName = "resume-to-json" | "company-to-json" | "generate-intro" | "discover-experience";
+export type SkillName =
+  | "resume-to-json"
+  | "company-to-json"
+  | "generate-intro"
+  | "discover-experience"
+  | "prepare-interview";
 export type InputMode = "text" | "file" | "url";
 export type TaskKind = "resume" | "company" | "intro" | "experienceDiscovery";
 export type LogLevel = "info" | "success" | "error";

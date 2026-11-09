@@ -11,7 +11,8 @@ const SKILL_LABEL: Record<SkillName, string> = {
   "resume-to-json": "이력서 정리",
   "company-to-json": "공고 정리",
   "generate-intro": "소개글 만들기",
-  "discover-experience": "경험 발굴"
+  "discover-experience": "경험 발굴",
+  "prepare-interview": "면접 준비 자료"
 };
 
 let codex: Codex | null = null;

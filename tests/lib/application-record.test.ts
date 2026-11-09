@@ -43,6 +43,7 @@ describe("application records", () => {
       jobTitle: companyFixture.jobTitle,
       status: "preparing",
       notes: "",
+      interviewPrep: null,
       createdAt: "2026-11-09T00:00:00.000Z",
       updatedAt: "2026-11-09T00:00:00.000Z",
       pdfFileName: expect.stringContaining("Beta-Corp")
@@ -99,12 +100,14 @@ describe("application records", () => {
     delete legacyRecord.nextActionDate;
     delete legacyRecord.appliedAt;
     delete legacyRecord.statusHistory;
+    delete legacyRecord.interviewPrep;
 
     expect(normalizeApplicationRecords([legacyRecord])[0]).toMatchObject({
       nextAction: "",
       nextActionDate: null,
       appliedAt: null,
-      statusHistory: [{ status: "preparing", changedAt: record.updatedAt }]
+      statusHistory: [{ status: "preparing", changedAt: record.updatedAt }],
+      interviewPrep: null
     });
   });
 
