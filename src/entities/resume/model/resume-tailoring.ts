@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { ResumeSchema } from "@/shared/lib/schemas";
-import type { Resume } from "@/shared/lib/types";
+import type { Company, Resume } from "@/shared/lib/types";
 
 const EvidenceIdsSchema = z.array(z.string().trim().min(1).max(100)).min(1).max(4);
 
@@ -20,12 +20,30 @@ const TailoredResumeItemSchema = z
   })
   .strict();
 
+const RequirementMatchTypeSchema = z.enum(["direct", "transferable", "adjacent", "gap"]);
+
+const RequirementMatchSchema = z
+  .object({
+    requirementId: z.string().trim().min(1).max(100),
+    matchType: RequirementMatchTypeSchema,
+    evidenceIds: z.array(z.string().trim().min(1).max(100)).max(6),
+    reason: z.string().trim().min(1).max(400)
+  })
+  .strict();
+
+export interface ResumeTailoringRequirement {
+  id: string;
+  type: "required" | "preferred";
+  text: string;
+}
+
 export const ResumeTailoringPlanSchema = z
   .object({
     headline: TailoredTextSchema,
     summary: TailoredTextSchema,
     experience: z.array(TailoredResumeItemSchema).max(12),
     projects: z.array(TailoredResumeItemSchema).max(12),
+    requirementMatches: z.array(RequirementMatchSchema),
     skillIds: z.array(z.string().trim().min(1).max(100)).max(40),
     highlightIds: z.array(z.string().trim().min(1).max(100)).max(20),
     strengthIds: z.array(z.string().trim().min(1).max(100)).max(20)
@@ -40,12 +58,28 @@ export const ResumeTailoringResultSchema = z
   .strict();
 
 export type ResumeTailoringPlan = z.infer<typeof ResumeTailoringPlanSchema>;
+export type ResumeTailoringRequirementMatch = z.infer<typeof RequirementMatchSchema>;
 export type ResumeTailoringResult = z.infer<typeof ResumeTailoringResultSchema>;
 
 export interface ResumeTailoringEvidence {
   id: string;
   title: string;
   text: string;
+}
+
+export function buildResumeTailoringRequirements(company: Company): ResumeTailoringRequirement[] {
+  return [
+    ...company.requirements.map((text, index) => ({
+      id: `requirement-${index + 1}`,
+      type: "required" as const,
+      text: text.trim()
+    })),
+    ...company.preferredSkills.map((text, index) => ({
+      id: `preferred-${index + 1}`,
+      type: "preferred" as const,
+      text: text.trim()
+    }))
+  ].filter((item) => item.text.length > 0);
 }
 
 const MAX_EVIDENCE_ITEMS = 68;
@@ -129,8 +163,13 @@ function includesKnownIds(ids: string[], allowedIds: Set<string>) {
   return ids.every((id) => allowedIds.has(id)) && new Set(ids).size === ids.length;
 }
 
-export function isResumeTailoringPlanValid(resume: Resume, plan: ResumeTailoringPlan): boolean {
+export function isResumeTailoringPlanValid(
+  resume: Resume,
+  company: Company,
+  plan: ResumeTailoringPlan
+): boolean {
   const evidenceIds = new Set(buildResumeTailoringEvidence(resume).map((item) => item.id));
+  const requirementIds = new Set(buildResumeTailoringRequirements(company).map((item) => item.id));
   const experienceIds = new Set(resume.experience.slice(0, 10).map((_, index) => `experience-${index + 1}`));
   const projectIds = new Set(resume.projects.slice(0, 12).map((_, index) => `project-${index + 1}`));
   const skillIds = new Set(resume.techStack.slice(0, 12).map((_, index) => `skill-${index + 1}`));
@@ -154,11 +193,24 @@ export function isResumeTailoringPlanValid(resume: Resume, plan: ResumeTailoring
     plan.projects.every(
       (item) => projectIds.has(item.sourceId) && item.evidenceIds.includes(item.sourceId)
     ) && new Set(plan.projects.map((item) => item.sourceId)).size === plan.projects.length;
+  const requirementIdsInPlan = plan.requirementMatches.map((item) => item.requirementId);
+  const requirementMatchesAreValid =
+    requirementIdsInPlan.length === requirementIds.size &&
+    includesKnownIds(requirementIdsInPlan, requirementIds) &&
+    plan.requirementMatches.every((item) => {
+      const referencesKnownEvidence =
+        includesKnownIds(item.evidenceIds, evidenceIds) || item.evidenceIds.length === 0;
+      const evidenceMatchesType =
+        item.matchType === "gap" ? item.evidenceIds.length === 0 : item.evidenceIds.length > 0;
+
+      return referencesKnownEvidence && evidenceMatchesType;
+    });
 
   return (
     citationsAreValid &&
     experienceIsValid &&
     projectsAreValid &&
+    requirementMatchesAreValid &&
     includesKnownIds(plan.skillIds, skillIds) &&
     includesKnownIds(plan.highlightIds, highlightIds) &&
     includesKnownIds(plan.strengthIds, strengthIds)
@@ -214,6 +266,7 @@ export const resumeTailoringOutputSchema = {
     "summary",
     "experience",
     "projects",
+    "requirementMatches",
     "skillIds",
     "highlightIds",
     "strengthIds"
@@ -260,6 +313,20 @@ export const resumeTailoringOutputSchema = {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: 1600 },
           evidenceIds: { type: "array", items: { type: "string" } }
+        }
+      }
+    },
+    requirementMatches: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["requirementId", "matchType", "evidenceIds", "reason"],
+        properties: {
+          requirementId: { type: "string" },
+          matchType: { type: "string", enum: ["direct", "transferable", "adjacent", "gap"] },
+          evidenceIds: { type: "array", items: { type: "string" } },
+          reason: { type: "string", maxLength: 400 }
         }
       }
     },

@@ -14,6 +14,7 @@ import { usePipelineStreamTask } from "@/shared/hooks/use-pipeline-stream-task";
 export interface ResumeTailoringReview {
   plan: ResumeTailoringPlan;
   resume: Resume;
+  sourceCompany: Company;
   sourceResume: Resume;
 }
 
@@ -32,6 +33,7 @@ export function useResumeTailoringWorkflow(args: {
     }
 
     const sourceResume = structuredClone(args.resume);
+    const sourceCompany = structuredClone(args.company);
     setReview(null);
     await runStreamTask<ResumeTailoringResult>({
       task: "resumeTailoring",
@@ -53,6 +55,7 @@ export function useResumeTailoringWorkflow(args: {
         setReview({
           plan: result.plan,
           sourceResume,
+          sourceCompany,
           resume: {
             ...result.resume,
             pdfProfileImageDataUrl: sourceResume.pdfProfileImageDataUrl ?? "",

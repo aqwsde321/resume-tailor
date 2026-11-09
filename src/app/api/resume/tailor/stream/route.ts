@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   applyResumeTailoringPlan,
   buildResumeTailoringEvidence,
+  buildResumeTailoringRequirements,
   isResumeTailoringPlanValid,
   ResumeTailoringPlanSchema,
   ResumeTailoringResultSchema,
@@ -30,6 +31,7 @@ const RequestSchema = z
 
 function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<typeof CompanySchema>) {
   const evidence = buildResumeTailoringEvidence(resume);
+  const requirements = buildResumeTailoringRequirements(company);
   const safeResume = {
     ...resume,
     pdfProfileImageDataUrl: "",
@@ -40,11 +42,21 @@ function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<t
     "[채용 공고]",
     JSON.stringify(company, null, 2),
     "",
+    "[요건 ID 목록: 각 항목을 정확히 한 번씩 매칭할 것]",
+    JSON.stringify(requirements, null, 2),
+    "",
     "[원본 이력서: 사실을 추가하지 말고, 기존 내용을 재구성할 것]",
     JSON.stringify(safeResume, null, 2),
     "",
     "[인용 가능한 이력서 근거 목록]",
-    JSON.stringify(evidence, null, 2)
+    JSON.stringify(evidence, null, 2),
+    "",
+    "[요건 매칭 규칙]",
+    "- requirementMatches에는 위 요건 ID를 빠짐없이 각각 한 번만 넣고, 목록에 없는 ID는 만들지 않습니다.",
+    "- matchType은 direct, transferable, adjacent, gap 중 하나로 분류하고 숫자 점수는 만들지 않습니다.",
+    "- gap은 원본 이력서에 연결 근거가 없는 경우에만 사용하며 evidenceIds는 빈 배열로 둡니다.",
+    "- direct, transferable, adjacent에는 실제 원본 근거 ID를 하나 이상 연결하고, reason에 연결 이유를 씁니다.",
+    "- 약한 근거를 억지로 연결하지 말고, 요건 문구를 보유 사실처럼 맞춤 이력서에 추가하지 않습니다."
   ].join("\n");
 }
 
@@ -66,8 +78,8 @@ export async function POST(request: Request) {
         });
         const plan = parseTaskResult("맞춤 이력서", ResumeTailoringPlanSchema, generated);
 
-        if (!isResumeTailoringPlanValid(body.resume, plan)) {
-          throw new HttpError(502, "맞춤 이력서 결과에 원본에서 찾을 수 없는 항목이 있어요.");
+        if (!isResumeTailoringPlanValid(body.resume, body.company, plan)) {
+          throw new HttpError(502, "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요.");
         }
 
         const sourceWithoutProfileImage = {

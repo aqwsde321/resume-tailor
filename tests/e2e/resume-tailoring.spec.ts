@@ -142,6 +142,38 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
           evidenceIds: ["project-1"]
         }
       ],
+      requirementMatches: [
+        {
+          requirementId: "requirement-1",
+          matchType: "direct",
+          evidenceIds: ["skill-1"],
+          reason: "React 실무 경험이 원본 기술 목록에 있습니다."
+        },
+        {
+          requirementId: "requirement-2",
+          matchType: "direct",
+          evidenceIds: ["skill-2"],
+          reason: "TypeScript 사용 경험이 원본 기술 목록에 있습니다."
+        },
+        {
+          requirementId: "requirement-3",
+          matchType: "direct",
+          evidenceIds: ["project-1"],
+          reason: "Admin Console에서 대시보드를 개발했습니다."
+        },
+        {
+          requirementId: "preferred-1",
+          matchType: "direct",
+          evidenceIds: ["skill-3"],
+          reason: "Next.js 사용 경험이 원본 기술 목록에 있습니다."
+        },
+        {
+          requirementId: "preferred-2",
+          matchType: "gap",
+          evidenceIds: [],
+          reason: "원본 이력서에서 디자인 시스템 운영 경험을 확인하지 못했습니다."
+        }
+      ],
       skillIds: ["skill-2", "skill-1"],
       highlightIds: ["highlight-1"],
       strengthIds: ["strength-2"]
@@ -182,6 +214,11 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
     page.getByText("Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다.")
   ).toBeVisible();
   await expect(page.getByText("프로젝트 · Admin Console").first()).toBeVisible();
+  const requirementMap = page.getByRole("region", { name: "공고 요건 매칭" });
+  await expect(requirementMap).toContainText("필수 요건 3개 중 3개 근거 연결");
+  await expect(requirementMap).toContainText("우대 조건 2개 중 1개 근거 연결");
+  await expect(requirementMap).toContainText("디자인 시스템 운영");
+  await expect(requirementMap.getByText("근거 없음")).toBeVisible();
 
   await page.getByRole("button", { name: "맞춤 이력서 적용" }).click();
   await page.getByRole("button", { name: "지원 기록 저장" }).click();

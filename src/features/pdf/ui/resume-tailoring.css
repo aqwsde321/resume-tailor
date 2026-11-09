@@ -32,6 +32,73 @@
   padding-top: 16px;
 }
 
+.resume-tailoring-requirement-map {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 14px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.resume-tailoring-requirement-map > header h4,
+.resume-tailoring-requirement-group h5 {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.resume-tailoring-requirement-map > header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.resume-tailoring-requirement-group {
+  display: grid;
+  gap: 8px;
+}
+
+.resume-tailoring-requirement {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.resume-tailoring-requirement > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resume-tailoring-requirement > header > strong {
+  font-size: 0.8rem;
+}
+
+.resume-tailoring-requirement > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.resume-tailoring-match-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(36, 72, 191, 0.08);
+  color: var(--primary-strong);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.resume-tailoring-match-badge[data-match-type="gap"] {
+  background: rgba(153, 73, 43, 0.1);
+  color: #8a3c31;
+}
+
 .resume-tailoring-copy-change,
 .resume-tailoring-item-group,
 .resume-tailoring-selection {
@@ -102,6 +169,11 @@
 @media (max-width: 760px) {
   .resume-tailoring-card-head {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resume-tailoring-requirement > header {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

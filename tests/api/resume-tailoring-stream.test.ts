@@ -32,6 +32,38 @@ const plan = {
       evidenceIds: ["project-1"]
     }
   ],
+  requirementMatches: [
+    {
+      requirementId: "requirement-1",
+      matchType: "direct",
+      evidenceIds: ["skill-1"],
+      reason: "이력서에 Java 사용 근거가 있습니다."
+    },
+    {
+      requirementId: "requirement-2",
+      matchType: "direct",
+      evidenceIds: ["skill-2"],
+      reason: "이력서에 Spring Boot 사용 근거가 있습니다."
+    },
+    {
+      requirementId: "requirement-3",
+      matchType: "adjacent",
+      evidenceIds: ["project-1"],
+      reason: "PostgreSQL 프로젝트 경험이 RDB 업무와 연결됩니다."
+    },
+    {
+      requirementId: "preferred-1",
+      matchType: "direct",
+      evidenceIds: ["skill-4"],
+      reason: "이력서에 Docker 사용 근거가 있습니다."
+    },
+    {
+      requirementId: "preferred-2",
+      matchType: "direct",
+      evidenceIds: ["project-1"],
+      reason: "프로젝트에 관리자 대시보드 설계 경험이 있습니다."
+    }
+  ],
   skillIds: ["skill-2", "skill-1"],
   highlightIds: ["highlight-2"],
   strengthIds: ["strength-1"]
@@ -93,6 +125,7 @@ describe("POST /api/resume/tailor/stream", () => {
       skillName: "tailor-resume",
       inputText: expect.stringContaining("experience-1")
     });
+    expect(vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.inputText).toContain("requirement-1");
     expect(vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.inputText).toContain(
       "주문 API와 운영 시스템을 개발합니다."
     );
@@ -109,7 +142,24 @@ describe("POST /api/resume/tailor/stream", () => {
 
     expect(events.find((event) => event.event === "result")).toBeUndefined();
     expect(events.find((event) => event.event === "error")?.data.message).toBe(
-      "맞춤 이력서 결과에 원본에서 찾을 수 없는 항목이 있어요."
+      "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요."
+    );
+  });
+
+  it("공고에 없는 요건 ID를 매칭하면 결과를 내보내지 않는다", async () => {
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
+      ...plan,
+      requirementMatches: plan.requirementMatches.map((match, index) =>
+        index === 0 ? { ...match, requirementId: "requirement-99" } : match
+      )
+    });
+
+    const response = await post({ resume, company: companyFixture });
+    const events = parseSse(await response.text());
+
+    expect(events.find((event) => event.event === "result")).toBeUndefined();
+    expect(events.find((event) => event.event === "error")?.data.message).toBe(
+      "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요."
     );
   });
 

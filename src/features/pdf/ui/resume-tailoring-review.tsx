@@ -1,7 +1,18 @@
 "use client";
 
-import { buildResumeTailoringEvidence } from "@/entities/resume/model/resume-tailoring";
+import {
+  buildResumeTailoringEvidence,
+  buildResumeTailoringRequirements,
+  type ResumeTailoringRequirementMatch
+} from "@/entities/resume/model/resume-tailoring";
 import type { ResumeTailoringReview } from "@/features/pdf/hooks/use-resume-tailoring-workflow";
+
+const MATCH_TYPE_LABELS: Record<ResumeTailoringRequirementMatch["matchType"], string> = {
+  direct: "직접 일치",
+  transferable: "전이 가능",
+  adjacent: "인접 경험",
+  gap: "근거 없음"
+};
 
 interface ResumeTailoringReviewProps {
   review: ResumeTailoringReview;
@@ -17,6 +28,12 @@ export function ResumeTailoringReviewPanel({
   const evidenceById = new Map(
     buildResumeTailoringEvidence(review.sourceResume).map((item) => [item.id, item])
   );
+  const requirements = buildResumeTailoringRequirements(review.sourceCompany);
+  const matchesByRequirementId = new Map(
+    review.plan.requirementMatches.map((item) => [item.requirementId, item])
+  );
+  const requiredRequirements = requirements.filter((item) => item.type === "required");
+  const preferredRequirements = requirements.filter((item) => item.type === "preferred");
 
   const renderEvidence = (ids: string[]) => (
     <ul className="resume-tailoring-evidence-list">
@@ -32,6 +49,38 @@ export function ResumeTailoringReviewPanel({
     </ul>
   );
 
+  const renderRequirements = (type: "required" | "preferred") =>
+    requirements
+      .filter((item) => item.type === type)
+      .map((requirement) => {
+        const match = matchesByRequirementId.get(requirement.id);
+        if (!match) {
+          return null;
+        }
+
+        return (
+          <article className="resume-tailoring-requirement" key={requirement.id}>
+            <header>
+              <strong>{requirement.text}</strong>
+              <span
+                className="resume-tailoring-match-badge"
+                data-match-type={match.matchType}
+              >
+                {MATCH_TYPE_LABELS[match.matchType]}
+              </span>
+            </header>
+            <p>{match.reason}</p>
+            {match.evidenceIds.length > 0 && renderEvidence(match.evidenceIds)}
+          </article>
+        );
+      });
+
+  const countMatchedRequirements = (items: typeof requirements) =>
+    items.filter((item) => {
+      const match = matchesByRequirementId.get(item.id);
+      return match && match.matchType !== "gap";
+    }).length;
+
   return (
     <section className="resume-tailoring-review" aria-label="맞춤 이력서 검토">
       <header>
@@ -41,6 +90,29 @@ export function ResumeTailoringReviewPanel({
           <p>원본 경력과 프로젝트에서 바뀐 표현을 확인하고 적용해 주세요.</p>
         </div>
       </header>
+
+      <section className="resume-tailoring-requirement-map" aria-label="공고 요건 매칭">
+        <header>
+          <div>
+            <h4>공고 요건 매칭</h4>
+            <p>
+              필수 요건 {requiredRequirements.length}개 중 {countMatchedRequirements(requiredRequirements)}개 근거 연결 · 우대 조건 {preferredRequirements.length}개 중 {countMatchedRequirements(preferredRequirements)}개 근거 연결
+            </p>
+          </div>
+        </header>
+        {requiredRequirements.length > 0 && (
+          <section className="resume-tailoring-requirement-group">
+            <h5>필수 요건</h5>
+            {renderRequirements("required")}
+          </section>
+        )}
+        {preferredRequirements.length > 0 && (
+          <section className="resume-tailoring-requirement-group">
+            <h5>우대 조건</h5>
+            {renderRequirements("preferred")}
+          </section>
+        )}
+      </section>
 
       <section className="resume-tailoring-copy-change">
         <h4>직무 제목</h4>
