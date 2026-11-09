@@ -15,6 +15,7 @@ import {
 } from "@/entities/application/model/application-backup";
 import {
   APPLICATION_STATUS_OPTIONS,
+  type ApplicationFollowUpDraft,
   type ApplicationInterviewPrep,
   buildApplicationDashboard,
   deleteApplicationRecord,
@@ -28,6 +29,12 @@ import {
   type ApplicationStatus,
   type ApplicationStatusFilter
 } from "@/entities/application/model/application-record";
+import {
+  ApplicationFollowUpDraftSchema,
+  FOLLOW_UP_OCCASION_OPTIONS,
+  upsertApplicationFollowUpDraft,
+  type FollowUpOccasion
+} from "@/entities/application/model/follow-up-draft";
 import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import {
   deleteApplicationPdf,
@@ -63,6 +70,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<ApplicationRecordSort>("recent");
+  const [followUpOccasion, setFollowUpOccasion] = useState<FollowUpOccasion>("application-thanks");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const backupInputRef = useRef<HTMLInputElement>(null);
   const dashboard = useMemo(() => buildApplicationDashboard(records), [records]);
@@ -80,7 +88,13 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     changes: Partial<
       Pick<
         ApplicationRecord,
-        "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt" | "interviewPrep"
+        | "status"
+        | "notes"
+        | "nextAction"
+        | "nextActionDate"
+        | "appliedAt"
+        | "interviewPrep"
+        | "followUpDrafts"
       >
     >
   ) => {
@@ -220,6 +234,61 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
       setError(error instanceof Error ? error.message : "면접 준비 자료를 만들지 못했어요.");
     } finally {
       setBusyRecordId(null);
+    }
+  };
+
+  const generateFollowUpDraft = async (record: ApplicationRecord) => {
+    setBusyRecordId(record.id);
+    try {
+      const response = await fetch("/api/application/follow-up-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          occasion: followUpOccasion,
+          company: record.snapshot.company,
+          status: record.status,
+          notes: record.notes,
+          nextAction: record.nextAction,
+          agent: toAgentRunOptions(state.agentSettings)
+        })
+      });
+      const body = (await response.json()) as {
+        ok?: boolean;
+        data?: unknown;
+        error?: { message?: string };
+      };
+      if (!response.ok || body.ok !== true) {
+        throw new Error(body.error?.message ?? "후속 메일 초안을 만들지 못했어요.");
+      }
+
+      const draft: ApplicationFollowUpDraft = ApplicationFollowUpDraftSchema.parse(body.data);
+      updateRecord(record.id, {
+        followUpDrafts: upsertApplicationFollowUpDraft(record.followUpDrafts, draft)
+      });
+      setMessage("후속 메일 초안을 저장했어요.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "후속 메일 초안을 만들지 못했어요.");
+    } finally {
+      setBusyRecordId(null);
+    }
+  };
+
+  const updateFollowUpDraft = (
+    record: ApplicationRecord,
+    draft: ApplicationFollowUpDraft,
+    changes: Partial<Pick<ApplicationFollowUpDraft, "subject" | "body">>
+  ) => {
+    updateRecord(record.id, {
+      followUpDrafts: upsertApplicationFollowUpDraft(record.followUpDrafts, { ...draft, ...changes })
+    });
+  };
+
+  const copyFollowUpDraft = async (draft: ApplicationFollowUpDraft) => {
+    try {
+      await navigator.clipboard.writeText(`${draft.subject}\n\n${draft.body}`);
+      setMessage("메일 초안을 복사했어요.");
+    } catch {
+      setError("메일 초안을 복사하지 못했어요. 제목과 본문을 직접 선택해 주세요.");
     }
   };
 
@@ -435,6 +504,9 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           <section className="applications-list" aria-label="지원 기록 목록">
             {filteredRecords.map((record) => {
               const deadlineStatus = getApplicationDeadlineStatus(record.nextActionDate);
+              const followUpDraft = record.followUpDrafts.find(
+                (draft) => draft.occasion === followUpOccasion
+              );
 
               return (
         <article className="card application-card" id={`application-record-${record.id}`} key={record.id}>
@@ -600,6 +672,72 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                   : record.interviewPrep
                     ? "면접 준비 자료 다시 만들기"
                     : "면접 준비 자료 만들기"}
+              </button>
+            </div>
+          </details>
+
+          <details className="application-follow-up-drafts">
+            <summary>후속 메일 초안{record.followUpDrafts.length > 0 ? ` · ${record.followUpDrafts.length}개 저장` : ""}</summary>
+            <div className="application-follow-up-draft-content">
+              <label className="application-field">
+                <span>메일 목적</span>
+                <select
+                  aria-label={`${record.companyName} 메일 목적`}
+                  className="form-select"
+                  value={followUpOccasion}
+                  onChange={(event) => setFollowUpOccasion(event.target.value as FollowUpOccasion)}
+                >
+                  {FOLLOW_UP_OCCASION_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              {followUpDraft ? (
+                  <div className="application-follow-up-draft-editor">
+                    <p className="application-artifact-date">{formatCreatedAt(followUpDraft.generatedAt)} 생성</p>
+                    <label className="application-field">
+                      <span>제목</span>
+                      <input
+                        aria-label={`${record.companyName} 후속 메일 제목`}
+                        className="form-input"
+                        maxLength={180}
+                        value={followUpDraft.subject}
+                        onChange={(event) => updateFollowUpDraft(record, followUpDraft, { subject: event.target.value })}
+                      />
+                    </label>
+                    <label className="application-field">
+                      <span>본문</span>
+                      <textarea
+                        aria-label={`${record.companyName} 후속 메일 본문`}
+                        className="form-input application-follow-up-draft-body"
+                        maxLength={4000}
+                        value={followUpDraft.body}
+                        onChange={(event) => updateFollowUpDraft(record, followUpDraft, { body: event.target.value })}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="nav-btn"
+                      disabled={!followUpDraft.subject.trim() || !followUpDraft.body.trim()}
+                      onClick={() => void copyFollowUpDraft(followUpDraft)}
+                    >
+                      제목과 본문 복사
+                    </button>
+                  </div>
+              ) : (
+                  <p>저장한 회사 정보, 진행 상태, 메모를 바탕으로 보낼 메일 초안을 만듭니다.</p>
+              )}
+              <button
+                type="button"
+                className="nav-btn"
+                disabled={busyRecordId === record.id}
+                onClick={() => void generateFollowUpDraft(record)}
+              >
+                {busyRecordId === record.id
+                  ? "메일 초안 만드는 중..."
+                  : Boolean(followUpDraft)
+                    ? "이 목적의 초안 다시 만들기"
+                    : "후속 메일 초안 만들기"}
               </button>
             </div>
           </details>

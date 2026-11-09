@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ApplicationFollowUpDraftSchema } from "@/entities/application/model/follow-up-draft";
 import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import { PDF_TEMPLATE_IDS, type PdfTemplateId } from "@/entities/pdf/model/templates";
 import { PDF_THEME_IDS, type PdfThemeId } from "@/entities/pdf/model/themes";
@@ -61,6 +62,7 @@ export const ApplicationRecordSchema = z
     appliedAt: ApplicationDateSchema,
     statusHistory: z.array(ApplicationStatusHistoryEntrySchema).default([]),
     interviewPrep: ApplicationInterviewPrepSchema.nullable().default(null),
+    followUpDrafts: z.array(ApplicationFollowUpDraftSchema).default([]),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     pdfFileName: z.string().trim().min(1),
@@ -71,6 +73,7 @@ export const ApplicationRecordSchema = z
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
 export type ApplicationStatusHistoryEntry = z.infer<typeof ApplicationStatusHistoryEntrySchema>;
 export type { ApplicationInterviewPrep } from "@/entities/application/model/interview-prep";
+export type { ApplicationFollowUpDraft } from "@/entities/application/model/follow-up-draft";
 export type ApplicationStatusFilter = ApplicationStatus | "all";
 export type ApplicationRecordSort = "recent" | "due-date";
 export type ApplicationDeadlineStatus = "none" | "overdue" | "today" | "upcoming";
@@ -120,6 +123,7 @@ export function createApplicationRecord(
     appliedAt: null,
     statusHistory: [{ status: "preparing", changedAt: now }],
     interviewPrep: null,
+    followUpDrafts: [],
     createdAt: now,
     updatedAt: now,
     pdfFileName: buildPdfDownloadName(input.company, input.resume),
@@ -165,7 +169,13 @@ export function updateApplicationRecord(
   changes: Partial<
     Pick<
       ApplicationRecord,
-      "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt" | "interviewPrep"
+      | "status"
+      | "notes"
+      | "nextAction"
+      | "nextActionDate"
+      | "appliedAt"
+      | "interviewPrep"
+      | "followUpDrafts"
     >
   >,
   updatedAt = new Date().toISOString()

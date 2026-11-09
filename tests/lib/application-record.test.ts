@@ -44,6 +44,7 @@ describe("application records", () => {
       status: "preparing",
       notes: "",
       interviewPrep: null,
+      followUpDrafts: [],
       createdAt: "2026-11-09T00:00:00.000Z",
       updatedAt: "2026-11-09T00:00:00.000Z",
       pdfFileName: expect.stringContaining("Beta-Corp")
@@ -101,13 +102,15 @@ describe("application records", () => {
     delete legacyRecord.appliedAt;
     delete legacyRecord.statusHistory;
     delete legacyRecord.interviewPrep;
+    delete legacyRecord.followUpDrafts;
 
     expect(normalizeApplicationRecords([legacyRecord])[0]).toMatchObject({
       nextAction: "",
       nextActionDate: null,
       appliedAt: null,
       statusHistory: [{ status: "preparing", changedAt: record.updatedAt }],
-      interviewPrep: null
+      interviewPrep: null,
+      followUpDrafts: []
     });
   });
 

@@ -319,6 +319,23 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
+  await page.route("**/api/application/follow-up-draft", async (route) => {
+    const requestBody = route.request().postDataJSON() as { occasion?: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          occasion: requestBody.occasion,
+          generatedAt: "2026-11-09T00:00:00.000Z",
+          subject: "Beta Corp 면접 후 감사 인사",
+          body: "면접에서 들은 제품 계획이 인상 깊었습니다. 제 경험을 바탕으로 팀에 기여하고 싶습니다."
+        }
+      })
+    });
+  });
+
   await page.route("**/api/resume/fetch-url", async (route) => {
     await route.fulfill({
       status: 200,
@@ -563,6 +580,12 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await interviewPrep.getByRole("button", { name: "면접 준비 자료 만들기" }).click();
   await expect(interviewPrep.getByText("면접 시작 30초 소개")).toBeVisible();
   await expect(interviewPrep.getByText("Beta Corp의 결제 API 경험을 설명하는 30초 소개입니다.")).toBeVisible();
+  const followUpDrafts = record.locator(".application-follow-up-drafts");
+  await followUpDrafts.locator("summary").click();
+  await followUpDrafts.getByLabel("Beta Corp 메일 목적").selectOption("result-inquiry");
+  await followUpDrafts.getByRole("button", { name: "후속 메일 초안 만들기" }).click();
+  await expect(followUpDrafts.getByLabel("Beta Corp 후속 메일 제목")).toHaveValue("Beta Corp 면접 후 감사 인사");
+  await followUpDrafts.getByLabel("Beta Corp 후속 메일 본문").fill("사용자가 수정한 후속 메일 본문입니다.");
   const statusHistory = record.locator(".application-status-history");
   await statusHistory.locator("summary").click();
   await expect(statusHistory.getByText("면접 중")).toBeVisible();
@@ -581,6 +604,12 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   const persistedInterviewPrep = persistedRecord.locator(".application-interview-prep");
   await persistedInterviewPrep.locator("summary").click();
   await expect(persistedInterviewPrep.getByText("Beta Corp의 결제 API 경험을 설명하는 30초 소개입니다.")).toBeVisible();
+  const persistedFollowUpDrafts = persistedRecord.locator(".application-follow-up-drafts");
+  await persistedFollowUpDrafts.locator("summary").click();
+  await persistedFollowUpDrafts.getByLabel("Beta Corp 메일 목적").selectOption("result-inquiry");
+  await expect(persistedFollowUpDrafts.getByLabel("Beta Corp 후속 메일 본문")).toHaveValue(
+    "사용자가 수정한 후속 메일 본문입니다."
+  );
   await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
   await expect(persistedRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("결과 문의 메일 보내기");
   await expect(persistedRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");

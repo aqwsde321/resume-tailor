@@ -2643,6 +2643,32 @@ button {
   font-size: 0.69rem;
 }
 
+.application-follow-up-drafts {
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.application-follow-up-drafts summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.application-follow-up-draft-content,
+.application-follow-up-draft-editor {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.application-follow-up-draft-body {
+  min-height: 180px;
+  line-height: 1.6;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
 .application-field {
   display: grid;
   gap: 6px;

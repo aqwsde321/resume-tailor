@@ -3,7 +3,8 @@ export type SkillName =
   | "company-to-json"
   | "generate-intro"
   | "discover-experience"
-  | "prepare-interview";
+  | "prepare-interview"
+  | "write-follow-up";
 export type InputMode = "text" | "file" | "url";
 export type TaskKind = "resume" | "company" | "intro" | "experienceDiscovery";
 export type LogLevel = "info" | "success" | "error";
