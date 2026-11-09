@@ -7,6 +7,7 @@ import { AppFrame } from "@/shared/ui/frame/app-frame";
 import { PdfEditorWorkspace } from "@/features/pdf/ui/workspace";
 import { usePdfWorkspaceDock } from "@/features/pdf/hooks/use-pdf-workspace-dock";
 import { usePdfWorkspaceState } from "@/features/pdf/hooks/use-pdf-workspace-state";
+import { useResumeTailoringWorkflow } from "@/features/pdf/hooks/use-resume-tailoring-workflow";
 import { getIntroRefreshReasons, usePipeline } from "@/entities/pipeline/model/pipeline-context";
 
 export default function PdfPage() {
@@ -38,6 +39,11 @@ export default function PdfPage() {
     customAccentHex: state.pdfCustomAccentHex
   });
   const workspaceRef = usePdfWorkspaceDock(canExportPdf);
+  const resumeTailoring = useResumeTailoringWorkflow({
+    company: pdfCompany,
+    resume: pdfResume,
+    setResume: setPdfResume
+  });
 
   return (
     <AppFrame
@@ -84,12 +90,23 @@ export default function PdfPage() {
               error={pdfError}
               exporting={isPdfExporting}
               savingApplication={isApplicationSaving}
+              tailoring={resumeTailoring.isGenerating}
+              tailoringReview={resumeTailoring.review}
               intro={pdfIntro}
-              onCompanyChange={setPdfCompany}
+              onCompanyChange={(nextCompany) => {
+                setPdfCompany(nextCompany);
+                resumeTailoring.clearReview();
+              }}
               onExport={() => void exportPdf()}
               onSaveApplication={() => void saveApplication()}
               onIntroChange={setPdfIntro}
-              onResumeChange={setPdfResume}
+              onResumeChange={(nextResume) => {
+                setPdfResume(nextResume);
+                resumeTailoring.clearReview();
+              }}
+              onTailorResume={() => void resumeTailoring.generate()}
+              onApplyTailoredResume={resumeTailoring.apply}
+              onDismissTailoredResume={resumeTailoring.dismiss}
               onTemplateChange={(nextTemplateId) =>
                 patch((prev) => ({
                   ...prev,

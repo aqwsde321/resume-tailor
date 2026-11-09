@@ -4,9 +4,15 @@ export type SkillName =
   | "generate-intro"
   | "discover-experience"
   | "prepare-interview"
-  | "write-follow-up";
+  | "write-follow-up"
+  | "tailor-resume";
 export type InputMode = "text" | "file" | "url";
-export type TaskKind = "resume" | "company" | "intro" | "experienceDiscovery";
+export type TaskKind =
+  | "resume"
+  | "company"
+  | "intro"
+  | "experienceDiscovery"
+  | "resumeTailoring";
 export type LogLevel = "info" | "success" | "error";
 export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 export type IntroTone = "balanced" | "confident" | "collaborative" | "problemSolving";

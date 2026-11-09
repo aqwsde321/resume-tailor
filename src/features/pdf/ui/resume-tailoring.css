@@ -1,0 +1,107 @@
+.resume-tailoring-card {
+  display: grid;
+  gap: 16px;
+}
+
+.resume-tailoring-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.resume-tailoring-card-head h2,
+.resume-tailoring-review h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.resume-tailoring-card-head > div > p:last-child,
+.resume-tailoring-review > header > div > p:last-child {
+  max-width: 74ch;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.resume-tailoring-review {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(17, 24, 39, 0.09);
+  padding-top: 16px;
+}
+
+.resume-tailoring-copy-change,
+.resume-tailoring-item-group,
+.resume-tailoring-selection {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(17, 24, 39, 0.09);
+  border-radius: 14px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.resume-tailoring-copy-change h4,
+.resume-tailoring-item-group h4,
+.resume-tailoring-selection h4 {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.resume-tailoring-before,
+.resume-tailoring-after,
+.resume-tailoring-selection p,
+.resume-tailoring-evidence-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.resume-tailoring-after {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.resume-tailoring-item-group {
+  gap: 10px;
+}
+
+.resume-tailoring-item {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.resume-tailoring-item > strong,
+.resume-tailoring-evidence-list strong {
+  font-size: 0.78rem;
+}
+
+.resume-tailoring-evidence-list {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resume-tailoring-evidence-list li {
+  border-left: 2px solid rgba(36, 72, 191, 0.32);
+  padding-left: 9px;
+}
+
+.resume-tailoring-evidence-list p {
+  margin-top: 3px;
+}
+
+@media (max-width: 760px) {
+  .resume-tailoring-card-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

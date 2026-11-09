@@ -13,7 +13,8 @@ const SKILL_LABEL: Record<SkillName, string> = {
   "generate-intro": "소개글 만들기",
   "discover-experience": "경험 발굴",
   "prepare-interview": "면접 준비 자료",
-  "write-follow-up": "후속 메일 초안"
+  "write-follow-up": "후속 메일 초안",
+  "tailor-resume": "회사 맞춤 이력서"
 };
 
 let codex: Codex | null = null;

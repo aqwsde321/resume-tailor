@@ -27,6 +27,8 @@ import {
   StrengthsSectionForm
 } from "@/features/pdf/ui/section-forms";
 import { PdfEditorModalSection } from "@/features/pdf/ui/section-modal";
+import { ResumeTailoringReviewPanel } from "@/features/pdf/ui/resume-tailoring-review";
+import type { ResumeTailoringReview } from "@/features/pdf/hooks/use-resume-tailoring-workflow";
 import { useTypstPreview } from "@/features/pdf/ui/use-typst-preview";
 import type { PdfSectionKey } from "@/features/pdf/ui/types";
 import { parseInlineItems, stringifyInlineList } from "@/shared/lib/list-input";
@@ -39,10 +41,15 @@ interface PdfEditorWorkspaceProps {
   error: string;
   exporting: boolean;
   savingApplication: boolean;
+  tailoring: boolean;
+  tailoringReview: ResumeTailoringReview | null;
   intro: Intro;
   onCompanyChange: (nextCompany: Company) => void;
   onExport: () => void;
   onSaveApplication: () => void;
+  onTailorResume: () => void;
+  onApplyTailoredResume: () => void;
+  onDismissTailoredResume: () => void;
   onIntroChange: (nextIntro: Intro) => void;
   onResumeChange: (nextResume: Resume) => void;
   onTemplateChange: (nextTemplateId: PdfTemplateId) => void;
@@ -76,10 +83,15 @@ export function PdfEditorWorkspace({
   error,
   exporting,
   savingApplication,
+  tailoring,
+  tailoringReview,
   intro,
   onCompanyChange,
   onExport,
   onSaveApplication,
+  onTailorResume,
+  onApplyTailoredResume,
+  onDismissTailoredResume,
   onIntroChange,
   onResumeChange,
   onTemplateChange,
@@ -334,6 +346,34 @@ export function PdfEditorWorkspace({
   return (
     <section className="pdf-workspace" ref={rootRef}>
       {error && <p className="status error">{error}</p>}
+
+      <section className="card resume-tailoring-card" aria-label="회사 맞춤 이력서 만들기">
+        <header className="resume-tailoring-card-head">
+          <div>
+            <p className="card-kicker">회사별 맞춤</p>
+            <h2>{company.companyName || "지원 회사"}에 맞게 이력서 정리</h2>
+            <p>
+              공고와 원본 이력서의 근거를 연결해 요약, 경력, 프로젝트 순서를 조정합니다.
+              적용 전 변경 내용과 근거를 확인할 수 있어요.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="nav-btn"
+            disabled={exporting || tailoring}
+            onClick={onTailorResume}
+          >
+            {tailoring ? "맞춤 이력서 만드는 중..." : "회사 맞춤 이력서 만들기"}
+          </button>
+        </header>
+        {tailoringReview && (
+          <ResumeTailoringReviewPanel
+            review={tailoringReview}
+            onApply={onApplyTailoredResume}
+            onDismiss={onDismissTailoredResume}
+          />
+        )}
+      </section>
 
       <div className="pdf-workspace-grid">
         <div className="pdf-editor-pane">

@@ -13,7 +13,8 @@ export const TASK_LABEL: Record<TaskKind, string> = {
   resume: "이력서 정리",
   company: "공고 정리",
   intro: "소개글 만들기",
-  experienceDiscovery: "경험 발굴"
+  experienceDiscovery: "경험 발굴",
+  resumeTailoring: "회사 맞춤 이력서"
 };
 
 export const PHASE_LABEL: Record<string, string> = {
@@ -64,6 +65,11 @@ export const TASK_PROGRESS_LABELS: Record<
     prepare: "질문 준비",
     analyze: "경험 확인",
     finalize: "초안 정리"
+  },
+  resumeTailoring: {
+    prepare: "공고와 이력서 확인",
+    analyze: "경력 근거 연결",
+    finalize: "이력서 초안 구성"
   }
 };
 

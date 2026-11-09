@@ -1,3 +1,4 @@
 @import "../shared/styles/base.css";
 @import "../shared/styles/pdf-and-frame.css";
 @import "../shared/styles/editorial-refresh.css";
+@import "../features/pdf/ui/resume-tailoring.css";

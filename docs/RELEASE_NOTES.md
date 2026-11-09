@@ -5,6 +5,20 @@
 
 ## Unreleased
 
+### Added
+
+- `/pdf`에서 채용공고에 맞춰 요약·경력·프로젝트 순서를 조정하는 이력서 초안 생성 추가
+- 맞춤 표현마다 원본 이력서 근거를 표시하고, 사용자 승인 후 PDF draft에 적용하도록 구성
+- `tailor-resume` 스킬과 `/api/resume/tailor/stream`에 원본 항목·근거 ID 검증 추가
+
+### Verified
+
+- `npm run test` (147 tests)
+- `npm run lint` (오류 없음, 기존 경고 2건)
+- `npm run typecheck`
+- `npm run build`
+- `npm run test:e2e -- --grep "공고에 맞춘 이력서를 확인하고 적용한 버전으로 지원 기록을 저장한다"`
+
 ### Changed
 
 - 소개글 근거 계산에서 복합 기술명 매칭을 강화해 일부 토큰만 겹쳐도 같은 기술로 보던 오탐을 줄임
