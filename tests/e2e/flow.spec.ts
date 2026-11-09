@@ -575,6 +575,14 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.getByRole("heading", { name: "지원 일정" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Beta Corp · 지원일" })).toBeVisible();
   await page.getByRole("button", { name: "목록 보기" }).click();
+  await page.getByRole("button", { name: "보드 보기" }).click();
+  await expect(page.getByRole("heading", { name: "지원 현황 보드" })).toBeVisible();
+  const boardCard = page.locator(".application-kanban-card").filter({ hasText: "Beta Corp" });
+  await expect(boardCard).toBeVisible();
+  await boardCard.getByLabel("Beta Corp 보드 상태").selectOption("closed");
+  await expect(page.locator(".application-kanban-column[data-status='closed']")).toContainText("Beta Corp");
+  await boardCard.getByLabel("Beta Corp 보드 상태").selectOption("interviewing");
+  await page.getByRole("button", { name: "목록 보기" }).click();
   const interviewPrep = record.locator(".application-interview-prep");
   await interviewPrep.locator("summary").click();
   await interviewPrep.getByRole("button", { name: "면접 준비 자료 만들기" }).click();
@@ -588,7 +596,7 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await followUpDrafts.getByLabel("Beta Corp 후속 메일 본문").fill("사용자가 수정한 후속 메일 본문입니다.");
   const statusHistory = record.locator(".application-status-history");
   await statusHistory.locator("summary").click();
-  await expect(statusHistory.getByText("면접 중")).toBeVisible();
+  await expect(statusHistory.getByText("면접 중").first()).toBeVisible();
   await expect(
     page.locator(".application-dashboard-metric").filter({ hasText: "면접 전환율" })
   ).toContainText("100%");

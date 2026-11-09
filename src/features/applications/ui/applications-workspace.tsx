@@ -43,6 +43,7 @@ import {
   saveApplicationPdfs
 } from "@/entities/application/model/application-pdf-store";
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
+import { ApplicationBoardView } from "@/features/applications/ui/application-board-view";
 import { ApplicationCalendarView } from "@/features/applications/ui/application-calendar-view";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 
@@ -71,7 +72,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<ApplicationRecordSort>("recent");
   const [followUpOccasion, setFollowUpOccasion] = useState<FollowUpOccasion>("application-thanks");
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar" | "board">("list");
   const backupInputRef = useRef<HTMLInputElement>(null);
   const dashboard = useMemo(() => buildApplicationDashboard(records), [records]);
   const filteredRecords = useMemo(
@@ -292,6 +293,15 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     }
   };
 
+  const selectApplicationRecord = (recordId: string) => {
+    setViewMode("list");
+    window.setTimeout(() => {
+      document
+        .getElementById(`application-record-${recordId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
+
   return (
     <>
       {records.length > 0 && (
@@ -458,6 +468,14 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           >
             달력 보기
           </button>
+          <button
+            type="button"
+            className="nav-btn"
+            aria-pressed={viewMode === "board"}
+            onClick={() => setViewMode("board")}
+          >
+            보드 보기
+          </button>
         </div>
       )}
       {records.length === 0 ? (
@@ -491,14 +509,13 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
         ) : viewMode === "calendar" ? (
           <ApplicationCalendarView
             records={filteredRecords}
-            onSelectRecord={(recordId) => {
-              setViewMode("list");
-              window.setTimeout(() => {
-                document
-                  .getElementById(`application-record-${recordId}`)
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }, 0);
-            }}
+            onSelectRecord={selectApplicationRecord}
+          />
+        ) : viewMode === "board" ? (
+          <ApplicationBoardView
+            records={filteredRecords}
+            onStatusChange={(recordId, status) => updateRecord(recordId, { status })}
+            onSelectRecord={selectApplicationRecord}
           />
         ) : (
           <section className="applications-list" aria-label="지원 기록 목록">
