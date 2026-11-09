@@ -17,6 +17,13 @@ export const APPLICATION_STATUS_OPTIONS: Array<{ id: ApplicationStatus; label: s
 
 export const ApplicationStatusSchema = z.enum(APPLICATION_STATUSES);
 
+const ApplicationStatusHistoryEntrySchema = z
+  .object({
+    status: ApplicationStatusSchema,
+    changedAt: z.string().datetime()
+  })
+  .strict();
+
 const ApplicationSnapshotSchema = z
   .object({
     resume: ResumeSchema,
@@ -50,6 +57,8 @@ export const ApplicationRecordSchema = z
     notes: z.string().max(5000),
     nextAction: z.string().max(5000).default(""),
     nextActionDate: ApplicationDateSchema,
+    appliedAt: ApplicationDateSchema,
+    statusHistory: z.array(ApplicationStatusHistoryEntrySchema).default([]),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     pdfFileName: z.string().trim().min(1),
@@ -58,6 +67,7 @@ export const ApplicationRecordSchema = z
   .strict();
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
+export type ApplicationStatusHistoryEntry = z.infer<typeof ApplicationStatusHistoryEntrySchema>;
 export type ApplicationStatusFilter = ApplicationStatus | "all";
 export type ApplicationRecordSort = "recent" | "due-date";
 export type ApplicationDeadlineStatus = "none" | "overdue" | "today" | "upcoming";
@@ -104,11 +114,28 @@ export function createApplicationRecord(
     notes: "",
     nextAction: "",
     nextActionDate: null,
+    appliedAt: null,
+    statusHistory: [{ status: "preparing", changedAt: now }],
     createdAt: now,
     updatedAt: now,
     pdfFileName: buildPdfDownloadName(input.company, input.resume),
     snapshot
   });
+}
+
+export function normalizeApplicationRecord(value: unknown): ApplicationRecord | null {
+  const parsed = ApplicationRecordSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return {
+    ...parsed.data,
+    statusHistory:
+      parsed.data.statusHistory.length > 0
+        ? parsed.data.statusHistory
+        : [{ status: parsed.data.status, changedAt: parsed.data.updatedAt }]
+  };
 }
 
 export function normalizeApplicationRecords(value: unknown): ApplicationRecord[] {
@@ -118,13 +145,13 @@ export function normalizeApplicationRecords(value: unknown): ApplicationRecord[]
 
   const ids = new Set<string>();
   return value.flatMap((item) => {
-    const parsed = ApplicationRecordSchema.safeParse(item);
-    if (!parsed.success || ids.has(parsed.data.id)) {
+    const record = normalizeApplicationRecord(item);
+    if (!record || ids.has(record.id)) {
       return [];
     }
 
-    ids.add(parsed.data.id);
-    return [parsed.data];
+    ids.add(record.id);
+    return [record];
   });
 }
 
@@ -132,17 +159,42 @@ export function updateApplicationRecord(
   records: ApplicationRecord[],
   id: string,
   changes: Partial<
-    Pick<ApplicationRecord, "status" | "notes" | "nextAction" | "nextActionDate">
+    Pick<
+      ApplicationRecord,
+      "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt"
+    >
   >,
   updatedAt = new Date().toISOString()
 ): ApplicationRecord[] {
   return records.map((record) =>
     record.id === id
-      ? ApplicationRecordSchema.parse({
-          ...record,
-          ...changes,
-          updatedAt
-        })
+      ? (() => {
+          const nextStatus = changes.status ?? record.status;
+          const statusChanged = nextStatus !== record.status;
+          const hasAppliedAtChange = Object.prototype.hasOwnProperty.call(changes, "appliedAt");
+          const appliedAt = hasAppliedAtChange
+            ? changes.appliedAt
+            : !record.appliedAt && statusChanged && nextStatus !== "preparing"
+              ? getLocalDateKey(new Date(updatedAt))
+              : record.appliedAt;
+          const statusHistory = statusChanged
+            ? [
+                ...record.statusHistory,
+                {
+                  status: nextStatus,
+                  changedAt: updatedAt
+                }
+              ]
+            : record.statusHistory;
+
+          return ApplicationRecordSchema.parse({
+            ...record,
+            ...changes,
+            appliedAt,
+            statusHistory,
+            updatedAt
+          });
+        })()
       : record
   );
 }
@@ -220,6 +272,95 @@ export function sortApplicationRecords(
 
     return right.createdAt.localeCompare(left.createdAt);
   });
+}
+
+export interface ApplicationCompanySummary {
+  companyName: string;
+  totalApplications: number;
+  submittedApplications: number;
+  interviewedApplications: number;
+  closedApplications: number;
+}
+
+export interface ApplicationDashboardSummary {
+  totalApplications: number;
+  submittedApplications: number;
+  interviewedApplications: number;
+  interviewConversionRate: number;
+  statusCounts: Record<ApplicationStatus, number>;
+  companies: ApplicationCompanySummary[];
+}
+
+function hasBeenSubmitted(record: ApplicationRecord) {
+  return (
+    record.appliedAt !== null ||
+    record.status !== "preparing" ||
+    record.statusHistory.some((entry) => entry.status !== "preparing")
+  );
+}
+
+function hasBeenInterviewed(record: ApplicationRecord) {
+  return (
+    record.status === "interviewing" ||
+    record.statusHistory.some((entry) => entry.status === "interviewing")
+  );
+}
+
+export function buildApplicationDashboard(
+  records: ApplicationRecord[]
+): ApplicationDashboardSummary {
+  const statusCounts: Record<ApplicationStatus, number> = {
+    preparing: 0,
+    applied: 0,
+    interviewing: 0,
+    closed: 0
+  };
+  const companies = new Map<string, ApplicationCompanySummary>();
+  let submittedApplications = 0;
+  let interviewedApplications = 0;
+
+  for (const record of records) {
+    statusCounts[record.status] += 1;
+
+    const submitted = hasBeenSubmitted(record);
+    const interviewed = hasBeenInterviewed(record);
+    if (submitted) {
+      submittedApplications += 1;
+    }
+    if (interviewed) {
+      interviewedApplications += 1;
+    }
+
+    const companyName = record.companyName.trim() || "회사";
+    const summary = companies.get(companyName) ?? {
+      companyName,
+      totalApplications: 0,
+      submittedApplications: 0,
+      interviewedApplications: 0,
+      closedApplications: 0
+    };
+    summary.totalApplications += 1;
+    summary.submittedApplications += Number(submitted);
+    summary.interviewedApplications += Number(interviewed);
+    summary.closedApplications += Number(record.status === "closed");
+    companies.set(companyName, summary);
+  }
+
+  return {
+    totalApplications: records.length,
+    submittedApplications,
+    interviewedApplications,
+    interviewConversionRate:
+      submittedApplications > 0
+        ? Math.round((interviewedApplications / submittedApplications) * 100)
+        : 0,
+    statusCounts,
+    companies: [...companies.values()].sort(
+      (left, right) =>
+        right.totalApplications - left.totalApplications ||
+        left.companyName.localeCompare(right.companyName, "ko-KR")
+    )
+  };
 }
 
 export function deleteApplicationRecord(records: ApplicationRecord[], id: string): ApplicationRecord[] {

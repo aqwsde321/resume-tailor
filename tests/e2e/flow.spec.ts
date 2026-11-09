@@ -512,11 +512,20 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(page.getByText("지원 기록과 PDF를 저장했어요.")).toBeVisible();
   await expect(page.getByRole("link", { name: "지원 기록 1" })).toBeVisible();
   await page.goto("/applications");
+  await expect(page.getByRole("heading", { name: "지원 성과" })).toBeVisible();
 
   const record = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await expect(record).toBeVisible();
   await expect(record.getByText("Frontend Engineer")).toBeVisible();
   await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
+  await expect(record.getByLabel("Beta Corp 지원일")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
+  const statusHistory = record.locator(".application-status-history");
+  await statusHistory.locator("summary").click();
+  await expect(statusHistory.getByText("면접 중")).toBeVisible();
+  await expect(
+    page.locator(".application-dashboard-metric").filter({ hasText: "면접 전환율" })
+  ).toContainText("100%");
+  await expect(page.locator(".application-company-summary")).toContainText("Beta Corp");
   await record.getByLabel("Beta Corp 메모").fill("1차 면접 일정 조율 중");
   await record.getByLabel("Beta Corp 다음 할 일").fill("결과 문의 메일 보내기");
   await record.getByLabel("Beta Corp 예정일").fill("2099-12-31");
@@ -524,6 +533,7 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
 
   const persistedRecord = page.locator("article.application-card").filter({ hasText: "Beta Corp" });
   await expect(persistedRecord.getByLabel("Beta Corp 진행 상태")).toHaveValue("interviewing");
+  await expect(persistedRecord.getByLabel("Beta Corp 지원일")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
   await expect(persistedRecord.getByLabel("Beta Corp 메모")).toHaveValue("1차 면접 일정 조율 중");
   await expect(persistedRecord.getByLabel("Beta Corp 다음 할 일")).toHaveValue("결과 문의 메일 보내기");
   await expect(persistedRecord.getByLabel("Beta Corp 예정일")).toHaveValue("2099-12-31");

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   ApplicationRecordSchema,
+  normalizeApplicationRecord,
   type ApplicationRecord
 } from "@/entities/application/model/application-record";
 
@@ -151,7 +152,17 @@ export function parseApplicationBackup(source: string): ApplicationBackup {
     ids.add(entry.record.id);
   }
 
-  return parsed.data;
+  return {
+    ...parsed.data,
+    entries: parsed.data.entries.map((entry) => {
+      const record = normalizeApplicationRecord(entry.record);
+      if (!record) {
+        throw new Error("백업 파일에 올바르지 않은 지원 기록이 있어요.");
+      }
+
+      return { ...entry, record };
+    })
+  };
 }
 
 export function decodeApplicationBackupPdfs(backup: ApplicationBackup) {

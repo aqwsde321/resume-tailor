@@ -15,6 +15,7 @@ import {
 } from "@/entities/application/model/application-backup";
 import {
   APPLICATION_STATUS_OPTIONS,
+  buildApplicationDashboard,
   deleteApplicationRecord,
   filterApplicationRecords,
   getApplicationDeadlineStatus,
@@ -59,6 +60,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<ApplicationRecordSort>("recent");
   const backupInputRef = useRef<HTMLInputElement>(null);
+  const dashboard = useMemo(() => buildApplicationDashboard(records), [records]);
   const filteredRecords = useMemo(
     () =>
       sortApplicationRecords(
@@ -71,7 +73,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const updateRecord = (
     id: string,
     changes: Partial<
-      Pick<ApplicationRecord, "status" | "notes" | "nextAction" | "nextActionDate">
+      Pick<ApplicationRecord, "status" | "notes" | "nextAction" | "nextActionDate" | "appliedAt">
     >
   ) => {
     patch((previous) => ({
@@ -184,6 +186,69 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
 
   return (
     <>
+      {records.length > 0 && (
+        <section className="card application-dashboard" aria-labelledby="application-dashboard-title">
+          <div className="application-dashboard-heading">
+            <div>
+              <p className="card-kicker">지원 현황 요약</p>
+              <h2 id="application-dashboard-title">지원 성과</h2>
+            </div>
+            <p>면접 전환율은 지원 완료 이력이 있는 기록을 기준으로 계산합니다.</p>
+          </div>
+          <div className="application-dashboard-metrics">
+            <article className="application-dashboard-metric">
+              <span>전체 기록</span>
+              <strong>{dashboard.totalApplications}</strong>
+              <small>저장한 지원 기록</small>
+            </article>
+            <article className="application-dashboard-metric">
+              <span>지원 완료</span>
+              <strong>{dashboard.submittedApplications}</strong>
+              <small>지원일 또는 상태 변경 이력</small>
+            </article>
+            <article className="application-dashboard-metric">
+              <span>면접 경험</span>
+              <strong>{dashboard.interviewedApplications}</strong>
+              <small>현재 상태와 변경 이력 포함</small>
+            </article>
+            <article className="application-dashboard-metric application-dashboard-rate">
+              <span>면접 전환율</span>
+              <strong>{dashboard.interviewConversionRate}%</strong>
+              <small>면접 경험 ÷ 지원 완료</small>
+            </article>
+          </div>
+          {dashboard.companies.length > 0 && (
+            <div className="application-company-summary">
+              <h3>회사별 현황</h3>
+              <div className="application-company-table-wrap">
+                <table className="application-company-table">
+                  <caption className="sr-only">회사별 지원 및 면접 현황</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">회사</th>
+                      <th scope="col">기록</th>
+                      <th scope="col">지원 완료</th>
+                      <th scope="col">면접 경험</th>
+                      <th scope="col">종료</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashboard.companies.map((company) => (
+                      <tr key={company.companyName}>
+                        <th scope="row">{company.companyName}</th>
+                        <td>{company.totalApplications}</td>
+                        <td>{company.submittedApplications}</td>
+                        <td>{company.interviewedApplications}</td>
+                        <td>{company.closedApplications}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
       <div className="applications-toolbar">
         <span>{records.length}건 저장됨</span>
         <div className="action-row">
@@ -377,6 +442,16 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
 
           <div className="application-follow-up">
             <label className="application-field">
+              <span>지원일</span>
+              <input
+                aria-label={`${record.companyName} 지원일`}
+                className="form-input"
+                type="date"
+                value={record.appliedAt ?? ""}
+                onChange={(event) => updateRecord(record.id, { appliedAt: event.target.value || null })}
+              />
+            </label>
+            <label className="application-field">
               <span>다음 할 일</span>
               <input
                 aria-label={`${record.companyName} 다음 할 일`}
@@ -401,6 +476,18 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               />
             </label>
           </div>
+
+          <details className="application-status-history">
+            <summary>상태 변경 이력</summary>
+            <ol>
+              {record.statusHistory.map((entry, index) => (
+                <li key={`${entry.changedAt}-${entry.status}-${index}`}>
+                  <span>{APPLICATION_STATUS_OPTIONS.find((option) => option.id === entry.status)?.label}</span>
+                  <time dateTime={entry.changedAt}>{formatCreatedAt(entry.changedAt)}</time>
+                </li>
+              ))}
+            </ol>
+          </details>
 
           <footer className="application-card-footer">
             <span className="application-pdf-name">{record.pdfFileName}</span>

@@ -2076,6 +2076,131 @@ button {
   gap: 12px;
 }
 
+.application-dashboard {
+  gap: 18px;
+  border-color: rgba(36, 72, 191, 0.12);
+  background:
+    radial-gradient(circle at 100% 0, rgba(36, 72, 191, 0.08), transparent 32%),
+    rgba(255, 255, 251, 0.9);
+}
+
+.application-dashboard-heading,
+.application-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.application-dashboard-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.application-dashboard-heading .card-kicker {
+  margin-bottom: 5px;
+}
+
+.application-dashboard-heading h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+}
+
+.application-dashboard-heading > p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.application-dashboard-metric {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.application-dashboard-metric > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.application-dashboard-metric strong {
+  color: var(--text);
+  font-size: 1.75rem;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.application-dashboard-metric small {
+  color: var(--muted);
+  font-size: 0.67rem;
+  line-height: 1.4;
+}
+
+.application-dashboard-rate strong {
+  color: var(--primary-strong);
+}
+
+.application-company-summary {
+  display: grid;
+  gap: 9px;
+}
+
+.application-company-summary h3 {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.application-company-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.application-company-table {
+  width: 100%;
+  min-width: 440px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.application-company-table th,
+.application-company-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+  white-space: nowrap;
+}
+
+.application-company-table thead th {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.application-company-table tbody th {
+  font-weight: 750;
+}
+
+.application-company-table td {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.application-company-table tbody tr:last-child th,
+.application-company-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .applications-toolbar {
   display: flex;
   align-items: center;
@@ -2236,8 +2361,48 @@ button {
 
 .application-follow-up {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.35fr);
+  grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr) minmax(180px, 0.35fr);
   gap: 12px;
+}
+
+.application-status-history {
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
+}
+
+.application-status-history summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.application-status-history ol {
+  display: grid;
+  gap: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-status-history li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+  font-size: 0.76rem;
+}
+
+.application-status-history li:last-child {
+  border-bottom: 0;
+}
+
+.application-status-history time {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-align: right;
 }
 
 .application-field {
@@ -2283,6 +2448,27 @@ button {
 }
 
 @media (max-width: 760px) {
+  .application-dashboard-heading {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .application-dashboard-heading > p {
+    text-align: left;
+  }
+
+  .application-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .application-dashboard-metric {
+    padding: 12px;
+  }
+
+  .application-dashboard-metric strong {
+    font-size: 1.5rem;
+  }
+
   .applications-toolbar {
     align-items: stretch;
     flex-direction: column;
