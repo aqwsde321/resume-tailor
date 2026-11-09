@@ -519,6 +519,10 @@ test("지원 기록과 PDF를 저장하고 상태·메모를 유지하며 보관
   await expect(record.getByText("Frontend Engineer")).toBeVisible();
   await record.getByLabel("Beta Corp 진행 상태").selectOption("interviewing");
   await expect(record.getByLabel("Beta Corp 지원일")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
+  await page.getByRole("button", { name: "달력 보기" }).click();
+  await expect(page.getByRole("heading", { name: "지원 일정" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Beta Corp · 지원일" })).toBeVisible();
+  await page.getByRole("button", { name: "목록 보기" }).click();
   const statusHistory = record.locator(".application-status-history");
   await statusHistory.locator("summary").click();
   await expect(statusHistory.getByText("면접 중")).toBeVisible();

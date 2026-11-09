@@ -34,6 +34,7 @@ import {
   saveApplicationPdfs
 } from "@/entities/application/model/application-pdf-store";
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
+import { ApplicationCalendarView } from "@/features/applications/ui/application-calendar-view";
 
 function formatCreatedAt(value: string) {
   return new Date(value).toLocaleString("ko-KR", {
@@ -59,6 +60,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<ApplicationRecordSort>("recent");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const backupInputRef = useRef<HTMLInputElement>(null);
   const dashboard = useMemo(() => buildApplicationDashboard(records), [records]);
   const filteredRecords = useMemo(
@@ -332,6 +334,26 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           </span>
         </div>
       )}
+      {records.length > 0 && (
+        <div className="application-view-toggle" role="group" aria-label="지원 기록 보기 방식">
+          <button
+            type="button"
+            className="nav-btn"
+            aria-pressed={viewMode === "list"}
+            onClick={() => setViewMode("list")}
+          >
+            목록 보기
+          </button>
+          <button
+            type="button"
+            className="nav-btn"
+            aria-pressed={viewMode === "calendar"}
+            onClick={() => setViewMode("calendar")}
+          >
+            달력 보기
+          </button>
+        </div>
+      )}
       {records.length === 0 ? (
         <section className="card applications-empty">
           <p className="card-kicker">아직 기록이 없어요</p>
@@ -360,13 +382,25 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
               </button>
             </div>
           </section>
+        ) : viewMode === "calendar" ? (
+          <ApplicationCalendarView
+            records={filteredRecords}
+            onSelectRecord={(recordId) => {
+              setViewMode("list");
+              window.setTimeout(() => {
+                document
+                  .getElementById(`application-record-${recordId}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 0);
+            }}
+          />
         ) : (
           <section className="applications-list" aria-label="지원 기록 목록">
             {filteredRecords.map((record) => {
               const deadlineStatus = getApplicationDeadlineStatus(record.nextActionDate);
 
               return (
-        <article className="card application-card" key={record.id}>
+        <article className="card application-card" id={`application-record-${record.id}`} key={record.id}>
           <header className="application-card-head">
             <div>
               <p className="card-kicker">{formatCreatedAt(record.createdAt)} 저장</p>
