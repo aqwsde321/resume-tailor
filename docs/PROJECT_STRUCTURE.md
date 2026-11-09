@@ -61,8 +61,11 @@ resume-tailor/
   - STEP 3 엔트리
 - `src/app/pdf/page.tsx`
   - STEP 4 엔트리
+- `src/app/jobs/page.tsx`
+  - 이력서 기반 공고 검색 화면 엔트리
 - `src/app/api/*/route.ts`
   - resume / company / intro / pdf 관련 HTTP API 엔트리와 fetch-url, stream, preview, export route 포함
+  - `/api/jobs/search`는 사람인·고용24 검색 API를 호출하고 결과를 정규화
 - `src/app/providers.tsx`
   - `PipelineProvider` 연결
 - `src/app/layout.tsx`
@@ -73,6 +76,13 @@ resume-tailor/
 ### `src/features/`
 
 step별 화면 기능을 모읍니다.
+
+#### `src/features/jobs/`
+
+- `page.tsx`
+  - 이력서 기반 검색 조건, 결과 적합 근거, 공고 선택 및 URL 가져오기
+- `model/job-search.ts`
+  - 공고 검색 요청/목록 스키마, 검색어 결정, 이력서 기준 결과 정렬
 
 #### `src/features/resume/`
 
@@ -231,7 +241,7 @@ step별 화면 기능을 모읍니다.
 
 ## 4. 주요 진입점
 
-- 사용자 페이지: `src/app/resume/page.tsx`, `src/app/company/page.tsx`, `src/app/result/page.tsx`, `src/app/pdf/page.tsx`
+- 사용자 페이지: `src/app/resume/page.tsx`, `src/app/jobs/page.tsx`, `src/app/company/page.tsx`, `src/app/result/page.tsx`, `src/app/pdf/page.tsx`
 - API 엔트리: `src/app/api/*/route.ts`
 - 전역 상태: `src/entities/pipeline/model/pipeline-context.tsx`
 - 소개글 근거 계산: `src/entities/intro/model/intro-insights.ts`

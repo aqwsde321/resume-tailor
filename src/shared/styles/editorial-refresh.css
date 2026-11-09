@@ -52,6 +52,12 @@ body {
   gap: 12px;
 }
 
+.hero-quick-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .hero-applications-link {
   display: inline-flex;
   align-items: center;

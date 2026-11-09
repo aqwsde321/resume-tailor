@@ -17,6 +17,7 @@ interface FrameShellProps {
   description: string;
   applicationsActive: boolean;
   applicationsCount: number;
+  jobsActive: boolean;
   saveSummaryItems: string[];
   showSaveSummary: boolean;
   showWorkflowSteps: boolean;
@@ -29,6 +30,7 @@ export function FrameShell({
   description,
   applicationsActive,
   applicationsCount,
+  jobsActive,
   saveSummaryItems,
   showSaveSummary,
   showWorkflowSteps,
@@ -41,13 +43,22 @@ export function FrameShell({
       <header className="hero">
         <div className="hero-topline">
           <p className="eyebrow">ResumeTailor</p>
-          <Link
-            href={"/applications" as Route}
-            className={`hero-applications-link ${applicationsActive ? "active" : ""}`.trim()}
-            aria-current={applicationsActive ? "page" : undefined}
-          >
-            지원 기록 <span>{applicationsCount}</span>
-          </Link>
+          <nav className="hero-quick-links" aria-label="빠른 이동">
+            <Link
+              href={"/jobs" as Route}
+              className={`hero-applications-link ${jobsActive ? "active" : ""}`.trim()}
+              aria-current={jobsActive ? "page" : undefined}
+            >
+              공고 찾기
+            </Link>
+            <Link
+              href={"/applications" as Route}
+              className={`hero-applications-link ${applicationsActive ? "active" : ""}`.trim()}
+              aria-current={applicationsActive ? "page" : undefined}
+            >
+              지원 기록 <span>{applicationsCount}</span>
+            </Link>
+          </nav>
         </div>
         <h1>{title}</h1>
         <p>{description}</p>

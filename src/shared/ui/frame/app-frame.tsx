@@ -19,6 +19,7 @@ interface AppFrameProps {
   showSaveSummary?: boolean;
   showWorkflowSteps?: boolean;
   applicationsActive?: boolean;
+  jobsActive?: boolean;
   children: ReactNode;
 }
 
@@ -31,6 +32,7 @@ export function AppFrame({
   showSaveSummary = true,
   showWorkflowSteps = true,
   applicationsActive = false,
+  jobsActive = false,
   children
 }: AppFrameProps) {
   const {
@@ -89,6 +91,7 @@ export function AppFrame({
           description={description}
           applicationsActive={applicationsActive}
           applicationsCount={state.applications.length}
+          jobsActive={jobsActive}
           saveSummaryItems={saveSummaryItems}
           showSaveSummary={showSaveSummary}
           showWorkflowSteps={showWorkflowSteps}
