@@ -147,7 +147,9 @@ function getMatch(resume: Resume, listing: JobListing) {
   });
   const careerMatched = hasCareerFit(resume, listing);
   const careerInformationAvailable =
-    Boolean(listing.careerLabel.trim()) || listing.careerMinYears !== null || listing.careerMaxYears !== null;
+    Boolean(listing.careerLabel.trim()) ||
+    (listing.careerMinYears !== null && listing.careerMinYears > 0) ||
+    listing.careerMaxYears !== null;
   const skillCoverage = resumeSkills.length > 0 ? matchedSkills.length / resumeSkills.length : 0;
   const score = (roleMatched ? 50 : 0) + skillCoverage * 40 + (careerInformationAvailable && careerMatched ? 10 : 0);
   const reasons: string[] = [];

@@ -97,6 +97,45 @@ describe("/api/jobs/search", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps entry-level roles from matching experienced resumes as career-compatible", async () => {
+    vi.stubEnv("SARAMIN_ACCESS_KEY", "saramin-secret");
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          jobs: {
+            total: "1",
+            job: [
+              {
+                id: "102",
+                active: 1,
+                url: "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=102",
+                company: { detail: { name: "Junior Corp" } },
+                position: {
+                  title: "Backend Engineer",
+                  "experience-level": { name: "신입" }
+                },
+                keyword: "Java"
+              }
+            ]
+          }
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await post({ query: "Backend Engineer", resume, sources: ["saramin"] });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.results[0]).toMatchObject({
+      careerMinYears: 0,
+      careerMaxYears: 0,
+      relevanceScore: 60,
+      fit: "medium"
+    });
+  });
+
   it("returns unconfigured providers as actionable statuses and does not call them", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -149,6 +188,28 @@ describe("/api/jobs/search", () => {
     expect(requestUrl.searchParams.get("numPerPage")).toBe("100");
     expect(requestUrl.searchParams.get("sortOrderBy")).toBe("DESC");
     expect(JSON.stringify(body)).not.toContain("ione-secret");
+  });
+
+  it("preserves the entry-level career cap in i-ONE JOB results", async () => {
+    vi.stubEnv("IBK_ONEJOB_ACCESS_KEY", "ione-secret");
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        `<job-search><jobs><hireSn>46</hireSn><cmpNm>Junior Corp</cmpNm><hireTitle>Backend Engineer</hireTitle><jobCareerinfo>신입</jobCareerinfo><jobCrrAbv>0</jobCrrAbv><jobCrrBlw>0</jobCrrBlw><jobCategory>Java</jobCategory><jobUrl>https://www.ibkonejob.co.kr/mb/job/view.do?hireSn=46</jobUrl></jobs></job-search>`,
+        { status: 200, headers: { "content-type": "application/xml" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await post({ query: "Backend Engineer", resume, sources: ["ionejob"] });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.results[0]).toMatchObject({
+      careerMinYears: 0,
+      careerMaxYears: 0,
+      relevanceScore: 60,
+      fit: "medium"
+    });
   });
 
   it.each(["work24", "wanted", "jumpit", "jobkorea", "manual"])(

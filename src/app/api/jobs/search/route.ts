@@ -44,22 +44,30 @@ function readOptionalNumber(value: unknown): number | null {
 }
 
 function parseExperienceYears(label: string): { min: number | null; max: number | null } {
-  if (!label || /신입|경력무관|무관/.test(label)) {
-    return { min: /신입/.test(label) ? 0 : null, max: null };
+  const normalizedLabel = label.trim();
+  if (!normalizedLabel || /경력무관|무관/.test(normalizedLabel)) {
+    return { min: null, max: null };
+  }
+  if (normalizedLabel === "신입") {
+    return { min: 0, max: 0 };
   }
 
-  const range = label.match(/(\d+)\s*[-~]\s*(\d+)\s*년/);
+  const range = normalizedLabel.match(/(\d+)\s*[-~]\s*(\d+)\s*년/);
   if (range) {
     return { min: Number(range[1]), max: Number(range[2]) };
   }
 
-  const minimum = label.match(/(\d+)\s*년\s*(?:이상|↑|이상부터)/);
+  const minimum = normalizedLabel.match(/(\d+)\s*년\s*(?:이상|↑|이상부터)/);
   if (minimum) {
     return { min: Number(minimum[1]), max: null };
   }
 
-  const single = label.match(/(\d+)\s*년/);
-  return single ? { min: Number(single[1]), max: Number(single[1]) } : { min: null, max: null };
+  const single = normalizedLabel.match(/(\d+)\s*년/);
+  if (single) {
+    return { min: Number(single[1]), max: Number(single[1]) };
+  }
+
+  return /신입/.test(normalizedLabel) ? { min: 0, max: null } : { min: null, max: null };
 }
 
 function timestampDate(value: unknown): string {
@@ -186,6 +194,12 @@ function normalizeIoneJob(readValue: (tag: string) => string): JobListing | null
   const career = parseExperienceYears(careerLabel);
   const careerMin = readOptionalNumber(value("jobCrrAbv"));
   const careerMax = readOptionalNumber(value("jobCrrBlw"));
+  const careerMaxYears =
+    careerMax === null
+      ? career.max
+      : careerMax > 0 || (career.min === 0 && career.max === 0)
+        ? careerMax
+        : null;
   const keywords = value("jobCategory")
     .split(/[,\n|]/)
     .map((item) => item.trim())
@@ -207,7 +221,7 @@ function normalizeIoneJob(readValue: (tag: string) => string): JobListing | null
     employmentType: value("jobTypecond"),
     careerLabel,
     careerMinYears: careerMin ?? career.min,
-    careerMaxYears: careerMax !== null ? (careerMax > 0 ? careerMax : null) : career.max,
+    careerMaxYears,
     salary: value("jobSalary"),
     deadline: calendarDate(value("hireRcvEndYmd")),
     postedAt: calendarDate(value("regYmd")),
