@@ -151,15 +151,18 @@ describe("/api/jobs/search", () => {
     expect(JSON.stringify(body)).not.toContain("ione-secret");
   });
 
-  it("rejects providers that are not approved for personal API use", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+  it.each(["work24", "wanted", "jumpit", "jobkorea", "manual"])(
+    "rejects %s as an external search provider",
+    async (source) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
 
-    const response = await post({ query: "Backend Engineer", resume, sources: ["work24"] });
+      const response = await post({ query: "Backend Engineer", resume, sources: [source] });
 
-    expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(400);
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+  );
 
   it("rejects invalid search input before contacting job providers", async () => {
     const fetchMock = vi.fn();

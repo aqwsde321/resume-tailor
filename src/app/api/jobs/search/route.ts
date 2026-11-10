@@ -6,13 +6,13 @@ import {
   rankJobListings,
   resolveJobSearchQuery,
   type JobListing,
-  type JobSource
+  type JobProvider
 } from "@/features/jobs/model/job-search";
 import { apiErrorResponse, parseJsonBody } from "@/server/http";
 
 export const runtime = "nodejs";
 
-const PROVIDER_LABEL: Record<JobSource, string> = {
+const PROVIDER_LABEL: Record<JobProvider, string> = {
   saramin: "사람인",
   ionejob: "i-ONE JOB"
 };
@@ -80,7 +80,7 @@ function timestampDate(value: unknown): string {
   return new Date(timestamp * 1000).toISOString().slice(0, 10);
 }
 
-function normalizeExternalUrl(value: string, source: JobSource): string | null {
+function normalizeExternalUrl(value: string, source: JobProvider): string | null {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();

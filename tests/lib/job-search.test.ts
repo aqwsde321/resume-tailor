@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { rankJobListings, resolveJobSearchQuery } from "@/features/jobs/model/job-search";
+import {
+  createManualJobListing,
+  rankJobListings,
+  resolveJobSearchQuery,
+  sortRankedJobListings
+} from "@/features/jobs/model/job-search";
 import { createPdfResumeFixture } from "../fixtures/pdf-fixture";
 
 const listings = [
@@ -41,6 +46,32 @@ const listings = [
 ];
 
 describe("job search matching", () => {
+  it("turns a user-pasted posting into a rankable manual listing without fetching its source URL", () => {
+    const manualListing = createManualJobListing(
+      {
+        companyName: "Acme",
+        companyDescription: "결제 플랫폼",
+        jobTitle: "Backend Engineer",
+        jobDescription: "주문 API 개발",
+        requirements: ["Java 서버 개발 경험"],
+        preferredSkills: ["PostgreSQL 경험"],
+        techStack: ["Java", "Spring Boot", "PostgreSQL"]
+      },
+      { id: "manual-1", url: "", postedAt: "2026-11-10" }
+    );
+
+    expect(manualListing).toMatchObject({
+      id: "manual-1",
+      source: "manual",
+      title: "Backend Engineer",
+      companyName: "Acme",
+      url: "",
+      keywords: ["Java", "Spring Boot", "PostgreSQL", "Java 서버 개발 경험", "PostgreSQL 경험"],
+      postedAt: "2026-11-10"
+    });
+    expect(rankJobListings(createPdfResumeFixture(), [manualListing])[0]).toMatchObject({ fit: "high" });
+  });
+
   it("uses the requested search term and falls back to resume position or skills", () => {
     const resume = createPdfResumeFixture();
 
@@ -59,6 +90,19 @@ describe("job search matching", () => {
     });
     expect(ranked[0]?.reasons.join(" ")).toContain("Backend Engineer");
     expect(ranked[1]).toMatchObject({ id: "saramin-2", fit: "low", matchedSkills: [] });
+  });
+
+  it("keeps the resume match score order when API and manual results are combined", () => {
+    const resume = createPdfResumeFixture();
+    const ranked = rankJobListings(resume, [
+      { ...listings[0]!, id: "less-matched", keywords: ["Java"], postedAt: "2026-11-09" },
+      { ...listings[0]!, id: "more-matched", postedAt: "2026-11-01" }
+    ]);
+
+    const combined = sortRankedJobListings([ranked[1]!, ranked[0]!]);
+
+    expect(combined.map((listing) => listing.id)).toEqual(["more-matched", "less-matched"]);
+    expect(combined[0]?.relevanceScore).toBeGreaterThan(combined[1]?.relevanceScore ?? 0);
   });
 
   it("does not surface expired postings", () => {

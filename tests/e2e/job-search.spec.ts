@@ -75,6 +75,7 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
               deadline: "2026-12-31",
               postedAt: "2026-11-09",
               active: true,
+              relevanceScore: 100,
               fit: "high",
               matchedSkills: ["Java", "Spring Boot", "PostgreSQL"],
               reasons: ["희망 직무(Backend Engineer)가 공고 제목과 맞아요.", "Java, Spring Boot, PostgreSQL이 공고 키워드에 있어요."]
@@ -124,7 +125,7 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
   );
 });
 
-test("검색 API 키가 없어도 직접 고른 공고 입력 흐름으로 이동할 수 있다", async ({ page }) => {
+test("검색 API 키가 없어도 공고 직접 비교 영역으로 이동할 수 있다", async ({ page }) => {
   await page.addInitScript((storedResume) => {
     window.localStorage.setItem(
       "resume-tailor.pipeline.v2",
@@ -150,8 +151,72 @@ test("검색 API 키가 없어도 직접 고른 공고 입력 흐름으로 이�
 
   await page.goto("/jobs");
   await expect(page.getByText("API 키 필요", { exact: true })).toHaveCount(2);
-  await page.getByRole("link", { name: "공고 직접 입력하기" }).click();
+  await page.getByRole("link", { name: "공고 직접 비교하기" }).click();
+
+  await expect(page.getByLabel("공고 원문")).toBeVisible();
+  await expect(page.getByRole("button", { name: "공고 비교에 추가" })).toBeVisible();
+});
+
+test("지원 API 없이 붙여넣은 공고를 이력서와 비교하고 선택할 수 있다", async ({ page }) => {
+  await page.addInitScript((storedResume) => {
+    window.localStorage.setItem(
+      "resume-tailor.pipeline.v2",
+      JSON.stringify({ resumeConfirmedJson: JSON.stringify(storedResume) })
+    );
+  }, resume);
+
+  await page.route("**/api/jobs/search", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          providers: [
+            { source: "saramin", configured: false },
+            { source: "ionejob", configured: false }
+          ]
+        }
+      })
+    });
+  });
+
+  await page.route("**/api/company", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          companyName: "Acme",
+          companyDescription: "결제 플랫폼",
+          jobTitle: "Backend Engineer",
+          jobDescription: "주문 API를 개발합니다.",
+          requirements: ["Java 서버 개발 경험"],
+          preferredSkills: ["PostgreSQL 경험"],
+          techStack: ["Java", "Spring Boot", "PostgreSQL"]
+        }
+      })
+    });
+  });
+
+  let sourceFetchCount = 0;
+  await page.route("**/api/company/fetch-url", async (route) => {
+    sourceFetchCount += 1;
+    await route.fulfill({ status: 500, body: "manual source must not be fetched" });
+  });
+
+  const postingText = "Acme Backend Engineer\nJava, Spring Boot, PostgreSQL로 주문 API를 개발합니다.";
+  await page.goto("/jobs");
+  await page.getByLabel("공고 원문").fill(postingText);
+  await page.getByRole("button", { name: "공고 비교에 추가" }).click();
+
+  const result = page.getByRole("article", { name: /Acme Backend Engineer/ });
+  await expect(result).toContainText("직접 입력");
+  await expect(result).toContainText("높은 관련성");
+  await result.getByRole("button", { name: "이 공고로 이력서 맞추기" }).click();
 
   await expect(page).toHaveURL(/\/company$/);
-  await expect(page.getByPlaceholder("채용 공고 내용을 붙여넣어 주세요.")).toBeVisible();
+  await expect(page.getByPlaceholder("채용 공고 내용을 붙여넣어 주세요.")).toHaveValue(postingText);
+  expect(sourceFetchCount).toBe(0);
 });

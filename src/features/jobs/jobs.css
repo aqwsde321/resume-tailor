@@ -3,6 +3,29 @@
   gap: 18px;
 }
 
+.job-search-manual {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.job-search-manual h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.job-search-manual header p:last-child {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.job-search-manual textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
 .job-search-panel-heading,
 .job-search-results > header,
 .job-search-result-header {
@@ -207,6 +230,10 @@
   gap: 12px;
   border-top: 1px solid rgba(17, 24, 39, 0.08);
   padding-top: 11px;
+}
+
+.job-search-result-actions > span {
+  flex: 1;
 }
 
 @media (max-width: 620px) {

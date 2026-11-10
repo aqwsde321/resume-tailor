@@ -6,22 +6,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
+  createManualJobListing,
+  type JobProvider,
   type JobSource,
   type RankedJobListing,
-  resolveJobSearchQuery
+  rankJobListings,
+  resolveJobSearchQuery,
+  sortRankedJobListings
 } from "@/features/jobs/model/job-search";
 import { hasResumeConfirmed, usePipeline } from "@/entities/pipeline/model/pipeline-context";
 import { parseResumeJson } from "@/entities/resume/model/resume-utils";
 import { AppFrame } from "@/shared/ui/frame/app-frame";
-import type { ApiFailure, ApiSuccess } from "@/shared/lib/types";
+import { toAgentRunOptions } from "@/shared/lib/agent-settings";
+import type { ApiFailure, ApiSuccess, Company } from "@/shared/lib/types";
 
 interface JobSearchProviderSetup {
-  source: JobSource;
+  source: JobProvider;
   configured: boolean;
 }
 
 interface JobSearchProviderResult {
-  source: JobSource;
+  source: JobProvider;
   state: "success" | "needs_key" | "failed";
   resultCount: number;
   message?: string;
@@ -45,12 +50,19 @@ interface CompanyUrlFetchData {
   warning?: string;
 }
 
+interface ManualJobCandidate {
+  listing: RankedJobListing;
+  company: Company;
+  sourceText: string;
+}
+
 const SOURCE_LABELS: Record<JobSource, string> = {
   saramin: "사람인",
-  ionejob: "i-ONE JOB"
+  ionejob: "i-ONE JOB",
+  manual: "직접 입력"
 };
 
-const SOURCE_ATTRIBUTION: Record<JobSource, { href: string; text: string }> = {
+const SOURCE_ATTRIBUTION: Record<JobProvider, { href: string; text: string }> = {
   saramin: { href: "https://www.saramin.co.kr/", text: "Powered by 취업 사람인" },
   ionejob: { href: "https://www.ibkonejob.co.kr/", text: "출처: i-ONE JOB" }
 };
@@ -68,13 +80,18 @@ export default function JobsPage() {
   const hasResume = hasResumeConfirmed(state) && Boolean(resume);
   const [query, setQuery] = useState("");
   const [providerSetup, setProviderSetup] = useState<JobSearchProviderSetup[]>([]);
-  const [selectedSources, setSelectedSources] = useState<JobSource[]>(["saramin", "ionejob"]);
+  const [selectedSources, setSelectedSources] = useState<JobProvider[]>(["saramin", "ionejob"]);
   const [providerResults, setProviderResults] = useState<JobSearchProviderResult[]>([]);
   const [results, setResults] = useState<RankedJobListing[]>([]);
+  const [manualJobs, setManualJobs] = useState<ManualJobCandidate[]>([]);
+  const [manualPostingText, setManualPostingText] = useState("");
+  const [manualPostingUrl, setManualPostingUrl] = useState("");
   const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [isParsingManual, setIsParsingManual] = useState(false);
   const [importingId, setImportingId] = useState("");
   const anyProviderConfigured = providerSetup.some((provider) => provider.configured);
+  const visibleResults = sortRankedJobListings([...results, ...manualJobs.map((candidate) => candidate.listing)]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -147,7 +164,7 @@ export default function JobsPage() {
       if (total > 0) {
         setMessage(`${total}개 공고를 이력서와 비교했어요.`);
       } else if (payload.data.providers.length > 0 && payload.data.providers.every((provider) => provider.state === "needs_key")) {
-        setMessage("선택한 검색 사이트의 API 키가 없어 공고 목록을 불러오지 못했어요. 키를 등록하거나 직접 고른 공고를 입력해 주세요.");
+        setMessage("선택한 API 키가 없어 자동 검색을 할 수 없어요. 아래에 공고 원문을 붙여넣어 비교하거나 API 키를 등록해 주세요.");
       } else {
         setMessage("조건에 맞는 공고를 찾지 못했어요. 검색어를 바꿔 다시 찾아보세요.");
       }
@@ -158,19 +175,99 @@ export default function JobsPage() {
     }
   };
 
-  const handleUseJob = async (url: string, id: string) => {
+  const handleAddManualJob = async () => {
+    clearStatus();
+    if (!resume) {
+      setError("먼저 이력서를 저장해 주세요.");
+      return;
+    }
+
+    const sourceText = manualPostingText.trim();
+    if (!sourceText) {
+      setError("비교할 채용 공고 원문을 붙여넣어 주세요.");
+      return;
+    }
+
+    const url = manualPostingUrl.trim();
+    if (url) {
+      try {
+        const parsedUrl = new URL(url);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          throw new Error("invalid-url");
+        }
+      } catch {
+        setError("공고 URL은 http 또는 https 주소로 입력해 주세요.");
+        return;
+      }
+    }
+
+    setIsParsingManual(true);
+    try {
+      const response = await fetch("/api/company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sourceText, agent: toAgentRunOptions(state.agentSettings) })
+      });
+      const payload = (await response.json()) as ApiSuccess<Company> | ApiFailure;
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.ok ? "공고를 구조화하지 못했어요." : payload.error.message);
+      }
+
+      const listing = createManualJobListing(payload.data, {
+        id: `manual-${crypto.randomUUID()}`,
+        url,
+        postedAt: new Date().toISOString().slice(0, 10)
+      });
+      const ranked = rankJobListings(resume, [listing])[0];
+      if (!ranked) {
+        throw new Error("공고를 이력서와 비교하지 못했어요.");
+      }
+
+      setManualJobs((previous) => [{ listing: ranked, company: payload.data, sourceText }, ...previous]);
+      setManualPostingText("");
+      setManualPostingUrl("");
+      setMessage("공고를 추가하고 이력서와 비교했어요.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "공고를 비교하지 못했어요.");
+    } finally {
+      setIsParsingManual(false);
+    }
+  };
+
+  const handleUseJob = async (job: RankedJobListing) => {
     clearStatus();
     if (!hasResume) {
       setError("먼저 이력서를 저장해 주세요.");
       return;
     }
 
-    setImportingId(id);
+    if (job.source === "manual") {
+      const candidate = manualJobs.find((item) => item.listing.id === job.id);
+      if (!candidate) {
+        setError("직접 입력한 공고를 찾지 못했어요. 다시 추가해 주세요.");
+        return;
+      }
+
+      patch((previous) => ({
+        ...previous,
+        companyUrl: job.url,
+        companyInputMode: "text",
+        companyText: candidate.sourceText,
+        companyJsonText: JSON.stringify(candidate.company, null, 2),
+        companyConfirmedJson: null,
+        companySavedAt: null
+      }));
+      setMessage("붙여넣은 공고를 가져왔어요. 내용을 확인하고 이력서 맞춤을 이어가세요.");
+      router.push("/company" as Route);
+      return;
+    }
+
+    setImportingId(job.id);
     try {
       const response = await fetch("/api/company/fetch-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url: job.url })
       });
       const payload = (await response.json()) as ApiSuccess<CompanyUrlFetchData> | ApiFailure;
       if (!response.ok || !payload.ok) {
@@ -195,7 +292,7 @@ export default function JobsPage() {
     }
   };
 
-  const toggleSource = (source: JobSource) => {
+  const toggleSource = (source: JobProvider) => {
     setSelectedSources((previous) =>
       previous.includes(source) ? previous.filter((item) => item !== source) : [...previous, source]
     );
@@ -267,12 +364,52 @@ export default function JobsPage() {
                 <a href="https://oapi.saramin.co.kr/join" target="_blank" rel="noreferrer">사람인 API 신청</a>
                 <a href="https://www.ibkonejob.co.kr/api/apiService.do" target="_blank" rel="noreferrer">i-ONE JOB Open API 안내</a>
               </div>
-              <Link href={"/company" as Route} className="nav-btn">공고 직접 입력하기</Link>
+              <a href="#manual-job-comparison" className="nav-btn">공고 직접 비교하기</a>
             </div>
 
             <div className="action-row">
               <button type="button" className="primary" onClick={() => void handleSearch()} disabled={isSearching}>
                 {isSearching ? "공고 찾는 중..." : "공고 검색"}
+              </button>
+            </div>
+          </section>
+
+          <section id="manual-job-comparison" className="card job-search-manual" aria-label="공고 직접 비교">
+            <header>
+              <div>
+                <p className="card-kicker">API 없이 비교</p>
+                <h2>공고 원문 붙여넣기</h2>
+                <p>사이트에서 직접 확인한 공고를 붙여넣으면 구조화해 이력서와 비교합니다. 원문 사이트는 자동으로 조회하지 않습니다.</p>
+              </div>
+            </header>
+            <label className="field">
+              <span>공고 원문</span>
+              <textarea
+                value={manualPostingText}
+                onChange={(event) => setManualPostingText(event.target.value)}
+                placeholder="회사명, 포지션, 담당 업무와 자격 요건이 포함된 공고를 붙여넣어 주세요."
+                maxLength={30000}
+                rows={8}
+              />
+            </label>
+            <label className="field">
+              <span>공고 URL (선택)</span>
+              <input
+                type="url"
+                value={manualPostingUrl}
+                onChange={(event) => setManualPostingUrl(event.target.value)}
+                placeholder="https://..."
+                maxLength={2000}
+              />
+            </label>
+            <div className="action-row">
+              <button
+                type="button"
+                className="primary"
+                onClick={() => void handleAddManualJob()}
+                disabled={isParsingManual}
+              >
+                {isParsingManual ? "공고 읽는 중..." : "공고 비교에 추가"}
               </button>
             </div>
           </section>
@@ -292,22 +429,26 @@ export default function JobsPage() {
             </section>
           )}
 
-          {results.length > 0 && (
+          {visibleResults.length > 0 && (
             <section className="job-search-results" aria-label="이력서에 맞는 공고 목록">
               <header>
                 <div>
                   <p className="card-kicker">이력서 근거로 정렬</p>
-                  <h2>공고 {results.length}개</h2>
+                  <h2>공고 {visibleResults.length}개</h2>
                 </div>
               </header>
-              {results.map((job) => (
+              {visibleResults.map((job) => (
                 <article className="card job-search-result" aria-label={`${job.companyName} ${job.title}`} key={`${job.source}-${job.id}`}>
                   <header className="job-search-result-header">
                     <div>
                       <p className="job-search-result-source">
-                        <a href={SOURCE_ATTRIBUTION[job.source].href} target="_blank" rel="noreferrer">
-                          {SOURCE_ATTRIBUTION[job.source].text}
-                        </a>
+                        {job.source === "manual" ? (
+                          SOURCE_LABELS.manual
+                        ) : (
+                          <a href={SOURCE_ATTRIBUTION[job.source].href} target="_blank" rel="noreferrer">
+                            {SOURCE_ATTRIBUTION[job.source].text}
+                          </a>
+                        )}
                       </p>
                       <h3>{job.title}</h3>
                       <p className="job-search-result-company">{job.companyName}</p>
@@ -326,12 +467,12 @@ export default function JobsPage() {
                     {job.reasons.map((reason) => <li key={reason}>{reason}</li>)}
                   </ul>
                   <footer className="job-search-result-actions">
-                    <a href={job.url} target="_blank" rel="noreferrer">공고 원문</a>
+                    {job.url ? <a href={job.url} target="_blank" rel="noreferrer">공고 원문</a> : <span />}
                     <button
                       type="button"
                       className="primary"
                       disabled={Boolean(importingId)}
-                      onClick={() => void handleUseJob(job.url, job.id)}
+                      onClick={() => void handleUseJob(job)}
                     >
                       {importingId === job.id ? "공고 가져오는 중..." : "이 공고로 이력서 맞추기"}
                     </button>
