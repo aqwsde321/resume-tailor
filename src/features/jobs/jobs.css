@@ -1,5 +1,4 @@
-.job-search-panel,
-.job-search-manual {
+.job-search-panel {
   display: grid;
   gap: 18px;
 }
@@ -14,14 +13,12 @@
 }
 
 .job-search-panel-heading h2,
-.job-search-results > header h2,
-.job-search-manual h2 {
+.job-search-results > header h2 {
   margin: 0;
   font-size: 1.05rem;
 }
 
-.job-search-panel-heading > div > p:last-child,
-.job-search-manual > div:first-child > p:last-child {
+.job-search-panel-heading > div > p:last-child {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
@@ -30,7 +27,7 @@
 
 .job-search-providers {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   border: 0;
   margin: 0;
@@ -45,21 +42,14 @@
 
 .job-search-provider {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 3px 9px;
+  gap: 3px;
   min-height: 62px;
   border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 12px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.58);
-}
-
-.job-search-provider input {
-  grid-row: span 2;
-  width: 17px;
-  height: 17px;
-  accent-color: var(--primary-strong);
 }
 
 .job-search-provider span {
@@ -87,15 +77,13 @@
   line-height: 1.5;
 }
 
-.job-search-api-links,
-.job-search-portal-links {
+.job-search-api-links {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .job-search-api-links a,
-.job-search-portal-links a,
 .job-search-result-source a,
 .job-search-result-actions > a {
   color: var(--primary-strong);
@@ -105,7 +93,6 @@
 }
 
 .job-search-api-links a:hover,
-.job-search-portal-links a:hover,
 .job-search-result-source a:hover,
 .job-search-result-actions > a:hover {
   text-decoration: underline;
@@ -215,10 +202,6 @@
   padding-top: 11px;
 }
 
-.job-search-manual {
-  margin-top: 22px;
-}
-
 @media (max-width: 620px) {
   .hero-quick-links {
     gap: 5px;
@@ -228,10 +211,6 @@
     gap: 5px;
     padding-inline: 8px;
     font-size: 0.7rem;
-  }
-
-  .job-search-providers {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .job-search-result-header,

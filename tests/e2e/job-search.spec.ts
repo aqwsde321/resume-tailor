@@ -43,8 +43,7 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
           ok: true,
           data: {
             providers: [
-              { source: "saramin", configured: true },
-              { source: "work24", configured: false }
+              { source: "saramin", configured: true }
             ]
           }
         })
@@ -106,10 +105,10 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
   await page.goto("/jobs");
   await expect(page.getByRole("heading", { name: "내 이력서에 맞는 공고 찾기" })).toBeVisible();
   await expect(page.getByText("키 설정됨", { exact: true })).toBeVisible();
-  const wantedSearchLink = page.getByRole("link", { name: "원티드 검색 열기" });
-  await expect(wantedSearchLink).toHaveAttribute("href", "https://recruit.wanted.co.kr/");
-  const jumpitSearchLink = page.getByRole("link", { name: "점핏 검색 열기" });
-  await expect(jumpitSearchLink).toHaveAttribute("href", "https://jumpit.saramin.co.kr/search");
+  await expect(page.getByText("사람인", { exact: true })).toBeVisible();
+  for (const excludedPortal of ["고용24", "원티드", "점핏", "잡코리아"]) {
+    await expect(page.getByText(excludedPortal, { exact: true })).toHaveCount(0);
+  }
   await page.getByRole("button", { name: "공고 검색" }).click();
 
   const result = page.getByRole("article", { name: /Acme Backend Engineer/ });

@@ -3,14 +3,14 @@ import { z } from "zod";
 import { ResumeSchema } from "@/shared/lib/schemas";
 import type { Resume } from "@/shared/lib/types";
 
-export const JobSourceSchema = z.enum(["saramin", "work24"]);
+export const JobSourceSchema = z.enum(["saramin"]);
 export type JobSource = z.infer<typeof JobSourceSchema>;
 
 export const JobSearchRequestSchema = z
   .object({
     query: z.string().trim().min(1).max(120),
     resume: ResumeSchema,
-    sources: z.array(JobSourceSchema).min(1).max(2)
+    sources: z.array(JobSourceSchema).length(1)
   })
   .strict()
   .refine((request) => new Set(request.sources).size === request.sources.length, {

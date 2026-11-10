@@ -1,4 +1,3 @@
-import { load } from "cheerio";
 import { NextResponse } from "next/server";
 
 import {
@@ -13,8 +12,7 @@ import { apiErrorResponse, parseJsonBody } from "@/server/http";
 export const runtime = "nodejs";
 
 const PROVIDER_LABEL: Record<JobSource, string> = {
-  saramin: "사람인",
-  work24: "고용24"
+  saramin: "사람인"
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -80,30 +78,11 @@ function timestampDate(value: unknown): string {
   return new Date(timestamp * 1000).toISOString().slice(0, 10);
 }
 
-function normalizeWork24EmploymentType(code: string, label: string): string {
-  const labels: Record<string, string> = {
-    "4": "파견근로",
-    "10": "정규직",
-    "11": "정규직(시간선택제)",
-    "20": "계약직",
-    "21": "계약직(시간선택제)",
-    Y: "대체인력"
-  };
-
-  return labels[code] ?? label;
-}
-
-function normalizeExternalUrl(value: string, source: JobSource): string | null {
+function normalizeExternalUrl(value: string): string | null {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
-    const allowedHosts =
-      source === "saramin"
-        ? ["saramin.co.kr"]
-        : ["work24.go.kr", "work.go.kr"];
-    const isAllowedHost = allowedHosts.some(
-      (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-    );
+    const isAllowedHost = hostname === "saramin.co.kr" || hostname.endsWith(".saramin.co.kr");
 
     return ["http:", "https:"].includes(url.protocol) && isAllowedHost ? url.toString() : null;
   } catch {
@@ -120,7 +99,7 @@ function normalizeSaraminJob(value: unknown): JobListing | null {
   const company = asRecord(job.company);
   const companyDetail = asRecord(company.detail);
   const companyName = readText(companyDetail.name ?? company.name);
-  const url = normalizeExternalUrl(readText(job.url), "saramin");
+  const url = normalizeExternalUrl(readText(job.url));
   const activeValue = readText(job.active);
   const active = !activeValue || ["1", "true"].includes(activeValue.toLowerCase());
 
@@ -185,67 +164,8 @@ async function searchSaramin(query: string, accessKey: string): Promise<JobListi
   return jobList.map(normalizeSaraminJob).filter((job): job is JobListing => Boolean(job));
 }
 
-function normalizeWork24Job(readValue: (tag: string) => string): JobListing | null {
-  const value = readValue;
-  const id = value("wantedAuthNo");
-  const title = value("title");
-  const companyName = value("company");
-  const url = normalizeExternalUrl(value("wantedInfoUrl"), "work24");
-  const careerLabel = value("career");
-  const career = parseExperienceYears(careerLabel);
-  const keywords = [value("indTpNm")].filter(Boolean);
-
-  if (!id || !title || !companyName || !url) {
-    return null;
-  }
-
-  return {
-    id: `work24-${id}`,
-    source: "work24",
-    title,
-    companyName,
-    url,
-    keywords,
-    location: value("region"),
-    employmentType: normalizeWork24EmploymentType(value("empTpCd"), value("empTpNm")),
-    careerLabel,
-    careerMinYears: career.min,
-    careerMaxYears: career.max,
-    salary: [value("salTpNm"), value("sal")].filter(Boolean).join(" "),
-    deadline: value("closeDt"),
-    postedAt: value("regDt"),
-    active: true
-  };
-}
-
-async function searchWork24(query: string, accessKey: string): Promise<JobListing[]> {
-  const url = new URL("https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do");
-  url.searchParams.set("authKey", accessKey);
-  url.searchParams.set("callTp", "L");
-  url.searchParams.set("returnType", "XML");
-  url.searchParams.set("startPage", "1");
-  url.searchParams.set("display", "50");
-  url.searchParams.set("keyword", query);
-  url.searchParams.set("sortOrderBy", "DESC");
-
-  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!response.ok) {
-    throw new Error("work24-request-failed");
-  }
-
-  const xml = await response.text();
-  const $ = load(xml, { xmlMode: true });
-  const items = $("wanted").toArray();
-  return items
-    .map((node) => normalizeWork24Job((tag) => $(node).children(tag).first().text().trim()))
-    .filter((job): job is JobListing => Boolean(job));
-}
-
 function getProviderConfiguration() {
-  return [
-    { source: "saramin" as const, configured: Boolean(process.env.SARAMIN_ACCESS_KEY?.trim()) },
-    { source: "work24" as const, configured: Boolean(process.env.WORK24_OPEN_API_KEY?.trim()) }
-  ];
+  return [{ source: "saramin" as const, configured: Boolean(process.env.SARAMIN_ACCESS_KEY?.trim()) }];
 }
 
 export async function GET() {
@@ -263,10 +183,7 @@ export async function POST(request: Request) {
     const query = resolveJobSearchQuery(body.resume, body.query);
     const sourceResults = await Promise.all(
       body.sources.map(async (source) => {
-        const accessKey =
-          source === "saramin"
-            ? process.env.SARAMIN_ACCESS_KEY?.trim()
-            : process.env.WORK24_OPEN_API_KEY?.trim();
+        const accessKey = process.env.SARAMIN_ACCESS_KEY?.trim();
 
         if (!accessKey) {
           return {
@@ -277,10 +194,7 @@ export async function POST(request: Request) {
         }
 
         try {
-          const listings =
-            source === "saramin"
-              ? await searchSaramin(query, accessKey)
-              : await searchWork24(query, accessKey);
+          const listings = await searchSaramin(query, accessKey);
           return {
             source,
             status: { source, state: "success" as const, resultCount: listings.length },

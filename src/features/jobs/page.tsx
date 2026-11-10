@@ -46,8 +46,7 @@ interface CompanyUrlFetchData {
 }
 
 const SOURCE_LABELS: Record<JobSource, string> = {
-  saramin: "사람인",
-  work24: "고용24"
+  saramin: "사람인"
 };
 
 const FIT_LABELS: Record<RankedJobListing["fit"], string> = {
@@ -56,21 +55,13 @@ const FIT_LABELS: Record<RankedJobListing["fit"], string> = {
   low: "낮은 관련성"
 };
 
-const PORTAL_LINKS = [
-  { label: "원티드 검색", href: "https://recruit.wanted.co.kr/" },
-  { label: "점핏 검색", href: "https://jumpit.saramin.co.kr/search" },
-  { label: "잡코리아", href: "https://www.jobkorea.co.kr/" }
-];
-
 export default function JobsPage() {
   const router = useRouter();
   const { hydrated, state, patch, clearStatus, setError, setMessage } = usePipeline();
   const resume = parseResumeJson(state.resumeConfirmedJson);
   const hasResume = hasResumeConfirmed(state) && Boolean(resume);
   const [query, setQuery] = useState("");
-  const [manualUrl, setManualUrl] = useState("");
   const [providerSetup, setProviderSetup] = useState<JobSearchProviderSetup[]>([]);
-  const [selectedSources, setSelectedSources] = useState<JobSource[]>(["saramin", "work24"]);
   const [providerResults, setProviderResults] = useState<JobSearchProviderResult[]>([]);
   const [results, setResults] = useState<RankedJobListing[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
@@ -116,11 +107,6 @@ export default function JobsPage() {
       return;
     }
 
-    if (selectedSources.length === 0) {
-      setError("검색할 사이트를 하나 이상 선택해 주세요.");
-      return;
-    }
-
     const resolvedQuery = resolveJobSearchQuery(resume, query);
     if (!resolvedQuery) {
       setError("검색어를 입력하거나 이력서에 희망 직무 또는 기술 스택을 저장해 주세요.");
@@ -135,7 +121,7 @@ export default function JobsPage() {
       const response = await fetch("/api/jobs/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: resolvedQuery, resume, sources: selectedSources })
+        body: JSON.stringify({ query: resolvedQuery, resume, sources: ["saramin"] })
       });
       const payload = (await response.json()) as ApiSuccess<JobSearchPayload> | ApiFailure;
       if (!response.ok || !payload.ok) {
@@ -148,7 +134,7 @@ export default function JobsPage() {
       if (total > 0) {
         setMessage(`${total}개 공고를 이력서와 비교했어요.`);
       } else if (payload.data.providers.every((provider) => provider.state === "needs_key")) {
-        setMessage("검색 API 키가 없어 공고 목록은 아직 불러오지 못했어요. 아래에서 공고 URL을 직접 가져올 수 있어요.");
+        setMessage("사람인 API 키가 없어 공고 목록을 불러오지 못했어요. 서버 환경에 키를 등록해 주세요.");
       } else {
         setMessage("조건에 맞는 공고를 찾지 못했어요. 검색어를 바꿔 다시 찾아보세요.");
       }
@@ -196,12 +182,6 @@ export default function JobsPage() {
     }
   };
 
-  const toggleSource = (source: JobSource) => {
-    setSelectedSources((previous) =>
-      previous.includes(source) ? previous.filter((item) => item !== source) : [...previous, source]
-    );
-  };
-
   return (
     <AppFrame
       step="company"
@@ -241,33 +221,26 @@ export default function JobsPage() {
 
             <fieldset className="job-search-providers">
               <legend>검색 사이트</legend>
-              {(["saramin", "work24"] as const).map((source) => {
-                const setup = providerSetup.find((item) => item.source === source);
-                const selected = selectedSources.includes(source);
-                return (
-                  <label className="job-search-provider" key={source}>
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => toggleSource(source)}
-                      aria-label={`${SOURCE_LABELS[source]} 검색`}
-                    />
-                    <span>{SOURCE_LABELS[source]}</span>
-                    <small>{isLoadingSources ? "확인 중" : setup?.configured ? "키 설정됨" : "API 키 필요"}</small>
-                  </label>
-                );
-              })}
+              <div className="job-search-provider">
+                <span>{SOURCE_LABELS.saramin}</span>
+                <small>
+                  {isLoadingSources
+                    ? "확인 중"
+                    : providerSetup.find((item) => item.source === "saramin")?.configured
+                      ? "키 설정됨"
+                      : "API 키 필요"}
+                </small>
+              </div>
             </fieldset>
 
             <div className="job-search-setup-note">
               <p>
                 {providerSetup.some((provider) => provider.configured)
                   ? "API 키는 서버의 .env.local에 보관하고 브라우저에 노출하지 않습니다."
-                  : "사람인은 신청 승인 후 키를 발급받고, 고용24는 기업회원 전용 신청과 심사가 필요합니다. 키가 없어도 아래에 공고 주소를 붙여넣어 가져올 수 있어요."}
+                  : "사람인 공식 API 키를 발급받아 서버의 .env.local에 설정하면 검색할 수 있어요."}
               </p>
               <div className="job-search-api-links">
                 <a href="https://oapi.saramin.co.kr/join" target="_blank" rel="noreferrer">사람인 API 신청</a>
-                <a href="https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do" target="_blank" rel="noreferrer">고용24 API 신청 안내</a>
               </div>
             </div>
 
@@ -306,13 +279,7 @@ export default function JobsPage() {
                   <header className="job-search-result-header">
                     <div>
                       <p className="job-search-result-source">
-                        {job.source === "saramin" ? (
-                          <a href="https://www.saramin.co.kr/" target="_blank" rel="noreferrer">Powered by 취업 사람인</a>
-                        ) : (
-                          <a href="https://www.work24.go.kr/" target="_blank" rel="noreferrer">
-                            본 자료는 고용노동부 고용24에서 제공된 정보입니다.
-                          </a>
-                        )}
+                        <a href="https://www.saramin.co.kr/" target="_blank" rel="noreferrer">Powered by 취업 사람인</a>
                       </p>
                       <h3>{job.title}</h3>
                       <p className="job-search-result-company">{job.companyName}</p>
@@ -346,37 +313,6 @@ export default function JobsPage() {
             </section>
           )}
 
-          <section className="card job-search-manual" aria-label="공고 주소로 맞춤 이력서 만들기">
-            <div>
-              <p className="card-kicker">직접 고른 공고</p>
-              <h2>원티드·점핏·잡코리아 공고도 가져오기</h2>
-              <p>사이트에서 공고를 고른 뒤 주소를 붙여넣으면 상세 내용을 불러와 같은 맞춤 이력서 흐름으로 연결합니다.</p>
-            </div>
-            <div className="job-search-portal-links">
-              {PORTAL_LINKS.map((portal) => (
-                <a key={portal.label} href={portal.href} target="_blank" rel="noreferrer">{portal.label} 열기</a>
-              ))}
-            </div>
-            <label className="field">
-              <span>공고 URL</span>
-              <input
-                type="url"
-                value={manualUrl}
-                onChange={(event) => setManualUrl(event.target.value)}
-                placeholder="https://공고-주소"
-              />
-            </label>
-            <div className="action-row">
-              <button
-                type="button"
-                className="secondary"
-                disabled={!manualUrl.trim() || Boolean(importingId)}
-                onClick={() => void handleUseJob(manualUrl.trim(), "manual-url")}
-              >
-                {importingId === "manual-url" ? "공고 가져오는 중..." : "URL로 가져와 맞춤 이력서 만들기"}
-              </button>
-            </div>
-          </section>
         </>
       )}
     </AppFrame>

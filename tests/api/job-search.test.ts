@@ -18,7 +18,6 @@ function post(body: unknown) {
 describe("/api/jobs/search", () => {
   beforeEach(() => {
     vi.stubEnv("SARAMIN_ACCESS_KEY", "");
-    vi.stubEnv("WORK24_OPEN_API_KEY", "");
   });
 
   afterEach(() => {
@@ -34,15 +33,13 @@ describe("/api/jobs/search", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.providers).toEqual([
-      { source: "saramin", configured: true },
-      { source: "work24", configured: false }
+      { source: "saramin", configured: true }
     ]);
     expect(JSON.stringify(body)).not.toContain("saramin-secret");
   });
 
-  it("normalizes Saramin and Work24 results and ranks them against resume evidence", async () => {
+  it("normalizes Saramin results and ranks them against resume evidence", async () => {
     vi.stubEnv("SARAMIN_ACCESS_KEY", "saramin-secret");
-    vi.stubEnv("WORK24_OPEN_API_KEY", "work24-secret");
     const fetchMock = vi.fn().mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -70,23 +67,18 @@ describe("/api/jobs/search", () => {
         }),
         { status: 200, headers: { "content-type": "application/json" } }
       )
-    ).mockResolvedValueOnce(
-      new Response(
-        `<wantedRoot><total>1</total><wanted><wantedAuthNo>W-2026-1</wantedAuthNo><company>Acme Work</company><title>백엔드 개발자</title><indTpNm>소프트웨어 개발</indTpNm><jobsCd>12345</jobsCd><region>서울</region><career>경력 3년</career><empTpCd>10</empTpCd><wantedInfoUrl>https://www.work24.go.kr/work/job/1</wantedInfoUrl><closeDt>2026-12-20</closeDt><regDt>2026-11-08</regDt></wanted></wantedRoot>`,
-        { status: 200, headers: { "content-type": "application/xml" } }
-      )
     );
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await post({
       query: "Backend Engineer",
       resume,
-      sources: ["saramin", "work24"]
+      sources: ["saramin"]
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.data.results).toHaveLength(2);
+    expect(body.data.results).toHaveLength(1);
     expect(body.data.results[0]).toMatchObject({
       id: "saramin-101",
       source: "saramin",
@@ -94,23 +86,11 @@ describe("/api/jobs/search", () => {
       fit: "high",
       matchedSkills: ["Java", "Spring Boot", "PostgreSQL"]
     });
-    expect(body.data.results[1]).toMatchObject({
-      id: "work24-W-2026-1",
-      source: "work24",
-      companyName: "Acme Work",
-      title: "백엔드 개발자",
-      location: "서울",
-      employmentType: "정규직",
-      keywords: ["소프트웨어 개발"]
-    });
     const saraminUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
-    const work24Url = new URL(String(fetchMock.mock.calls[1]?.[0]));
     expect(saraminUrl.searchParams.get("keywords")).toBe("Backend Engineer");
     expect(saraminUrl.searchParams.get("access-key")).toBe("saramin-secret");
-    expect(work24Url.searchParams.get("keyword")).toBe("Backend Engineer");
-    expect(work24Url.searchParams.get("authKey")).toBe("work24-secret");
     expect(JSON.stringify(body)).not.toContain("saramin-secret");
-    expect(JSON.stringify(body)).not.toContain("work24-secret");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns unconfigured providers as actionable statuses and does not call them", async () => {
@@ -120,16 +100,25 @@ describe("/api/jobs/search", () => {
     const response = await post({
       query: "Backend Engineer",
       resume,
-      sources: ["saramin", "work24"]
+      sources: ["saramin"]
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.data.results).toEqual([]);
     expect(body.data.providers).toEqual([
-      { source: "saramin", state: "needs_key", resultCount: 0 },
-      { source: "work24", state: "needs_key", resultCount: 0 }
+      { source: "saramin", state: "needs_key", resultCount: 0 }
     ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects providers that are not approved for personal API use", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await post({ query: "Backend Engineer", resume, sources: ["work24"] });
+
+    expect(response.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
