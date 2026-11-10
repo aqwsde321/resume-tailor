@@ -22,3 +22,6 @@ playwright-report/
 test-results/
 .playwright-cli/
 output/playwright/
+
+# Local personal resumes, company details, and application records
+/private-data/
