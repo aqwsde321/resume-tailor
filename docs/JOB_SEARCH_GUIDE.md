@@ -13,6 +13,19 @@
 
 사람인에는 검색어만 전달한다. i-ONE JOB에는 키, 페이지, 출력 건수, 정렬 순서만 전달한다. 이력서 원문은 외부 API로 보내지 않고 앱 서버에서 공고 요약과 비교한다.
 
+## 제외한 사이트
+
+| 사이트 | 제외 이유 |
+| --- | --- |
+| 고용24 | 공식 안내에서 Open API를 기업회원 전용으로 제한한다. |
+| 원티드 | 공식 API 신청 양식에서 사업자등록번호를 요구한다. |
+| 점핏 | 개인 프로젝트의 API 사용을 허용하는 공식 문서를 확인하지 못했다. |
+| 잡코리아 | 공식 XML API 예시는 신입공채용이며, 개인 프로젝트가 사용할 수 있는 일반 채용 API 조건을 확인하지 못했다. |
+
+## API 발급 조건
+
+i-ONE JOB은 공식 Open API와 인증키 신청 메뉴를 제공하지만, 공개 문서만으로 개인 계정의 키 발급 가능 여부까지 확인할 수는 없다. 키가 발급되지 않으면 해당 공급자를 사용할 수 없다.
+
 ## API 키 설정
 
 1. `.env.example`을 참고해 프로젝트 루트에 `.env.local`을 만든다.
@@ -37,4 +50,5 @@ IBK_ONEJOB_ACCESS_KEY=발급받은_i-ONE_JOB_키
 ## 공식 안내
 
 - [사람인 채용 공고 API](https://oapi.saramin.co.kr/guide/job-search), [사람인 이용 신청](https://oapi.saramin.co.kr/join), [access-key 발급 절차](https://oapi.saramin.co.kr/guide/1)
-- [i-ONE JOB 채용정보 API 문서](https://www.ibkonejob.co.kr/api/apiService.do), [i-ONE JOB 개인회원 이용약관](https://www.ibkonejob.co.kr/mb/cms/useStpView.do)
+- [i-ONE JOB 채용정보 API 문서](https://www.ibkonejob.co.kr/api/apiService.do), [인증키 신청 안내](https://www.ibkonejob.co.kr/api/apiMain.do), [i-ONE JOB 개인회원 이용약관](https://www.ibkonejob.co.kr/mb/cms/useStpView.do)
+- 제외 기준: [고용24 Open API 이용안내](https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do), [원티드 API 신청](https://openapi.wanted.jobs/apply/), [잡코리아 신입공채 API 예시](https://company.jobkorea.co.kr/Network/Popup_Xml_sample_2.asp)
