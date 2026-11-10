@@ -754,6 +754,47 @@ test("공고 URL을 불러와 정리한 뒤 수정하고 저장할 수 있다", 
   );
 });
 
+test("AI가 회사명과 직무명을 비우면 공고 URL에서 읽은 힌트로 채운다", async ({ page }) => {
+  await completeResumeStep(page);
+  await page.unroute("**/api/company/stream");
+  await page.route("**/api/company/stream", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: toSse([
+        {
+          event: "result",
+          data: {
+            data: {
+              companyName: "",
+              companyDescription: "",
+              jobTitle: "",
+              jobDescription: "백엔드 API를 개발합니다.",
+              requirements: ["Java 기반 개발 경험"],
+              preferredSkills: [],
+              techStack: ["Java"]
+            }
+          }
+        },
+        { event: "done", data: { ok: true, elapsedMs: 1 } }
+      ])
+    });
+  });
+
+  await page.goto("/company");
+  const sourceCard = getSourceInputSection(page, "공고 원문");
+  const companySection = getCompanyReviewSection(page);
+  await sourceCard.locator(".input-mode-tabs").getByRole("button", { name: "URL 불러오기" }).click();
+  await sourceCard.locator(".url-fetch-panel input[type='url']").fill("https://jobs.example.com/frontend");
+  await sourceCard.locator(".url-fetch-panel").getByRole("button", { name: "URL 불러오기" }).click();
+  await expect(sourceCard.locator(".url-preview-title")).toHaveText("프론트엔드 엔지니어 채용");
+
+  await sourceCard.getByRole("button", { name: "내용 정리" }).click();
+
+  await expect(companySection.getByLabel("회사명")).toHaveValue("Example Jobs");
+  await expect(companySection.getByLabel("포지션")).toHaveValue("프론트엔드 엔지니어");
+});
+
 test("이력서와 공고 기술 스택 입력은 쉼표를 입력하는 도중 raw text를 유지한다", async ({ page }) => {
   await completeResumeStep(page);
 

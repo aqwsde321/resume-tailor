@@ -4,8 +4,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { AppFrame } from "@/shared/ui/frame/app-frame";
+import { applyUrlCompanyHints } from "@/features/company/model/company-url-hints";
 import { CompanyDetailsSection } from "@/features/company/ui/details-section";
+import { AppFrame } from "@/shared/ui/frame/app-frame";
 import { ReasoningInline } from "@/shared/ui/reasoning-inline";
 import { SaveActionCard } from "@/shared/ui/workflow/save-action-card";
 import { SourceInputCard } from "@/shared/ui/workflow/source-input-card";
@@ -36,6 +37,11 @@ interface CompanyUrlFetchData {
   jobTitleHint: string;
   text: string;
   warning?: string;
+}
+
+interface CompanyUrlPreview extends UrlFetchPreview {
+  companyNameHint: string;
+  jobTitleHint: string;
 }
 
 function formatIssueDetails(errorMessage: string): string {
@@ -82,7 +88,7 @@ export default function CompanyPage() {
   const { bindRequiredFieldRef, focusRequiredField } =
     useRequiredFieldFocus<CompanyRequiredFieldKey>();
   const [isUrlLoading, setIsUrlLoading] = useState(false);
-  const [urlPreview, setUrlPreview] = useState<UrlFetchPreview | null>(null);
+  const [urlPreview, setUrlPreview] = useState<CompanyUrlPreview | null>(null);
   const uiBusy = isBusy || isUrlLoading;
 
   const [draft, setDraft] = useState<Company>(() => toCompanyDraft(state.companyJsonText));
@@ -211,7 +217,12 @@ export default function CompanyPage() {
       successMessage: "초안이 준비됐어요. 아래에서 다듬고 저장해 주세요.",
       abortMessage: "공고 정리를 중단했어요.",
       fallbackErrorMessage: "공고를 읽는 중 문제가 생겼어요.",
-      onSuccess: (company) => {
+      onSuccess: (parsedCompany) => {
+        const company = applyUrlCompanyHints(parsedCompany, {
+          companyName: urlPreview?.companyNameHint,
+          jobTitle: urlPreview?.jobTitleHint
+        });
+
         patch((prev) => ({
           ...prev,
           companyJsonText: JSON.stringify(company, null, 2),
@@ -270,6 +281,8 @@ export default function CompanyPage() {
         sourceHost,
         textLength: payload.data.text.length,
         warning: payload.data.warning,
+        companyNameHint: payload.data.companyNameHint,
+        jobTitleHint: payload.data.jobTitleHint,
         fields: [
           { label: "회사", value: payload.data.companyNameHint },
           { label: "포지션", value: payload.data.jobTitleHint }
