@@ -1,7 +1,7 @@
 # 프로젝트 구조
 
 - 문서 버전: v0.9
-- 마지막 업데이트: 2026-04-27
+- 마지막 업데이트: 2026-11-10
 - 기준 범위: 현재 로컬 MVP 코드베이스
 
 ## 1. 구조 요약
@@ -62,10 +62,9 @@ resume-tailor/
 - `src/app/pdf/page.tsx`
   - STEP 4 엔트리
 - `src/app/jobs/page.tsx`
-  - 이력서 기반 공고 검색 화면 엔트리
+  - 사용자가 제공한 공고 URL 분석 화면 엔트리
 - `src/app/api/*/route.ts`
   - resume / company / intro / pdf 관련 HTTP API 엔트리와 fetch-url, stream, preview, export route 포함
-  - `/api/jobs/search`는 사람인·i-ONE JOB 공식 API를 호출하고 결과를 정규화
 - `src/app/providers.tsx`
   - `PipelineProvider` 연결
 - `src/app/layout.tsx`
@@ -80,9 +79,9 @@ step별 화면 기능을 모읍니다.
 #### `src/features/jobs/`
 
 - `page.tsx`
-  - 공식 API 검색 사이트 선택, 결과 적합 근거, 공고 선택
-- `model/job-search.ts`
-  - 공고 검색 요청/목록 스키마, 검색어 결정, 이력서 기준 결과 정렬
+  - 사용자가 넣은 공고 URL을 불러오고 구조화 결과와 이력서 적합 근거 표시
+- `model/job-analysis.ts`
+  - URL에서 구조화한 공고 정보를 이력서와 비교하고 적합 근거 계산
 
 #### `src/features/resume/`
 

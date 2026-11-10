@@ -49,7 +49,7 @@ export function FrameShell({
               className={`hero-applications-link ${jobsActive ? "active" : ""}`.trim()}
               aria-current={jobsActive ? "page" : undefined}
             >
-              공고 찾기
+              공고 분석
             </Link>
             <Link
               href={"/applications" as Route}

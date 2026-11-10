@@ -3,29 +3,6 @@
   gap: 18px;
 }
 
-.job-search-manual {
-  display: grid;
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.job-search-manual h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.job-search-manual header p:last-child {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-.job-search-manual textarea {
-  resize: vertical;
-  min-height: 150px;
-}
-
 .job-search-panel-heading,
 .job-search-results > header,
 .job-search-result-header {
@@ -48,100 +25,8 @@
   line-height: 1.55;
 }
 
-.job-search-providers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.job-search-providers legend {
-  margin-bottom: 9px;
-  font-size: 0.8rem;
-  font-weight: 750;
-}
-
-.job-search-provider {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 3px 9px;
-  min-height: 62px;
-  border: 1px solid rgba(17, 24, 39, 0.1);
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.job-search-provider input {
-  grid-row: span 2;
-  width: 17px;
-  height: 17px;
-  accent-color: var(--primary-strong);
-}
-
-.job-search-provider span {
-  font-size: 0.82rem;
-  font-weight: 750;
-}
-
-.job-search-provider small {
-  color: var(--muted);
-  font-size: 0.71rem;
-}
-
-.job-search-setup-note {
-  display: grid;
-  gap: 8px;
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: rgba(17, 24, 39, 0.035);
-}
-
-.job-search-setup-note p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.5;
-}
-
-.job-search-api-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.job-search-api-links a,
-.job-search-result-source a,
-.job-search-result-actions > a {
-  color: var(--primary-strong);
-  font-size: 0.76rem;
-  font-weight: 750;
-  text-decoration: none;
-}
-
-.job-search-api-links a:hover,
-.job-search-result-source a:hover,
-.job-search-result-actions > a:hover {
-  text-decoration: underline;
-}
-
-.job-search-provider-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.job-search-provider-status p {
-  margin: 0;
-  border: 1px solid rgba(17, 24, 39, 0.09);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: var(--muted);
-  font-size: 0.74rem;
+.job-search-query input {
+  width: 100%;
 }
 
 .job-search-results {
@@ -162,25 +47,21 @@
 
 .job-search-result-source,
 .job-search-result-company,
-.job-search-result-meta,
 .job-search-matched-skills {
   margin: 0;
 }
 
 .job-search-result-source {
-  min-height: 18px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .job-search-result-company {
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.82rem;
-}
-
-.job-search-result-meta {
-  color: var(--muted);
-  font-size: 0.77rem;
-  line-height: 1.5;
 }
 
 .job-search-fit {
@@ -203,6 +84,30 @@
   color: #825b0c;
 }
 
+.job-search-summary {
+  display: grid;
+  gap: 5px;
+}
+
+.job-search-summary h4 {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.job-search-summary p,
+.job-search-summary ul {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.job-search-summary ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
 .job-search-matched-skills {
   color: var(--primary-strong);
   font-size: 0.78rem;
@@ -223,6 +128,16 @@
   line-height: 1.5;
 }
 
+.job-search-warning {
+  margin: 0;
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: rgba(157, 106, 18, 0.08);
+  color: #825b0c;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .job-search-result-actions {
   display: flex;
   align-items: center;
@@ -232,8 +147,16 @@
   padding-top: 11px;
 }
 
-.job-search-result-actions > span {
-  flex: 1;
+.job-search-result-actions > a {
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.job-search-result-actions > a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 620px) {
@@ -245,10 +168,6 @@
     gap: 5px;
     padding-inline: 8px;
     font-size: 0.7rem;
-  }
-
-  .job-search-providers {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .job-search-result-header,

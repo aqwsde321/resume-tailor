@@ -1,33 +1,14 @@
 import { z } from "zod";
 
-import { ResumeSchema } from "@/shared/lib/schemas";
 import type { Company, Resume } from "@/shared/lib/types";
 
-export const JobProviderSchema = z.enum(["saramin", "ionejob"]);
-export type JobProvider = z.infer<typeof JobProviderSchema>;
-
-export const JobSourceSchema = z.enum(["saramin", "ionejob", "manual"]);
-export type JobSource = z.infer<typeof JobSourceSchema>;
-
-export const JobSearchRequestSchema = z
-  .object({
-    query: z.string().trim().min(1).max(120),
-    resume: ResumeSchema,
-    sources: z.array(JobProviderSchema).min(1).max(2)
-  })
-  .strict()
-  .refine((request) => new Set(request.sources).size === request.sources.length, {
-    message: "검색 사이트를 중복 선택할 수 없습니다.",
-    path: ["sources"]
-  });
-
-const JobListingObjectSchema = z
+export const JobListingSchema = z
   .object({
     id: z.string().trim().min(1).max(200),
-    source: JobSourceSchema,
+    source: z.literal("url"),
     title: z.string().trim().min(1).max(300),
     companyName: z.string().trim().min(1).max(200),
-    url: z.union([z.string().url().max(2000), z.literal("")]),
+    url: z.string().trim().url().max(2000),
     keywords: z.array(z.string().trim().min(1).max(120)).max(50),
     location: z.string().max(200),
     employmentType: z.string().max(120),
@@ -41,26 +22,12 @@ const JobListingObjectSchema = z
   })
   .strict();
 
-export const JobListingSchema = JobListingObjectSchema
-  .superRefine((listing, context) => {
-    if (listing.source !== "manual" && !listing.url) {
-      context.addIssue({ code: "custom", message: "검색 공고에는 원문 URL이 필요합니다.", path: ["url"] });
-    }
-  });
-
-export const RankedJobListingSchema = JobListingObjectSchema
-  .extend({
-    relevanceScore: z.number().min(0).max(100),
-    fit: z.enum(["high", "medium", "low"]),
-    matchedSkills: z.array(z.string().max(120)).max(30),
-    reasons: z.array(z.string().max(240)).max(8)
-  })
-  .strict()
-  .superRefine((listing, context) => {
-    if (listing.source !== "manual" && !listing.url) {
-      context.addIssue({ code: "custom", message: "검색 공고에는 원문 URL이 필요합니다.", path: ["url"] });
-    }
-  });
+export const RankedJobListingSchema = JobListingSchema.extend({
+  relevanceScore: z.number().min(0).max(100),
+  fit: z.enum(["high", "medium", "low"]),
+  matchedSkills: z.array(z.string().max(120)).max(30),
+  reasons: z.array(z.string().max(240)).max(8)
+}).strict();
 
 export type JobListing = z.infer<typeof JobListingSchema>;
 export type RankedJobListing = z.infer<typeof RankedJobListingSchema>;
@@ -82,11 +49,7 @@ function words(value: string): string[] {
   return value.match(/[\p{L}\p{N}+#.]+/gu) ?? [];
 }
 
-export function resolveJobSearchQuery(resume: Resume, requestedQuery: string): string {
-  return requestedQuery.trim().slice(0, 120) || resume.desiredPosition.trim() || resume.techStack[0]?.trim() || "";
-}
-
-export function createManualJobListing(
+export function createUrlJobListing(
   company: Company,
   options: { id: string; url: string; postedAt: string }
 ): JobListing {
@@ -96,7 +59,7 @@ export function createManualJobListing(
 
   return JobListingSchema.parse({
     id: options.id,
-    source: "manual",
+    source: "url",
     title: company.jobTitle.trim() || "포지션 미확인",
     companyName: company.companyName.trim() || "회사 미확인",
     url: options.url.trim(),
@@ -180,20 +143,18 @@ function getMatch(resume: Resume, listing: JobListing) {
 }
 
 export function rankJobListings(resume: Resume, listings: JobListing[]): RankedJobListing[] {
-  return listings
-    .filter((listing) => listing.active)
-    .map((listing) => ({ listing, match: getMatch(resume, listing) }))
-    .sort((left, right) => {
-      if (left.match.score !== right.match.score) {
-        return right.match.score - left.match.score;
-      }
-      return right.listing.postedAt.localeCompare(left.listing.postedAt);
-    })
-    .map(({ listing, match }) => ({
-      ...listing,
-      relevanceScore: match.score,
-      fit: match.fit,
-      matchedSkills: match.matchedSkills,
-      reasons: match.reasons
-    }));
+  return sortRankedJobListings(
+    listings
+      .filter((listing) => listing.active)
+      .map((listing) => {
+        const match = getMatch(resume, listing);
+        return RankedJobListingSchema.parse({
+          ...listing,
+          relevanceScore: Math.round(match.score),
+          fit: match.fit,
+          matchedSkills: match.matchedSkills,
+          reasons: match.reasons
+        });
+      })
+  );
 }

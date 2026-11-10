@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createManualJobListing,
-  rankJobListings,
-  resolveJobSearchQuery,
-  sortRankedJobListings
-} from "@/features/jobs/model/job-search";
+import { createUrlJobListing, rankJobListings, sortRankedJobListings } from "@/features/jobs/model/job-analysis";
 import { createPdfResumeFixture } from "../fixtures/pdf-fixture";
+
+const company = {
+  companyName: "Acme",
+  companyDescription: "결제 플랫폼",
+  jobTitle: "Backend Engineer",
+  jobDescription: "주문 API 개발",
+  requirements: ["Java 서버 개발 경험"],
+  preferredSkills: ["PostgreSQL 경험"],
+  techStack: ["Java", "Spring Boot", "PostgreSQL"]
+};
 
 const listings = [
   {
-    id: "saramin-1",
-    source: "saramin" as const,
+    id: "url-1",
+    source: "url" as const,
     title: "Backend Engineer",
     companyName: "Acme",
-    url: "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=1",
+    url: "https://jobs.example.com/backend-1",
     keywords: ["Java", "Spring Boot", "PostgreSQL"],
     location: "서울",
     employmentType: "정규직",
@@ -27,11 +32,11 @@ const listings = [
     active: true
   },
   {
-    id: "saramin-2",
-    source: "saramin" as const,
+    id: "url-2",
+    source: "url" as const,
     title: "Product Designer",
     companyName: "Other",
-    url: "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=2",
+    url: "https://jobs.example.com/designer-2",
     keywords: ["Figma", "디자인"],
     location: "부산",
     employmentType: "계약직",
@@ -45,54 +50,39 @@ const listings = [
   }
 ];
 
-describe("job search matching", () => {
-  it("turns a user-pasted posting into a rankable manual listing without fetching its source URL", () => {
-    const manualListing = createManualJobListing(
-      {
-        companyName: "Acme",
-        companyDescription: "결제 플랫폼",
-        jobTitle: "Backend Engineer",
-        jobDescription: "주문 API 개발",
-        requirements: ["Java 서버 개발 경험"],
-        preferredSkills: ["PostgreSQL 경험"],
-        techStack: ["Java", "Spring Boot", "PostgreSQL"]
-      },
-      { id: "manual-1", url: "", postedAt: "2026-11-10" }
-    );
+describe("job posting URL analysis", () => {
+  it("turns parsed content from a user-provided URL into a rankable listing", () => {
+    const listing = createUrlJobListing(company, {
+      id: "url-1",
+      url: "https://jobs.example.com/backend-1",
+      postedAt: "2026-11-10"
+    });
 
-    expect(manualListing).toMatchObject({
-      id: "manual-1",
-      source: "manual",
+    expect(listing).toMatchObject({
+      id: "url-1",
+      source: "url",
       title: "Backend Engineer",
       companyName: "Acme",
-      url: "",
+      url: "https://jobs.example.com/backend-1",
       keywords: ["Java", "Spring Boot", "PostgreSQL", "Java 서버 개발 경험", "PostgreSQL 경험"],
       postedAt: "2026-11-10"
     });
-    expect(rankJobListings(createPdfResumeFixture(), [manualListing])[0]).toMatchObject({ fit: "high" });
+    expect(rankJobListings(createPdfResumeFixture(), [listing])[0]).toMatchObject({ fit: "high" });
   });
 
-  it("uses the requested search term and falls back to resume position or skills", () => {
-    const resume = createPdfResumeFixture();
-
-    expect(resolveJobSearchQuery(resume, "  Java 백엔드  ")).toBe("Java 백엔드");
-    expect(resolveJobSearchQuery(resume, "")).toBe("Backend Engineer");
-    expect(resolveJobSearchQuery({ ...resume, desiredPosition: "" }, "")).toBe("Java");
-  });
-
-  it("ranks postings using explicit resume skills, role text, and career requirements", () => {
+  it("ranks analyzed postings using resume skills, role text, and career requirements", () => {
     const ranked = rankJobListings(createPdfResumeFixture(), listings);
 
     expect(ranked[0]).toMatchObject({
-      id: "saramin-1",
+      id: "url-1",
       fit: "high",
       matchedSkills: ["Java", "Spring Boot", "PostgreSQL"]
     });
     expect(ranked[0]?.reasons.join(" ")).toContain("Backend Engineer");
-    expect(ranked[1]).toMatchObject({ id: "saramin-2", fit: "low", matchedSkills: [] });
+    expect(ranked[1]).toMatchObject({ id: "url-2", fit: "low", matchedSkills: [] });
   });
 
-  it("keeps the resume match score order when API and manual results are combined", () => {
+  it("orders URL analyses by relevance score", () => {
     const resume = createPdfResumeFixture();
     const ranked = rankJobListings(resume, [
       { ...listings[0]!, id: "less-matched", keywords: ["Java"], postedAt: "2026-11-09" },
@@ -111,7 +101,7 @@ describe("job search matching", () => {
       listings[0]!
     ]);
 
-    expect(ranked.map((listing) => listing.id)).toEqual(["saramin-1"]);
+    expect(ranked.map((listing) => listing.id)).toEqual(["url-1"]);
   });
 
   it("does not grant career-fit points when a posting has no career information", () => {
