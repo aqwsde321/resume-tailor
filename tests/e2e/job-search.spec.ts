@@ -121,3 +121,27 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
     "Java와 Spring Boot 기반 주문 API를 개발합니다."
   );
 });
+
+test("검색 API 키가 없어도 직접 고른 공고 입력 흐름으로 이동할 수 있다", async ({ page }) => {
+  await page.addInitScript((storedResume) => {
+    window.localStorage.setItem(
+      "resume-tailor.pipeline.v2",
+      JSON.stringify({ resumeConfirmedJson: JSON.stringify(storedResume) })
+    );
+  }, resume);
+
+  await page.route("**/api/jobs/search", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, data: { providers: [{ source: "saramin", configured: false }] } })
+    });
+  });
+
+  await page.goto("/jobs");
+  await expect(page.getByText("API 키 필요", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "공고 직접 입력하기" }).click();
+
+  await expect(page).toHaveURL(/\/company$/);
+  await expect(page.getByPlaceholder("채용 공고 내용을 붙여넣어 주세요.")).toBeVisible();
+});

@@ -67,6 +67,7 @@ export default function JobsPage() {
   const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [importingId, setImportingId] = useState("");
+  const saraminConfigured = providerSetup.some((provider) => provider.source === "saramin" && provider.configured);
 
   useEffect(() => {
     if (!hydrated) {
@@ -134,7 +135,7 @@ export default function JobsPage() {
       if (total > 0) {
         setMessage(`${total}개 공고를 이력서와 비교했어요.`);
       } else if (payload.data.providers.every((provider) => provider.state === "needs_key")) {
-        setMessage("사람인 API 키가 없어 공고 목록을 불러오지 못했어요. 서버 환경에 키를 등록해 주세요.");
+        setMessage("사람인 API 키가 없어 공고 목록을 불러오지 못했어요. API 키를 등록하거나 직접 고른 공고를 입력해 주세요.");
       } else {
         setMessage("조건에 맞는 공고를 찾지 못했어요. 검색어를 바꿔 다시 찾아보세요.");
       }
@@ -226,7 +227,7 @@ export default function JobsPage() {
                 <small>
                   {isLoadingSources
                     ? "확인 중"
-                    : providerSetup.find((item) => item.source === "saramin")?.configured
+                    : saraminConfigured
                       ? "키 설정됨"
                       : "API 키 필요"}
                 </small>
@@ -235,13 +236,16 @@ export default function JobsPage() {
 
             <div className="job-search-setup-note">
               <p>
-                {providerSetup.some((provider) => provider.configured)
+                {saraminConfigured
                   ? "API 키는 서버의 .env.local에 보관하고 브라우저에 노출하지 않습니다."
                   : "사람인 공식 API 키를 발급받아 서버의 .env.local에 설정하면 검색할 수 있어요."}
               </p>
               <div className="job-search-api-links">
                 <a href="https://oapi.saramin.co.kr/join" target="_blank" rel="noreferrer">사람인 API 신청</a>
               </div>
+              {!isLoadingSources && !saraminConfigured && (
+                <Link href={"/company" as Route} className="nav-btn">공고 직접 입력하기</Link>
+              )}
             </div>
 
             <div className="action-row">
