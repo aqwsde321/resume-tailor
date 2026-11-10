@@ -65,7 +65,7 @@ resume-tailor/
   - 이력서 기반 공고 검색 화면 엔트리
 - `src/app/api/*/route.ts`
   - resume / company / intro / pdf 관련 HTTP API 엔트리와 fetch-url, stream, preview, export route 포함
-  - `/api/jobs/search`는 사람인 검색 API를 호출하고 결과를 정규화
+  - `/api/jobs/search`는 사람인·i-ONE JOB 공식 API를 호출하고 결과를 정규화
 - `src/app/providers.tsx`
   - `PipelineProvider` 연결
 - `src/app/layout.tsx`
@@ -80,7 +80,7 @@ step별 화면 기능을 모읍니다.
 #### `src/features/jobs/`
 
 - `page.tsx`
-  - 사람인 이력서 기반 검색 조건, 결과 적합 근거, 공고 선택
+  - 공식 API 검색 사이트 선택, 결과 적합 근거, 공고 선택
 - `model/job-search.ts`
   - 공고 검색 요청/목록 스키마, 검색어 결정, 이력서 기준 결과 정렬
 

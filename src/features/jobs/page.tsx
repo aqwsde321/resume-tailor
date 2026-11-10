@@ -46,7 +46,13 @@ interface CompanyUrlFetchData {
 }
 
 const SOURCE_LABELS: Record<JobSource, string> = {
-  saramin: "사람인"
+  saramin: "사람인",
+  ionejob: "i-ONE JOB"
+};
+
+const SOURCE_ATTRIBUTION: Record<JobSource, { href: string; text: string }> = {
+  saramin: { href: "https://www.saramin.co.kr/", text: "Powered by 취업 사람인" },
+  ionejob: { href: "https://www.ibkonejob.co.kr/", text: "출처: i-ONE JOB" }
 };
 
 const FIT_LABELS: Record<RankedJobListing["fit"], string> = {
@@ -62,12 +68,13 @@ export default function JobsPage() {
   const hasResume = hasResumeConfirmed(state) && Boolean(resume);
   const [query, setQuery] = useState("");
   const [providerSetup, setProviderSetup] = useState<JobSearchProviderSetup[]>([]);
+  const [selectedSources, setSelectedSources] = useState<JobSource[]>(["saramin", "ionejob"]);
   const [providerResults, setProviderResults] = useState<JobSearchProviderResult[]>([]);
   const [results, setResults] = useState<RankedJobListing[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [importingId, setImportingId] = useState("");
-  const saraminConfigured = providerSetup.some((provider) => provider.source === "saramin" && provider.configured);
+  const anyProviderConfigured = providerSetup.some((provider) => provider.configured);
 
   useEffect(() => {
     if (!hydrated) {
@@ -108,6 +115,11 @@ export default function JobsPage() {
       return;
     }
 
+    if (selectedSources.length === 0) {
+      setError("검색할 사이트를 하나 이상 선택해 주세요.");
+      return;
+    }
+
     const resolvedQuery = resolveJobSearchQuery(resume, query);
     if (!resolvedQuery) {
       setError("검색어를 입력하거나 이력서에 희망 직무 또는 기술 스택을 저장해 주세요.");
@@ -122,7 +134,7 @@ export default function JobsPage() {
       const response = await fetch("/api/jobs/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: resolvedQuery, resume, sources: ["saramin"] })
+        body: JSON.stringify({ query: resolvedQuery, resume, sources: selectedSources })
       });
       const payload = (await response.json()) as ApiSuccess<JobSearchPayload> | ApiFailure;
       if (!response.ok || !payload.ok) {
@@ -134,8 +146,8 @@ export default function JobsPage() {
       const total = payload.data.results.length;
       if (total > 0) {
         setMessage(`${total}개 공고를 이력서와 비교했어요.`);
-      } else if (payload.data.providers.every((provider) => provider.state === "needs_key")) {
-        setMessage("사람인 API 키가 없어 공고 목록을 불러오지 못했어요. API 키를 등록하거나 직접 고른 공고를 입력해 주세요.");
+      } else if (payload.data.providers.length > 0 && payload.data.providers.every((provider) => provider.state === "needs_key")) {
+        setMessage("선택한 검색 사이트의 API 키가 없어 공고 목록을 불러오지 못했어요. 키를 등록하거나 직접 고른 공고를 입력해 주세요.");
       } else {
         setMessage("조건에 맞는 공고를 찾지 못했어요. 검색어를 바꿔 다시 찾아보세요.");
       }
@@ -183,6 +195,12 @@ export default function JobsPage() {
     }
   };
 
+  const toggleSource = (source: JobSource) => {
+    setSelectedSources((previous) =>
+      previous.includes(source) ? previous.filter((item) => item !== source) : [...previous, source]
+    );
+  };
+
   return (
     <AppFrame
       step="company"
@@ -206,7 +224,7 @@ export default function JobsPage() {
               <div>
                 <p className="card-kicker">내 이력서 기반</p>
                 <h2>공고 검색</h2>
-                <p>검색어는 포털에만 전달하고, 이력서와의 적합도는 이 앱에서 비교합니다.</p>
+                <p>사람인은 검색어로 찾고, i-ONE JOB은 최신 등록 공고 100건을 가져와 이력서 적합도로 정렬합니다.</p>
               </div>
             </header>
 
@@ -222,30 +240,34 @@ export default function JobsPage() {
 
             <fieldset className="job-search-providers">
               <legend>검색 사이트</legend>
-              <div className="job-search-provider">
-                <span>{SOURCE_LABELS.saramin}</span>
-                <small>
-                  {isLoadingSources
-                    ? "확인 중"
-                    : saraminConfigured
-                      ? "키 설정됨"
-                      : "API 키 필요"}
-                </small>
-              </div>
+              {(["saramin", "ionejob"] as const).map((source) => {
+                const setup = providerSetup.find((item) => item.source === source);
+                return (
+                  <label className="job-search-provider" key={source}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSources.includes(source)}
+                      onChange={() => toggleSource(source)}
+                      aria-label={`${SOURCE_LABELS[source]} 검색`}
+                    />
+                    <span>{SOURCE_LABELS[source]}</span>
+                    <small>{isLoadingSources ? "확인 중" : setup?.configured ? "키 설정됨" : "API 키 필요"}</small>
+                  </label>
+                );
+              })}
             </fieldset>
 
             <div className="job-search-setup-note">
               <p>
-                {saraminConfigured
+                {anyProviderConfigured
                   ? "API 키는 서버의 .env.local에 보관하고 브라우저에 노출하지 않습니다."
-                  : "사람인 공식 API 키를 발급받아 서버의 .env.local에 설정하면 검색할 수 있어요."}
+                  : "공식 API 이용 신청 후 발급된 키를 서버의 .env.local에 설정하면 해당 사이트에서 검색할 수 있어요."}
               </p>
               <div className="job-search-api-links">
                 <a href="https://oapi.saramin.co.kr/join" target="_blank" rel="noreferrer">사람인 API 신청</a>
+                <a href="https://www.ibkonejob.co.kr/api/apiService.do" target="_blank" rel="noreferrer">i-ONE JOB Open API 안내</a>
               </div>
-              {!isLoadingSources && !saraminConfigured && (
-                <Link href={"/company" as Route} className="nav-btn">공고 직접 입력하기</Link>
-              )}
+              <Link href={"/company" as Route} className="nav-btn">공고 직접 입력하기</Link>
             </div>
 
             <div className="action-row">
@@ -283,7 +305,9 @@ export default function JobsPage() {
                   <header className="job-search-result-header">
                     <div>
                       <p className="job-search-result-source">
-                        <a href="https://www.saramin.co.kr/" target="_blank" rel="noreferrer">Powered by 취업 사람인</a>
+                        <a href={SOURCE_ATTRIBUTION[job.source].href} target="_blank" rel="noreferrer">
+                          {SOURCE_ATTRIBUTION[job.source].text}
+                        </a>
                       </p>
                       <h3>{job.title}</h3>
                       <p className="job-search-result-company">{job.companyName}</p>

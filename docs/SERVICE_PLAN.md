@@ -38,7 +38,7 @@
 
 MVP 포함:
 - `/jobs` 이력서 기반 공고 검색, 적합 근거 표시, 선택한 공고를 `/company`에 연결
-- 사람인 공식 API 검색
+- 사람인 및 i-ONE JOB 공식 API 검색
 - 페이지 분리 4단계 플로우(`/resume` -> `/company` -> `/result` -> `/pdf`)
 - JSON 확정 상태 관리(`resumeConfirmedJson`, `companyConfirmedJson`)
 - 일반 API, fetch-url API, SSE 스트림 API, PDF preview/export API
@@ -69,10 +69,10 @@ MVP 제외(후순위):
 
 공고 검색 `/jobs`:
 - 확정된 이력서의 희망 직무를 기본 검색어로 사용하고, 검색어를 수정할 수 있다.
-- 사람인 공식 API 결과를 조회하고, 기술·직무 키워드와 경력 조건이 맞는 이유를 표시한다.
+- 사람인 검색어 기반 결과와 i-ONE JOB 최신 공고를 조회하고, 기술·직무 키워드와 경력 조건이 맞는 이유를 표시한다.
 - 검색 API 키는 서버 환경 변수에서만 읽는다.
 - 선택한 공고 원문을 `/company`에 전달하고 기존 회사 맞춤 이력서 흐름으로 이어간다.
-- 사람인 출처 표기와 원문 링크를 제공한다.
+- 사람인 및 i-ONE JOB 출처 표기와 원문 링크를 제공한다.
 
 STEP 1 `/resume`:
 - 이력서: textarea / txt 업로드 / URL 불러오기 탭 전환

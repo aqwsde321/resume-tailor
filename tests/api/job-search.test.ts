@@ -18,6 +18,7 @@ function post(body: unknown) {
 describe("/api/jobs/search", () => {
   beforeEach(() => {
     vi.stubEnv("SARAMIN_ACCESS_KEY", "");
+    vi.stubEnv("IBK_ONEJOB_ACCESS_KEY", "");
   });
 
   afterEach(() => {
@@ -27,15 +28,18 @@ describe("/api/jobs/search", () => {
 
   it("reports which official search providers have server-side keys without exposing them", async () => {
     vi.stubEnv("SARAMIN_ACCESS_KEY", "saramin-secret");
+    vi.stubEnv("IBK_ONEJOB_ACCESS_KEY", "ione-secret");
 
     const response = await GET();
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.data.providers).toEqual([
-      { source: "saramin", configured: true }
+      { source: "saramin", configured: true },
+      { source: "ionejob", configured: true }
     ]);
     expect(JSON.stringify(body)).not.toContain("saramin-secret");
+    expect(JSON.stringify(body)).not.toContain("ione-secret");
   });
 
   it("normalizes Saramin results and ranks them against resume evidence", async () => {
@@ -100,16 +104,51 @@ describe("/api/jobs/search", () => {
     const response = await post({
       query: "Backend Engineer",
       resume,
-      sources: ["saramin"]
+      sources: ["saramin", "ionejob"]
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.data.results).toEqual([]);
     expect(body.data.providers).toEqual([
-      { source: "saramin", state: "needs_key", resultCount: 0 }
+      { source: "saramin", state: "needs_key", resultCount: 0 },
+      { source: "ionejob", state: "needs_key", resultCount: 0 }
     ]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("normalizes i-ONE JOB Open API results and ranks them against resume evidence", async () => {
+    vi.stubEnv("IBK_ONEJOB_ACCESS_KEY", "ione-secret");
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        `<job-search><totalRow>1</totalRow><nowPage>1</nowPage><numPerPage>100</numPerPage><jobs><hireSn>45</hireSn><cmpNm>IBK Acme</cmpNm><hireTitle>Backend Engineer</hireTitle><hireRcvStYmd>20261101</hireRcvStYmd><hireRcvEndYmd>20261231</hireRcvEndYmd><regYmd>20261109</regYmd><jobCategory>Java,Spring Boot,PostgreSQL</jobCategory><jobCareerinfo>경력 3년 이상</jobCareerinfo><jobCrrAbv>3</jobCrrAbv><jobCrrBlw>0</jobCrrBlw><jobEdu>학력무관</jobEdu><jobTypecond>정규직</jobTypecond><jobLocation>서울</jobLocation><jobSalary>회사 내규</jobSalary><jobUrl>https://www.ibkonejob.co.kr/mb/job/view.do?hireSn=45</jobUrl></jobs></job-search>`,
+        { status: 200, headers: { "content-type": "application/xml" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await post({ query: "Backend Engineer", resume, sources: ["ionejob"] });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.results).toHaveLength(1);
+    expect(body.data.results[0]).toMatchObject({
+      id: "ionejob-45",
+      source: "ionejob",
+      companyName: "IBK Acme",
+      title: "Backend Engineer",
+      keywords: ["Java", "Spring Boot", "PostgreSQL"],
+      careerMinYears: 3,
+      careerMaxYears: null,
+      fit: "high"
+    });
+    expect(body.data.providers).toEqual([{ source: "ionejob", state: "success", resultCount: 1 }]);
+    const requestUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(requestUrl.searchParams.get("authKey")).toBe("ione-secret");
+    expect(requestUrl.searchParams.get("nowPage")).toBe("1");
+    expect(requestUrl.searchParams.get("numPerPage")).toBe("100");
+    expect(requestUrl.searchParams.get("sortOrderBy")).toBe("DESC");
+    expect(JSON.stringify(body)).not.toContain("ione-secret");
   });
 
   it("rejects providers that are not approved for personal API use", async () => {

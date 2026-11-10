@@ -27,7 +27,7 @@
 
 .job-search-providers {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   border: 0;
   margin: 0;
@@ -42,14 +42,21 @@
 
 .job-search-provider {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 3px;
+  gap: 3px 9px;
   min-height: 62px;
   border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 12px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.58);
+}
+
+.job-search-provider input {
+  grid-row: span 2;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--primary-strong);
 }
 
 .job-search-provider span {
@@ -211,6 +218,10 @@
     gap: 5px;
     padding-inline: 8px;
     font-size: 0.7rem;
+  }
+
+  .job-search-providers {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .job-search-result-header,

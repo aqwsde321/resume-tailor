@@ -1,3 +1,4 @@
+import { load } from "cheerio";
 import { NextResponse } from "next/server";
 
 import {
@@ -12,7 +13,8 @@ import { apiErrorResponse, parseJsonBody } from "@/server/http";
 export const runtime = "nodejs";
 
 const PROVIDER_LABEL: Record<JobSource, string> = {
-  saramin: "사람인"
+  saramin: "사람인",
+  ionejob: "i-ONE JOB"
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -78,11 +80,12 @@ function timestampDate(value: unknown): string {
   return new Date(timestamp * 1000).toISOString().slice(0, 10);
 }
 
-function normalizeExternalUrl(value: string): string | null {
+function normalizeExternalUrl(value: string, source: JobSource): string | null {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
-    const isAllowedHost = hostname === "saramin.co.kr" || hostname.endsWith(".saramin.co.kr");
+    const allowedDomain = source === "saramin" ? "saramin.co.kr" : "ibkonejob.co.kr";
+    const isAllowedHost = hostname === allowedDomain || hostname.endsWith(`.${allowedDomain}`);
 
     return ["http:", "https:"].includes(url.protocol) && isAllowedHost ? url.toString() : null;
   } catch {
@@ -99,7 +102,7 @@ function normalizeSaraminJob(value: unknown): JobListing | null {
   const company = asRecord(job.company);
   const companyDetail = asRecord(company.detail);
   const companyName = readText(companyDetail.name ?? company.name);
-  const url = normalizeExternalUrl(readText(job.url));
+  const url = normalizeExternalUrl(readText(job.url), "saramin");
   const activeValue = readText(job.active);
   const active = !activeValue || ["1", "true"].includes(activeValue.toLowerCase());
 
@@ -164,8 +167,81 @@ async function searchSaramin(query: string, accessKey: string): Promise<JobListi
   return jobList.map(normalizeSaraminJob).filter((job): job is JobListing => Boolean(job));
 }
 
+function calendarDate(value: string): string {
+  const raw = value.trim();
+  if (/^\d{8}$/.test(raw)) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  }
+
+  return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : raw;
+}
+
+function normalizeIoneJob(readValue: (tag: string) => string): JobListing | null {
+  const value = readValue;
+  const id = value("hireSn");
+  const title = value("hireTitle");
+  const companyName = value("cmpNm");
+  const url = normalizeExternalUrl(value("jobUrl") || value("jobMobileUrl"), "ionejob");
+  const careerLabel = value("jobCareerinfo");
+  const career = parseExperienceYears(careerLabel);
+  const careerMin = readOptionalNumber(value("jobCrrAbv"));
+  const careerMax = readOptionalNumber(value("jobCrrBlw"));
+  const keywords = value("jobCategory")
+    .split(/[,\n|]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 50);
+
+  if (!id || !title || !companyName || !url) {
+    return null;
+  }
+
+  return {
+    id: `ionejob-${id}`,
+    source: "ionejob",
+    title,
+    companyName,
+    url,
+    keywords,
+    location: value("jobLocation"),
+    employmentType: value("jobTypecond"),
+    careerLabel,
+    careerMinYears: careerMin ?? career.min,
+    careerMaxYears: careerMax !== null ? (careerMax > 0 ? careerMax : null) : career.max,
+    salary: value("jobSalary"),
+    deadline: calendarDate(value("hireRcvEndYmd")),
+    postedAt: calendarDate(value("regYmd")),
+    active: true
+  };
+}
+
+async function searchIoneJob(accessKey: string): Promise<JobListing[]> {
+  const url = new URL("https://www.ibkonejob.co.kr/common/api/ionejobSearch.do");
+  url.searchParams.set("authKey", accessKey);
+  url.searchParams.set("nowPage", "1");
+  url.searchParams.set("numPerPage", "100");
+  url.searchParams.set("sortOrderBy", "DESC");
+
+  const response = await fetch(url, {
+    headers: { Accept: "application/xml, text/xml" },
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok) {
+    throw new Error("ionejob-request-failed");
+  }
+
+  const $ = load(await response.text(), { xmlMode: true });
+  return $("job-search > jobs")
+    .toArray()
+    .map((node) => normalizeIoneJob((tag) => $(node).children(tag).first().text().trim()))
+    .filter((job): job is JobListing => Boolean(job));
+}
+
 function getProviderConfiguration() {
-  return [{ source: "saramin" as const, configured: Boolean(process.env.SARAMIN_ACCESS_KEY?.trim()) }];
+  return [
+    { source: "saramin" as const, configured: Boolean(process.env.SARAMIN_ACCESS_KEY?.trim()) },
+    { source: "ionejob" as const, configured: Boolean(process.env.IBK_ONEJOB_ACCESS_KEY?.trim()) }
+  ];
 }
 
 export async function GET() {
@@ -183,7 +259,10 @@ export async function POST(request: Request) {
     const query = resolveJobSearchQuery(body.resume, body.query);
     const sourceResults = await Promise.all(
       body.sources.map(async (source) => {
-        const accessKey = process.env.SARAMIN_ACCESS_KEY?.trim();
+        const accessKey =
+          source === "saramin"
+            ? process.env.SARAMIN_ACCESS_KEY?.trim()
+            : process.env.IBK_ONEJOB_ACCESS_KEY?.trim();
 
         if (!accessKey) {
           return {
@@ -194,7 +273,10 @@ export async function POST(request: Request) {
         }
 
         try {
-          const listings = await searchSaramin(query, accessKey);
+          const listings =
+            source === "saramin"
+              ? await searchSaramin(query, accessKey)
+              : await searchIoneJob(accessKey);
           return {
             source,
             status: { source, state: "success" as const, resultCount: listings.length },

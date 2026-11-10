@@ -43,7 +43,8 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
           ok: true,
           data: {
             providers: [
-              { source: "saramin", configured: true }
+              { source: "saramin", configured: true },
+              { source: "ionejob", configured: false }
             ]
           }
         })
@@ -106,6 +107,7 @@ test("이력서 조건으로 공고를 검색하고 선택한 공고 원문을 �
   await expect(page.getByRole("heading", { name: "내 이력서에 맞는 공고 찾기" })).toBeVisible();
   await expect(page.getByText("키 설정됨", { exact: true })).toBeVisible();
   await expect(page.getByText("사람인", { exact: true })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "i-ONE JOB 검색" })).toBeChecked();
   for (const excludedPortal of ["고용24", "원티드", "점핏", "잡코리아"]) {
     await expect(page.getByText(excludedPortal, { exact: true })).toHaveCount(0);
   }
@@ -134,12 +136,20 @@ test("검색 API 키가 없어도 직접 고른 공고 입력 흐름으로 이�
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, data: { providers: [{ source: "saramin", configured: false }] } })
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          providers: [
+            { source: "saramin", configured: false },
+            { source: "ionejob", configured: false }
+          ]
+        }
+      })
     });
   });
 
   await page.goto("/jobs");
-  await expect(page.getByText("API 키 필요", { exact: true })).toBeVisible();
+  await expect(page.getByText("API 키 필요", { exact: true })).toHaveCount(2);
   await page.getByRole("link", { name: "공고 직접 입력하기" }).click();
 
   await expect(page).toHaveURL(/\/company$/);
