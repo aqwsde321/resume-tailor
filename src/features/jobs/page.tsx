@@ -263,11 +263,11 @@ export default function JobsPage() {
               <p>
                 {providerSetup.some((provider) => provider.configured)
                   ? "API 키는 서버의 .env.local에 보관하고 브라우저에 노출하지 않습니다."
-                  : "사람인·고용24 검색은 공식 API 키가 필요합니다. 키가 없어도 아래에 공고 주소를 붙여넣어 가져올 수 있어요."}
+                  : "사람인은 신청 승인 후 키를 발급받고, 고용24는 기업회원 전용 신청과 심사가 필요합니다. 키가 없어도 아래에 공고 주소를 붙여넣어 가져올 수 있어요."}
               </p>
               <div className="job-search-api-links">
                 <a href="https://oapi.saramin.co.kr/join" target="_blank" rel="noreferrer">사람인 API 신청</a>
-                <a href="https://www.work24.go.kr/cm/e/a/0110/selectOpenApiSvcInfo.do" target="_blank" rel="noreferrer">고용24 Open API</a>
+                <a href="https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do" target="_blank" rel="noreferrer">고용24 API 신청 안내</a>
               </div>
             </div>
 
