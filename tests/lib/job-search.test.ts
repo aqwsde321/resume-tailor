@@ -113,4 +113,19 @@ describe("job search matching", () => {
 
     expect(ranked.map((listing) => listing.id)).toEqual(["saramin-1"]);
   });
+
+  it("does not grant career-fit points when a posting has no career information", () => {
+    const ranked = rankJobListings(createPdfResumeFixture(), [
+      {
+        ...listings[0]!,
+        id: "career-unspecified",
+        keywords: ["Java"],
+        careerLabel: "",
+        careerMinYears: null,
+        careerMaxYears: null
+      }
+    ]);
+
+    expect(ranked[0]).toMatchObject({ relevanceScore: 60, fit: "medium" });
+  });
 });
