@@ -278,7 +278,7 @@ export const resumeTailoringOutputSchema = {
       required: ["text", "evidenceIds"],
       properties: {
         text: { type: "string", maxLength: 1600 },
-        evidenceIds: { type: "array", items: { type: "string" } }
+        evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
     },
     summary: {
@@ -287,11 +287,12 @@ export const resumeTailoringOutputSchema = {
       required: ["text", "evidenceIds"],
       properties: {
         text: { type: "string", maxLength: 1600 },
-        evidenceIds: { type: "array", items: { type: "string" } }
+        evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
     },
     experience: {
       type: "array",
+      maxItems: 12,
       items: {
         type: "object",
         additionalProperties: false,
@@ -299,12 +300,13 @@ export const resumeTailoringOutputSchema = {
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: 1600 },
-          evidenceIds: { type: "array", items: { type: "string" } }
+          evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
       }
     },
     projects: {
       type: "array",
+      maxItems: 12,
       items: {
         type: "object",
         additionalProperties: false,
@@ -312,7 +314,7 @@ export const resumeTailoringOutputSchema = {
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: 1600 },
-          evidenceIds: { type: "array", items: { type: "string" } }
+          evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
       }
     },
@@ -325,13 +327,13 @@ export const resumeTailoringOutputSchema = {
         properties: {
           requirementId: { type: "string" },
           matchType: { type: "string", enum: ["direct", "transferable", "adjacent", "gap"] },
-          evidenceIds: { type: "array", items: { type: "string" } },
+          evidenceIds: { type: "array", maxItems: 6, items: { type: "string" } },
           reason: { type: "string", maxLength: 400 }
         }
       }
     },
-    skillIds: { type: "array", items: { type: "string" } },
-    highlightIds: { type: "array", items: { type: "string" } },
-    strengthIds: { type: "array", items: { type: "string" } }
+    skillIds: { type: "array", maxItems: 40, items: { type: "string" } },
+    highlightIds: { type: "array", maxItems: 20, items: { type: "string" } },
+    strengthIds: { type: "array", maxItems: 20, items: { type: "string" } }
   }
 } as const;

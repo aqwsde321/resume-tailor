@@ -1,6 +1,6 @@
 # 릴리즈 노트
 
-- 마지막 업데이트: 2026-11-10
+- 마지막 업데이트: 2026-11-11
 - 기준: 버전별 기능, 문서, 검증 기록
 
 ## Unreleased
@@ -9,14 +9,15 @@
 
 - `/jobs`에서 외부 채용 목록 검색과 사이트별 API 키 설정을 제거하고, 사용자가 제공한 공고 URL 분석과 이력서 비교만 제공
 - 분석 결과에서 공고 요약과 이력서 매칭 근거를 보여주고 `/company` 맞춤 이력서 흐름으로 연결
+- 맞춤 이력서 생성의 근거 ID 개수를 스킬 지침과 JSON 스키마에서 제한해 초과 응답 검증 오류를 줄임
 
 ### Verified
 
-- `npm run test` (31 files, 170 tests passed)
+- `npm run test` (34 files, 175 tests passed)
 - `npm run lint` (오류 없음, 기존 경고 2건)
 - `npm run typecheck`
 - `npm run build`
-- `npm run test:e2e` (22 tests passed)
+- `npm run test:e2e` (23 tests passed)
 
 ### Added
 

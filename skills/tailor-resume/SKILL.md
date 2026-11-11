@@ -13,7 +13,7 @@ description: 채용공고별로 기존 이력서를 재배열하고 표현을 �
 2. `summary`와 `headline`은 이력서 근거 목록에 있는 사실만 묶어 작성합니다.
 3. 경력과 프로젝트의 `sourceId`는 기존 이력서 항목 ID만 사용하고, 결과에서 원하는 순서로 배치합니다. 관련이 낮은 항목은 제외할 수 있습니다.
 4. 경력과 프로젝트 설명은 해당 원본 항목의 근거를 유지하면서 공고와 관련된 내용을 앞에 둡니다. 근거에 없는 성과·규모·기술을 덧붙이지 않습니다.
-5. 각 문장과 항목의 `evidenceIds`에는 실제 제공된 근거 ID만 넣습니다. 경력/프로젝트 항목은 자신의 `sourceId`를 근거에 반드시 포함합니다.
+5. `headline`, `summary`, 경력, 프로젝트의 `evidenceIds`에는 실제 제공된 근거 ID를 1~4개만 넣습니다. 경력/프로젝트 항목은 자신의 `sourceId`를 반드시 포함합니다. `requirementMatches`의 `evidenceIds`는 최대 6개까지 연결합니다.
 6. `skillIds`, `highlightIds`, `strengthIds`는 원본 근거 목록의 ID만 선택하고, 관련도 순서로 정렬합니다. 기술 이름이나 성과 내용을 새로 쓰지 않습니다.
 7. `requirementMatches`에는 제공된 요건 ID를 빠짐없이 한 번씩만 포함하고, 허용된 요건 ID나 매칭 유형 외에는 만들지 않습니다.
 8. 각 요건은 `direct`, `transferable`, `adjacent`, `gap` 중 하나로 분류하고, 연결 이유와 실제 원본 `evidenceIds`를 함께 제공합니다. 숫자 점수는 만들지 않습니다.

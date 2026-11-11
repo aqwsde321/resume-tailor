@@ -131,6 +131,18 @@ describe("POST /api/resume/tailor/stream", () => {
     );
   });
 
+  it("Codex 출력 스키마에 근거 ID 개수 제한을 포함한다", async () => {
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce(plan);
+
+    await post({ resume, company: companyFixture });
+
+    const outputSchema = vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.outputSchema;
+    const serializedSchema = JSON.stringify(outputSchema);
+    expect(serializedSchema).toContain("\"minItems\":1");
+    expect(serializedSchema).toContain("\"maxItems\":4");
+    expect(serializedSchema).toContain("\"maxItems\":6");
+  });
+
   it("이력서에 없는 근거 참조를 반환하면 결과를 내보내지 않는다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
       ...plan,
