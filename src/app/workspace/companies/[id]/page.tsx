@@ -36,7 +36,7 @@ export default function CompanyWorkPage() {
   const companyCurrent = work.company && work.companySourceText === work.document.text;
   return <><Link href="/workspace/companies">← 회사별 이력서 목록</Link><h1>{work.title}</h1>
     {error && <p role="alert">{error}</p>}
-    <details open={!work.company}><summary>공고 원문 검토·수정</summary><DocumentEditor document={work.document} settings={workspace.settings} onChange={(document) => { change((current) => ({ ...current, document })); setCandidate(null); }} />
+    <details open={!work.company}><summary>공고 원문 검토·수정</summary><DocumentEditor variant="studio" document={work.document} settings={workspace.settings} onChange={(document) => { change((current) => ({ ...current, document })); setCandidate(null); }} />
       <button className="primary" disabled={busy || !work.document.text.trim() || Boolean(work.document.proposal) || work.document.annotations.some((item) => item.status === "pending")} onClick={() => void task(async () => {
         const company = await workspaceRequest<Company>("/api/company", jsonRequest({ text: work.document.text, agent })); setCandidate({ company, sourceText: work.document.text });
       })}>검토한 공고 정리</button>
@@ -63,7 +63,7 @@ export default function CompanyWorkPage() {
         <section className="card"><h2>회사별 편집본</h2><pre>{resumeToMarkdown(work.resume)}</pre>
           <button disabled={busy} onClick={() => change((current) => ({ ...current, versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 버전 보관</button>
         </section>
-        <details><summary>이력서 직접 수정·추가 댓글</summary><DocumentEditor document={work.resumeDocument ?? newTextDocument("resume", work.title, resumeToMarkdown(work.resume))} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} />
+        <details><summary>이력서 직접 수정·추가 댓글</summary><DocumentEditor variant="studio" document={work.resumeDocument ?? newTextDocument("resume", work.title, resumeToMarkdown(work.resume))} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} />
           <button disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => void task(async () => {
             const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: work.resumeDocument!.text, agent }));
             setEditedCandidate({ resume, sourceText: work.resumeDocument!.text });

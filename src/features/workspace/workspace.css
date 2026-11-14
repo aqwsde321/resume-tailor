@@ -198,6 +198,33 @@
 .studio-enrichment .card > p { color: var(--muted); font-size: 12px; }
 .studio-enrichment label { font-size: 12px; }
 .studio-main [role=alert] { scroll-margin-top: 24px; }
+.studio-companies, .studio-settings { max-width: 1100px; margin-inline: auto; }
+.studio-new-work { margin: 24px 0 28px; padding: 0 24px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.studio-new-work > summary { padding-block: 18px; color: var(--primary-strong); font-weight: 600; }
+.resume-studio .studio-new-work .card { margin-top: 0; padding: 20px 0; border: 0; }
+.resume-studio .work-list { gap: 12px; }
+.resume-studio .work-list a { position: relative; padding: 22px 24px; border-radius: 10px; background: #fff; border-color: var(--line); }
+.resume-studio .work-list a::after { position: absolute; top: 22px; right: 24px; content: "›"; font-size: 24px; color: var(--primary); }
+.resume-studio .work-list a:hover { border-color: #b5a9dc; background: #fcfbff; }
+.resume-studio .work-list strong { padding-right: 24px; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.resume-studio .work-list span { color: var(--muted); font-size: 12px; }
+.resume-studio .work-list small { margin-top: 8px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.resume-studio .studio-settings-section { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 2fr); column-gap: 44px; row-gap: 10px; margin-block: 18px; padding: 28px; }
+.studio-settings-section > h2 { grid-column: 1; grid-row: 1; margin: 0; font-size: 16px; font-weight: 600; }
+.studio-settings-section > :not(h2) { grid-column: 2; min-width: 0; }
+.studio-settings-section > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.85; }
+.resume-studio .studio-settings-section label { margin-block: 6px; font-size: 12px; }
+.studio-settings-section > button, .studio-settings-section > a { justify-self: start; }
+.studio-settings-section .nav-btn { padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: #f5f2fc; color: var(--primary-strong); text-decoration: none; font-size: 12px; }
+.studio-settings-section a:hover { text-decoration: underline; }
+.studio-main > h1 { margin-top: 14px; font-size: 26px; overflow-wrap: anywhere; }
+.studio-main > details { padding: 12px 0; }
+@media(max-width: 850px) {
+  .resume-studio .studio-settings-section { grid-template-columns: minmax(0, 1fr); padding: 22px; gap: 14px; }
+  .studio-settings-section > h2 { grid-column: 1; grid-row: auto; margin-bottom: 4px; }
+  .studio-settings-section > :not(h2) { grid-column: 1; }
+  .studio-new-work { padding-inline: 16px; }
+}
 @media (min-width: 1600px) { .studio-main { padding-inline: 52px; } }
 @media (max-width: 1180px) {
   .resume-studio { grid-template-columns: 190px minmax(0, 1fr); }
