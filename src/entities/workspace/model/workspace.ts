@@ -25,7 +25,7 @@ export const ReviewDocumentSchema = z.object({
     url: z.string().url().optional(),
     attachmentId: Id.optional(),
     originalText: z.string().max(500000),
-    pages: z.array(z.object({ page: z.number().int().positive(), text: z.string(), method: z.enum(["text", "ocr"]) }).strict()).default([]),
+    pages: z.array(z.object({ page: z.number().int().positive(), text: z.string(), method: z.enum(["text", "ocr"]), imageId: Id.optional() }).strict()).default([]),
   }).strict(),
   text: z.string().max(500000),
   annotations: z.array(AnnotationSchema).max(500),
