@@ -149,8 +149,12 @@ export const resumeOutputSchema = {
     "experience",
     "projects",
     "achievements",
-    "strengths"
-    , "headline", "careerDurationText", "contacts", "education", "qualifications"
+    "strengths",
+    "headline",
+    "careerDurationText",
+    "contacts",
+    "education",
+    "qualifications"
   ],
   properties: {
     headline: { type: "string" },

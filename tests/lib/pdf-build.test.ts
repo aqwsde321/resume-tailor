@@ -11,6 +11,8 @@ const hasPdfTextExtractor = spawnSync("pdftotext", ["-v"], { encoding: "utf8" })
 const describeWithTypst = hasTypst ? describe : describe.skip;
 const describeWithPdfTools = hasTypst && hasPdfTextExtractor ? describe : describe.skip;
 const resumeFixture = createPdfResumeFixture({
+  education: ["예시대학교 수학 학사"],
+  qualifications: ["SQLD 2022"],
   pdfProfileImageDataUrl: PROFILE_IMAGE_DATA_URL,
   pdfProfileImageVisible: true
 });

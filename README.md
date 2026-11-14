@@ -77,6 +77,14 @@ docker compose up -d
 - 접속 주소: [http://localhost:3000](http://localhost:3000)
 - 일반 사용자는 `docker compose build`가 필요 없습니다.
 - Compose 방식에서는 로그인 정보가 `codex-home` Docker volume에 저장됩니다.
+- 작업 자료는 `./private-data`에 보관되며 컨테이너를 다시 만들어도 유지됩니다.
+
+로컬 소스 변경을 반영하려면 이미지를 직접 빌드합니다.
+
+```bash
+docker build -t resume-tailor:local .
+RESUME_TAILOR_IMAGE=resume-tailor:local docker compose up -d
+```
 
 중지와 정리:
 
@@ -97,7 +105,8 @@ Docker를 쓰지 않고 직접 실행하려면 아래가 필요합니다.
 - Codex 앱 또는 Codex CLI
 - Codex 로그인 가능한 계정
 - `typst` CLI: `/pdf`의 실제 Typst 미리보기와 PDF 내보내기를 로컬에서 쓰려면 PATH에 있어야 합니다.
-- `pdftotext` (Poppler): PDF 텍스트 검사용입니다. 설치하지 않아도 PDF 내보내기는 가능하지만 검사는 건너뜁니다.
+- Poppler의 `pdfinfo`, `pdftotext`, `pdftoppm`: PDF 입력의 텍스트 추출과 페이지 미리보기에 필요합니다. macOS는 `brew install poppler`, Debian/Ubuntu는 `apt install poppler-utils`로 설치합니다.
+- 이미지·스캔본 OCR은 macOS Vision을 사용합니다. Linux는 `tesseract-ocr`, `tesseract-ocr-kor`, `tesseract-ocr-eng`가 필요합니다. Docker 이미지에는 포함됩니다.
 
 Node.js는 LTS 설치를 권장합니다.
 
