@@ -30,6 +30,9 @@ description: 이력서 텍스트를 구조화된 resume.json으로 변환하는 
 `output/resume.json`으로 저장한다.
 
 **규칙:**
+- 연락처·학력·자격증·교육 이력은 빠뜨리지 않는다. education에는 학교·전공·학위·기간, qualifications에는 자격·교육·수상과 날짜를 원문 사실 그대로 담는다.
+- 프로젝트에는 company(소속 회사), role(역할), period(프로젝트 기간)를 따로 보존한다. 근무 회사와 고객사를 혼동하지 않는다. subtitle에는 역할·기간을 읽기 좋게 정리한다.
+- 기존 headline, careerDurationText, contacts, 링크와 프로젝트 성과를 보존한다. 제공되지 않은 정보는 추측하지 않는다.
 - 필드가 없으면 빈값(빈 문자열, 빈 배열, 숫자는 0)으로 채운다
 - techStack, strengths, achievements는 중복 없이 핵심 키워드만
 - careerYears는 정수

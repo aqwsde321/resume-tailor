@@ -37,6 +37,7 @@ export const ReviewDocumentSchema = z.object({
 export const EnrichmentSchema = z.object({
   id: Id,
   topic: z.string().max(2000),
+  status: z.enum(["question", "draft", "done"]).default("question"),
   messages: z.array(ExperienceDiscoveryMessageSchema),
   drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
 }).strict();

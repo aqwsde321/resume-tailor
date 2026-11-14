@@ -3,6 +3,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { Annotation, ReviewDocument, Workspace } from "@/entities/workspace/model/workspace";
 import { acceptDocumentChanges } from "@/entities/workspace/model/document-review";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
+import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 
 export function DocumentEditor({ document, settings, onChange }: {
   document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void;
@@ -63,7 +64,7 @@ export function DocumentEditor({ document, settings, onChange }: {
         <button className="primary" disabled={!pending.length || busy} onClick={async () => {
           setBusy(true); setError("");
           try {
-            const proposal = await workspaceRequest<NonNullable<ReviewDocument["proposal"]>>("/api/workspace/review", jsonRequest({ document, agent: settings }));
+            const proposal = await workspaceRequest<NonNullable<ReviewDocument["proposal"]>>("/api/workspace/review", jsonRequest({ document, agent: toAgentRunOptions(settings) }));
             update({ proposal }); setSelected(proposal.changes.map((change) => change.id));
           } catch (error) { setError(error instanceof Error ? error.message : "수정 요청을 반영하지 못했습니다."); }
           finally { setBusy(false); }

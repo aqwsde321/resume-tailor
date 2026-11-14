@@ -31,7 +31,7 @@ export function normalizeAgentSettings(raw: unknown): AgentSettings {
   const value = raw as Partial<AgentSettings>;
 
   return {
-    model: "",
+    model: typeof value.model === "string" ? value.model.trim().slice(0, 120) : "",
     modelReasoningEffort: isModelReasoningEffort(value.modelReasoningEffort)
       ? value.modelReasoningEffort
       : "medium"
@@ -40,6 +40,7 @@ export function normalizeAgentSettings(raw: unknown): AgentSettings {
 
 export function toAgentRunOptions(settings: AgentSettings): AgentRunOptions {
   return {
+    ...(settings.model.trim() ? { model: settings.model.trim() } : {}),
     modelReasoningEffort: settings.modelReasoningEffort || "medium"
   };
 }

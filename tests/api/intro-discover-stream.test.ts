@@ -62,6 +62,13 @@ describe("POST /api/intro/discover/stream", () => {
     vi.clearAllMocks();
   });
 
+  it("공고 없이도 공통 이력서의 부족한 내용을 질문할 수 있다", async () => {
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce({ status: "question", message: "프로젝트에서 직접 맡은 역할은 무엇인가요?", draft: null });
+    const response = await post({ resume: resumePayload, requirement: "역할과 성과 보완", messages: [] });
+    expect(response.status).toBe(200);
+    expect(parseSse(await response.text()).some((event) => event.event === "result")).toBe(true);
+  });
+
   it("첫 질문을 요건에 맞춰 만들고 SSE 결과를 반환한다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
       status: "question",

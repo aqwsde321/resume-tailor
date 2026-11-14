@@ -29,6 +29,9 @@ const ResumeContactItemSchema = z
 
 const ResumeProjectItemSchema = z
   .object({
+    company: z.string().optional(),
+    period: z.string().optional(),
+    role: z.string().optional(),
     name: z.string().default(""),
     description: z.string().default(""),
     subtitle: z.string().default(""),
@@ -41,6 +44,8 @@ const ResumeProjectItemSchema = z
 
 export const ResumeSchema = z
   .object({
+    education: z.array(z.string()).optional(),
+    qualifications: z.array(z.string()).optional(),
     name: z.string().default(""),
     headline: z.string().default(""),
     summary: z.string().default(""),
@@ -145,8 +150,14 @@ export const resumeOutputSchema = {
     "projects",
     "achievements",
     "strengths"
+    , "headline", "careerDurationText", "contacts", "education", "qualifications"
   ],
   properties: {
+    headline: { type: "string" },
+    careerDurationText: { type: "string" },
+    contacts: { type: "array", items: { type: "object", additionalProperties: false, required: ["label", "value", "url"], properties: { label: { type: "string" }, value: { type: "string" }, url: { type: "string" } } } },
+    education: { type: "array", items: { type: "string" } },
+    qualifications: { type: "array", items: { type: "string" } },
     name: { type: "string" },
     summary: { type: "string" },
     desiredPosition: { type: "string" },
@@ -174,8 +185,10 @@ export const resumeOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "description", "techStack"],
+        required: ["name", "description", "techStack", "company", "period", "role", "subtitle", "link", "linkLabel", "highlights"],
         properties: {
+          company: { type: "string" }, period: { type: "string" }, role: { type: "string" },
+          subtitle: { type: "string" }, link: { type: "string" }, linkLabel: { type: "string" }, highlights: { type: "array", items: { type: "string" } },
           name: { type: "string" },
           description: { type: "string" },
           techStack: {

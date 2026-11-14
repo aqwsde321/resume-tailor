@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 
 const RequestSchema = z.object({
   resume: ResumeSchema,
-  company: CompanySchema,
+  company: CompanySchema.optional(),
   requirement: z.string().trim().min(1).max(300),
   messages: z.array(ExperienceDiscoveryMessageSchema).max(16).default([]),
   agent: AgentRunOptionsSchema.optional()
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       try {
         const generated = await runSkillJsonStream<unknown>({
           skillName: "discover-experience",
-          inputText: buildInputText(body.resume, body.company, body.requirement, body.messages),
+          inputText: buildInputText(body.resume, body.company ?? null, body.requirement, body.messages),
           outputSchema: experienceDiscoveryOutputSchema,
           signal: request.signal,
           ...body.agent,

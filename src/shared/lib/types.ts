@@ -42,6 +42,9 @@ export interface ResumeContactItem {
 }
 
 export interface ResumeProjectItem {
+  company?: string;
+  period?: string;
+  role?: string;
   name: string;
   description: string;
   subtitle: string;
@@ -52,6 +55,8 @@ export interface ResumeProjectItem {
 }
 
 export interface Resume {
+  education?: string[];
+  qualifications?: string[];
   name: string;
   headline: string;
   summary: string;

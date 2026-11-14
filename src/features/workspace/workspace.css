@@ -1,0 +1,23 @@
+.workspace-app { max-width: 1400px; margin: auto; padding: 24px; }
+.workspace-app .card { margin-block: 20px; padding: 24px; }
+.workspace-header, .workspace-header nav { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.workspace-header { padding-block: 12px 24px; border-bottom: 1px solid var(--line, #ddd); }
+.workspace-header a { color: var(--text); text-decoration: none; }
+.workspace-header a[aria-current] { color: var(--primary-strong); font-weight: 800; text-decoration: underline; text-underline-offset: 8px; }
+.workspace-header > span { margin-left: auto; font-size: .8rem; color: var(--muted); }
+.workspace-app label { display: grid; gap: 8px; margin-block: 14px; }
+.workspace-app input:not([type=checkbox]), .workspace-app select, .workspace-app textarea { width: 100%; }
+.workspace-app button, .workspace-app .nav-btn { margin: 4px 8px 4px 0; }
+.workspace-app textarea { resize: vertical; }
+.workspace-app pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.review-columns { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(250px, 1fr); gap: 24px; }
+.review-text { min-height: 65vh; font: inherit; line-height: 1.85; }
+.review-comment, .review-change { padding: 16px; margin-block: 12px; border: 1px solid #d8dce5; border-radius: 10px; background: #f8f9fc; }
+.source-original { max-height: 45vh; overflow: auto; }
+.source-region { position: relative; max-width: 700px; touch-action: none; user-select: none; }
+.source-region img { display: block; width: 100%; height: auto; pointer-events: none; }
+.region-selection { position: absolute; border: 2px solid #2950c8; background: #2950c830; pointer-events: none; }
+.workspace-app summary { cursor: pointer; padding-block: 12px; }
+.workspace-app .work-list { display: grid; gap: 12px; }
+.workspace-app .work-list a { padding: 20px; display: grid; gap: 8px; color: inherit; text-decoration: none; border: 1px solid #d8dce5; border-radius: 12px; background: white; }
+@media(max-width: 760px) { .workspace-app { padding: 12px; } .workspace-app .card { padding: 16px; } .review-columns { grid-template-columns: 1fr; } .workspace-header, .workspace-header nav { gap: 14px; } }
