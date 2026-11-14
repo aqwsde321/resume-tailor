@@ -231,3 +231,12 @@
   #section_title([Strengths])
   #bullet_list(data.strengths)
 ]
+
+#if data.education.len() > 0 [
+  #section_title([Education])
+  #bullet_list(data.education)
+]
+#if data.qualifications.len() > 0 [
+  #section_title([Qualifications])
+  #bullet_list(data.qualifications)
+]

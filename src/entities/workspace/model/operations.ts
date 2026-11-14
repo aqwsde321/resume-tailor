@@ -6,7 +6,7 @@ export function publishMasterResume(workspace: Workspace, document: ReviewDocume
   const now = new Date().toISOString();
   return { ...workspace, master: {
     id: workspace.master?.id ?? crypto.randomUUID(),
-    version: (workspace.master?.version ?? 0) + 1,
+    version: (workspace.master?.resume ? workspace.master.version : 0) + 1,
     document, resume: ResumeSchema.parse(resume), enrichment: workspace.master?.enrichment ?? [], updatedAt: now,
   } };
 }

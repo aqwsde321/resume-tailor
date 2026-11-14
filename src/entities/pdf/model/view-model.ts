@@ -52,6 +52,8 @@ interface PdfThemeView {
 }
 
 export interface TypstResumeDocument {
+  education: string[];
+  qualifications: string[];
   name: string;
   desiredPosition: string;
   careerDuration: string;
@@ -284,7 +286,7 @@ function buildCareerDuration(resume: Resume) {
 
 function buildTextSections(resume: Resume, intro: Intro): PdfTextBlock[] {
   const sections: PdfTextBlock[] = [];
-  const introSource = intro.longIntro.trim() || intro.shortIntro.trim() || intro.oneLineIntro.trim();
+  const introSource = intro.longIntro.trim() || intro.shortIntro.trim() || intro.oneLineIntro.trim() || resume.summary.trim();
   const tailoredIntroParagraphs = splitParagraphs(introSource);
   if (tailoredIntroParagraphs.length > 0) {
     sections.push({
@@ -380,7 +382,9 @@ export function buildTypstResumeDocument(
       onAccentHex: theme.onAccentHex
     },
     techGroups: buildTechGroups(resume.techStack),
-    strengths: buildPdfStrengths(resume)
+    strengths: buildPdfStrengths(resume),
+    education: compactStrings(resume.education ?? []),
+    qualifications: compactStrings(resume.qualifications ?? [])
   };
 }
 

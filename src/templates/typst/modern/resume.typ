@@ -250,6 +250,15 @@
 ]
 
 #section_title([Skills])
+#if data.education.len() > 0 [
+  #section_title([Education])
+  #bullet_list(data.education)
+]
+#if data.qualifications.len() > 0 [
+  #section_title([Qualifications])
+  #bullet_list(data.qualifications)
+]
+
 #for group in data.techGroups [
   #if group.items.len() > 0 [
     #box(

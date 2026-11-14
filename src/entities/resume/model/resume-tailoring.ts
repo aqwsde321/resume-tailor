@@ -110,6 +110,8 @@ export function buildResumeTailoringEvidence(resume: Resume): ResumeTailoringEvi
 
   addEvidence(evidence, "summary", "이력서 요약", resume.summary);
   addEvidence(evidence, "headline", "직무 제목", resume.headline);
+  (resume.education ?? []).slice(0, 6).forEach((item, index) => addEvidence(evidence, `education-${index + 1}`, `학력 ${index + 1}`, item));
+  (resume.qualifications ?? []).slice(0, 6).forEach((item, index) => addEvidence(evidence, `qualification-${index + 1}`, `자격·교육 ${index + 1}`, item));
 
   resume.experience.slice(0, 10).forEach((item, index) => {
     const text = [

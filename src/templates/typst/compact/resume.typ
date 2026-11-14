@@ -227,5 +227,11 @@
         ]
       ])
     ]
+    #if data.education.len() > 0 [
+      #rail_section([Education], [#bullet_list(data.education)])
+    ]
+    #if data.qualifications.len() > 0 [
+      #rail_section([Qualifications], [#bullet_list(data.qualifications)])
+    ]
   ],
 )

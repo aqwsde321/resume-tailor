@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
 import { DocumentChangeSchema } from "./document-review";
+import { ResumeTailoringPlanSchema } from "@/entities/resume/model/resume-tailoring";
 
 const Id = z.string().uuid();
 const Timestamp = z.string().datetime();
 export const AnnotationSchema = z.object({
   id: Id,
-  instruction: z.string().trim().min(1).max(4000),
+  instruction: z.string().max(4000),
   anchor: z.discriminatedUnion("type", [
     z.object({ type: z.literal("text"), start: z.number().int().nonnegative(), end: z.number().int().nonnegative(), quote: z.string() }).strict(),
     z.object({ type: z.literal("document") }).strict(),
@@ -20,6 +21,7 @@ export const ReviewDocumentSchema = z.object({
   id: Id,
   kind: z.enum(["resume", "job"]),
   title: z.string().max(300),
+  warnings: z.array(z.string()).optional(),
   source: z.object({
     type: z.enum(["text", "markdown", "url", "pdf", "image"]),
     url: z.string().url().optional(),
@@ -56,6 +58,10 @@ export const CompanyWorkSchema = z.object({
   title: z.string().max(300),
   document: ReviewDocumentSchema,
   company: CompanySchema.nullable(),
+  companySourceText: z.string().optional(),
+  resumeDocument: ReviewDocumentSchema.nullable().optional(),
+  tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
+  artifacts: z.array(z.object({ id: Id, name: z.string(), createdAt: Timestamp }).strict()).optional(),
   sourceResumeVersion: z.number().int().positive().nullable(),
   sourceResume: ResumeSchema.nullable(),
   resume: ResumeSchema.nullable(),
