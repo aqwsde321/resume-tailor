@@ -25,7 +25,7 @@ test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정
   });
   await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: resume } }));
   await page.goto("/workspace/resume");
-  await page.getByLabel("입력 방법").selectOption("text");
+  await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
   await page.getByLabel("원문", { exact: true }).fill("J a v a 개발자");
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
   await page.getByRole("region", { name: "추출 문서", exact: true }).evaluate((element) => {
@@ -45,6 +45,36 @@ test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정
   await expect.poll(() => stored().master?.resume?.name).toBe("예시 개발자");
   await page.reload();
   await expect(page.getByText("확정 이력서 · 버전 1", { exact: true })).toBeVisible();
+});
+
+test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용할 수 있다", async ({ page }) => {
+  await mockStorage(page);
+  const longText = "긴문서본문".repeat(100);
+  await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("resume", "긴파일명".repeat(35), longText), warnings: [] } } }));
+  await page.goto("/workspace/resume");
+  const fileTab = page.getByRole("tab", { name: "파일 업로드", exact: true });
+  await expect(fileTab).toHaveAttribute("aria-selected", "true");
+  await fileTab.focus();
+  await fileTab.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "URL", exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "원본 URL", exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("tab", { name: "URL", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "내용 추출", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "원본 URL", exact: true })).toBeFocused();
+  await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
+  await page.getByRole("textbox", { name: "원문", exact: true }).fill(longText);
+  await page.getByRole("button", { name: "내용 추출", exact: true }).click();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText(longText);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const documentBox = await page.getByRole("region", { name: "추출 문서", exact: true }).boundingBox();
+  const comments = await page.getByRole("complementary", { name: "수정 댓글", exact: true }).boundingBox();
+  expect(comments!.y).toBeGreaterThanOrEqual(documentBox!.y + documentBox!.height);
+  await page.getByRole("button", { name: "직접 편집", exact: true }).click();
+  await page.getByRole("textbox", { name: "추출 문서", exact: true }).fill("직접 수정한 이력서");
+  await page.getByRole("button", { name: "읽기·댓글", exact: true }).click();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("직접 수정한 이력서");
 });
 
 test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보완과 새 항목 추가를 함께 적용한다", async ({ page }) => {
