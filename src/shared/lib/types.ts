@@ -1,4 +1,5 @@
 export type SkillName =
+  | "review-document"
   | "resume-to-json"
   | "company-to-json"
   | "generate-intro"

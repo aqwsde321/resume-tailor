@@ -29,7 +29,7 @@ export const ReviewDocumentSchema = z.object({
   }).strict(),
   text: z.string().max(500000),
   annotations: z.array(AnnotationSchema).max(500),
-  proposal: z.object({ sourceText: z.string(), changes: z.array(DocumentChangeSchema) }).strict().nullable(),
+  proposal: z.object({ sourceText: z.string(), changes: z.array(DocumentChangeSchema), unresolved: z.array(z.object({ commentId: z.string(), message: z.string() }).strict()).default([]) }).strict().nullable(),
   history: z.array(z.object({ text: z.string(), annotationIds: z.array(Id), createdAt: Timestamp }).strict()),
   updatedAt: Timestamp,
 }).strict();

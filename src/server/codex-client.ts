@@ -8,6 +8,7 @@ import type { AgentRunOptions, SkillName, StreamLogPayload } from "@/shared/lib/
 type JsonSchema = Record<string, unknown>;
 
 const SKILL_LABEL: Record<SkillName, string> = {
+  "review-document": "문서 수정 요청 반영",
   "resume-to-json": "이력서 정리",
   "company-to-json": "공고 정리",
   "generate-intro": "소개글 만들기",
