@@ -11,14 +11,14 @@ export default function SettingsPage() {
   const [direct, setDirect] = useState(false); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const [restore, setRestore] = useState<File | null>(null); const [confirmed, setConfirmed] = useState(false);
   if (!workspace) return null;
-  return <><h1>설정</h1>
-    <section className="card"><h2>AI 실행 설정</h2>
+  return <div className="studio-settings"><header className="studio-page-heading"><div><h1>설정</h1><p>AI 실행 방식과 소중한 작업 자료를 관리하세요.</p></div><span className="studio-state-badge">이 컴퓨터에 저장</span></header>
+    <section className="card studio-settings-section"><h2>AI 실행 설정</h2>
       <label>모델 선택<select value={direct || workspace.settings.model ? "direct" : "default"} onChange={(event) => { setDirect(event.target.value === "direct"); if (event.target.value === "default") update((previous) => ({ ...previous, settings: { ...previous.settings, model: "" } })); }}><option value="default">Codex 기본 모델 사용</option><option value="direct">모델 직접 지정</option></select></label>
-      {(direct || workspace.settings.model) && <label>모델 ID<input value={workspace.settings.model} onChange={(event) => update((previous) => ({ ...previous, settings: { ...previous.settings, model: event.target.value } }))} maxLength={120} placeholder="사용 가능한 모델 ID 입력" /></label>}
+      {(direct || workspace.settings.model) && <label>모델 ID<input value={workspace.settings.model} onChange={(event) => update((previous) => ({ ...previous, settings: { ...previous.settings, model: event.target.value } }))} maxLength={120} name="model-id" autoComplete="off" spellCheck={false} placeholder="사용 가능한 모델 ID 입력…" /></label>}
       <p>지정한 모델은 이력서·공고 정리, 댓글 반영, 경험 보완과 맞춤 생성에 공통 적용합니다. 사용할 수 없는 모델은 실행 시 오류로 알려 줍니다.</p>
       <label>생각 깊이<select value={workspace.settings.modelReasoningEffort} onChange={(event) => { const value = event.target.value; if (isModelReasoningEffort(value)) update((previous) => ({ ...previous, settings: { ...previous.settings, modelReasoningEffort: value } })); }}>{MODEL_REASONING_EFFORT_VALUES.map((value) => <option key={value} value={value}>{MODEL_REASONING_EFFORT_LABELS[value]}</option>)}</select></label>
     </section>
-    <section className="card"><h2>로컬 저장·백업</h2><p>자료는 실행 중인 프로젝트의 private-data/workspace 폴더에 저장됩니다. Git 추적에서 제외됩니다.</p>
+    <section className="card studio-settings-section"><h2>로컬 저장·백업</h2><p>자료는 실행 중인 프로젝트의 private-data/workspace 폴더에 저장됩니다. Git 추적에서 제외됩니다.</p>
       <a className="nav-btn" href="/api/workspace/backup" download>자료와 원본 파일 백업</a>
       <label>복원할 백업 파일<input type="file" accept=".json" onChange={(event) => setRestore(event.target.files?.[0] ?? null)} /></label>
       <label><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />백업 내용으로 현재 작업 전체를 복원합니다. 복원 전 데이터도 로컬에 보관됩니다.</label>
@@ -28,7 +28,7 @@ export default function SettingsPage() {
         catch (error) { setError((error as Error).message); } finally { setBusy(false); }
       }}>백업 복원</button>
     </section>
-    <section className="card"><h2>이전 브라우저 자료 가져오기</h2><p>이전에 저장한 이력서·지원 기록과 PDF를 새 회사별 작업으로 가져옵니다. 이전 브라우저 데이터는 삭제하지 않습니다.</p>
+    <section className="card studio-settings-section"><h2>이전 브라우저 자료 가져오기</h2><p>이전에 저장한 이력서·지원 기록과 PDF를 새 회사별 작업으로 가져옵니다. 이전 브라우저 데이터는 삭제하지 않습니다.</p>
       <button disabled={busy || Boolean(workspace.legacyBackup) || status !== "저장됨"} onClick={async () => {
         setBusy(true); setError("");
         try {
@@ -51,5 +51,5 @@ export default function SettingsPage() {
       <p><Link href="/applications">이전 지원 기록·PDF 확인</Link></p>
     </section>
     {error && <p role="status">{error}</p>}
-  </>;
+  </div>;
 }
