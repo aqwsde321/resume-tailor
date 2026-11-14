@@ -9,6 +9,8 @@ export function DocumentEditor({ document, settings, onChange }: {
   document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void;
 }) {
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const readRef = useRef<HTMLDivElement>(null);
+  const [editing, setEditing] = useState(false);
   const beforeEdit = useRef(document.text);
   const [anchor, setAnchor] = useState<Annotation["anchor"]>({ type: "document" });
   const [instruction, setInstruction] = useState("");
@@ -17,7 +19,17 @@ export function DocumentEditor({ document, settings, onChange }: {
   const [error, setError] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
-  const update = (patch: Partial<ReviewDocument>) => onChange({ ...document, ...patch, updatedAt: new Date().toISOString() });
+  const update = (patch: Partial<ReviewDocument>) => {
+    const annotations = patch.annotations ?? document.annotations;
+    if (patch.text !== undefined) patch.annotations = annotations.map((comment) => {
+      const anchor = comment.anchor;
+      if (anchor.type !== "text" || patch.text!.slice(anchor.start, anchor.end) === anchor.quote) return comment;
+      const start = patch.text!.indexOf(anchor.quote);
+      if (start < 0 || patch.text!.indexOf(anchor.quote, start + 1) >= 0) return comment;
+      return { ...comment, anchor: { ...anchor, start, end: start + anchor.quote.length } };
+    });
+    onChange({ ...document, ...patch, updatedAt: new Date().toISOString() });
+  };
   const pending = document.annotations.filter((comment) => comment.status === "pending");
   const page = document.source.pages.find((item) => item.page === pageNumber);
   function point(event: PointerEvent<HTMLDivElement>) {
@@ -25,13 +37,19 @@ export function DocumentEditor({ document, settings, onChange }: {
     return { x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)), y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)) };
   }
   const region = anchor.type === "region" && anchor.page === pageNumber ? anchor : null;
+  const highlights = pending.flatMap((comment) => comment.anchor.type === "text" && document.text.slice(comment.anchor.start, comment.anchor.end) === comment.anchor.quote ? [{ ...comment.anchor, instruction: comment.instruction }] : []);
+  const boundaries = [...new Set([0, document.text.length, ...highlights.flatMap((item) => [item.start, item.end])])].sort((a, b) => a - b);
   return <section className="card document-review">
     <header><h2>추출 문서 검토</h2><p>문장을 드래그해 댓글을 달거나 직접 고치세요. 수정 요청을 모아서 한 번에 반영할 수 있습니다.</p></header>
+    {document.warnings?.map((warning, index) => <p role="status" key={index}>{warning}</p>)}
     <details><summary>원본 확인</summary>
       {document.source.url && <a href={document.source.url} target="_blank" rel="noreferrer">원본 URL 열기</a>}
       {document.source.attachmentId && <a href={`/api/workspace/attachment/${document.source.attachmentId}`} target="_blank" rel="noreferrer">원본 파일 열기</a>}
       {document.source.pages.length > 0 && <label>페이지<select value={pageNumber} onChange={(event) => setPageNumber(Number(event.target.value))}>{document.source.pages.map((item) => <option value={item.page} key={item.page}>{item.page}페이지 · {item.method === "ocr" ? "OCR" : "텍스트"}</option>)}</select></label>}
-      {page?.imageId ? <div className="source-region" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = point(event); }} onPointerUp={(event) => {
+      {page?.imageId ? <div className="source-region" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = point(event); }} onPointerMove={(event) => {
+        const start = dragStart.current; if (!start) return; const end = point(event);
+        if (Math.abs(end.x - start.x) > 0.005 && Math.abs(end.y - start.y) > 0.005) setAnchor({ type: "region", page: pageNumber, x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) });
+      }} onPointerUp={(event) => {
         const start = dragStart.current; dragStart.current = null; if (!start) return;
         const end = point(event); const width = Math.abs(end.x - start.x); const height = Math.abs(end.y - start.y);
         if (width > 0.005 && height > 0.005) setAnchor({ type: "region", page: pageNumber, x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width, height });
@@ -43,12 +61,24 @@ export function DocumentEditor({ document, settings, onChange }: {
       </div> : <pre className="source-original">{document.source.originalText}</pre>}
     </details>
     <div className="review-columns">
-      <div><label>추출 문서<textarea ref={textRef} className="review-text" value={document.text} disabled={busy} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
+      <div><div><button onClick={() => setEditing(false)}>읽기·댓글</button><button onClick={() => setEditing(true)}>직접 편집</button></div>
+        {!editing && <div ref={readRef} className="review-document" role="region" aria-label="추출 문서" onMouseUp={() => {
+          const selection = window.getSelection(); if (!selection?.rangeCount || selection.isCollapsed || !readRef.current) return;
+          const range = selection.getRangeAt(0); if (!readRef.current.contains(range.commonAncestorContainer)) return;
+          const prefix = range.cloneRange(); prefix.selectNodeContents(readRef.current); prefix.setEnd(range.startContainer, range.startOffset);
+          const start = prefix.toString().length; const quote = range.toString();
+          if (document.text.slice(start, start + quote.length) === quote) setAnchor({ type: "text", start, end: start + quote.length, quote });
+        }}>{boundaries.slice(0, -1).map((start, index) => {
+          const end = boundaries[index + 1]; const comments = highlights.filter((item) => item.start <= start && item.end >= end);
+          return comments.length ? <mark key={start} title={comments.map((item) => item.instruction).join("\n")}>{document.text.slice(start, end)}</mark> : <span key={start}>{document.text.slice(start, end)}</span>;
+        })}</div>}
+        {editing && <label>추출 문서<textarea ref={textRef} className="review-text" value={document.text} disabled={busy} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
         if (beforeEdit.current !== document.text) update({ history: [...document.history, { text: beforeEdit.current, annotationIds: [], createdAt: new Date().toISOString() }] });
       }} onSelect={(event) => {
         const { selectionStart: start, selectionEnd: end } = event.currentTarget;
         if (start !== end) setAnchor({ type: "text", start, end, quote: document.text.slice(start, end) });
-      }} onChange={(event) => { update({ text: event.target.value, proposal: null }); setAnchor({ type: "document" }); }} /></label></div>
+      }} onChange={(event) => { update({ text: event.target.value, proposal: null }); setAnchor({ type: "document" }); }} /></label>}
+      </div>
       <aside aria-label="수정 댓글">
         <button type="button" onClick={() => setAnchor({ type: "document" })}>문서 전체에 댓글</button>
         <p>{anchor.type === "text" ? `선택: ${anchor.quote}` : anchor.type === "region" ? `원본 ${anchor.page}페이지 선택 영역` : "문서 전체"}</p>
@@ -57,9 +87,10 @@ export function DocumentEditor({ document, settings, onChange }: {
           update({ annotations: [...document.annotations, { id: crypto.randomUUID(), instruction: instruction.trim(), anchor, status: "pending", createdAt: new Date().toISOString() }], proposal: null }); setInstruction("");
         }}>댓글 추가</button>
         {pending.map((comment) => <article className="review-comment" key={comment.id}>
-          <button onClick={() => { setAnchor(comment.anchor); if (comment.anchor.type === "text") { textRef.current?.focus(); textRef.current?.setSelectionRange(comment.anchor.start, comment.anchor.end); } }}>{comment.anchor.type === "text" ? comment.anchor.quote : comment.anchor.type === "region" ? `${comment.anchor.page}페이지 영역` : "문서 전체"}</button>
+          <button onClick={() => { setAnchor(comment.anchor); if (comment.anchor.type === "region") setPageNumber(comment.anchor.page); if (comment.anchor.type === "text") { readRef.current?.scrollIntoView({ block: "center" }); textRef.current?.focus(); textRef.current?.setSelectionRange(comment.anchor.start, comment.anchor.end); } }}>{comment.anchor.type === "text" ? comment.anchor.quote : comment.anchor.type === "region" ? `${comment.anchor.page}페이지 영역` : "문서 전체"}</button>
           <label>댓글 내용<textarea value={comment.instruction} disabled={busy} maxLength={4000} onChange={(event) => update({ annotations: document.annotations.map((item) => item.id === comment.id ? { ...item, instruction: event.target.value } : item), proposal: null })} /></label>
           <button disabled={busy} onClick={() => update({ annotations: document.annotations.filter((item) => item.id !== comment.id), proposal: null })}>댓글 삭제</button>
+          <button disabled={busy} onClick={() => update({ annotations: document.annotations.map((item) => item.id === comment.id ? { ...item, anchor } : item), proposal: null })}>현재 선택 영역으로 다시 연결</button>
         </article>)}
         <button className="primary" disabled={!pending.length || busy} onClick={async () => {
           setBusy(true); setError("");

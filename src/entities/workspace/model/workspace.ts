@@ -41,7 +41,7 @@ export const EnrichmentSchema = z.object({
   topic: z.string().max(2000),
   status: z.enum(["question", "draft", "done"]).default("question"),
   messages: z.array(ExperienceDiscoveryMessageSchema),
-  drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
+  drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, target: z.string().optional(), status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
 }).strict();
 
 export const MasterResumeSchema = z.object({

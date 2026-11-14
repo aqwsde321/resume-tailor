@@ -12,6 +12,8 @@
 .workspace-app pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .review-columns { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(250px, 1fr); gap: 24px; }
 .review-text { min-height: 65vh; font: inherit; line-height: 1.85; }
+.review-document { min-height: 65vh; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; padding: 18px; border: 1px solid #d8dce5; border-radius: 10px; background: white; }
+.review-document mark { background: #fff0ad; border-bottom: 2px solid #cf971d; }
 .review-comment, .review-change { padding: 16px; margin-block: 12px; border: 1px solid #d8dce5; border-radius: 10px; background: #f8f9fc; }
 .source-original { max-height: 45vh; overflow: auto; }
 .source-region { position: relative; max-width: 700px; touch-action: none; user-select: none; }

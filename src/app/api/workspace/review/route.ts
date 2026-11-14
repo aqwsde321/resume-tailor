@@ -5,6 +5,9 @@ import { validateDocumentChanges } from "@/entities/workspace/model/document-rev
 import { AgentRunOptionsSchema } from "@/shared/lib/schemas";
 import { runSkillJson } from "@/server/codex-client";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { cropSourceRegion } from "@/server/source-region";
+import { readAttachment } from "@/server/workspace-attachments";
+import { extractTextFromImages } from "@/server/company-image-ocr";
 export const runtime = "nodejs";
 const GeneratedSchema = z.object({
   changes: z.array(z.object({ blockId: z.string(), after: z.string(), reason: z.string(), commentIds: z.array(z.string()).min(1) }).strict()).max(200),
@@ -23,6 +26,7 @@ export async function POST(request: Request) {
     const { document, agent } = await parseJsonBody(request, z.object({ document: ReviewDocumentSchema, agent: AgentRunOptionsSchema.optional() }).strict());
     const comments = document.annotations.filter((comment) => comment.status === "pending");
     if (!comments.length) throw new HttpError(400, "수정 댓글을 먼저 작성해 주세요.");
+    if (comments.some((comment) => !comment.instruction.trim())) throw new HttpError(400, "빈 댓글을 작성하거나 삭제해 주세요.");
     for (const comment of comments) {
       const anchor = comment.anchor;
       if (anchor.type === "text" && (anchor.end <= anchor.start || document.text.slice(anchor.start, anchor.end) !== anchor.quote)) {
@@ -32,7 +36,17 @@ export async function POST(request: Request) {
     }
     const blocks = [...document.text.matchAll(/[^\n]+(?:\n[^\n]+)*/g)].map((match, index) => ({ id: `block-${index}`, start: match.index!, end: match.index! + match[0].length, text: match[0] }));
     blocks.push({ id: "document", start: 0, end: document.text.length, text: document.text });
-    const generated = GeneratedSchema.parse(await runSkillJson({ skillName: "review-document", inputText: JSON.stringify({ source: document.source, blocks, comments }), outputSchema, ...agent }));
+    const commentsWithRegions = [];
+    for (const comment of comments) {
+      if (comment.anchor.type !== "region") { commentsWithRegions.push(comment); continue; }
+      const page = document.source.pages.find((item) => item.page === (comment.anchor as { page: number }).page);
+      if (!page?.imageId) throw new HttpError(400, "선택한 페이지의 원본 이미지를 찾지 못했습니다.");
+      const original = await readAttachment(page.imageId);
+      const crop = await cropSourceRegion(original.buffer, comment.anchor);
+      const selectedRegionText = (await extractTextFromImages([{ buffer: crop, contentType: "image/png" }])).join("\n");
+      commentsWithRegions.push({ ...comment, selectedRegionText, regionReadWarning: selectedRegionText ? "" : "선택 영역 OCR 결과가 없습니다. 사용자 정정 내용이 부족하면 확인 질문을 남기세요." });
+    }
+    const generated = GeneratedSchema.parse(await runSkillJson({ skillName: "review-document", inputText: JSON.stringify({ source: document.source, blocks, comments: commentsWithRegions }), outputSchema, ...agent }));
     const commentIds = new Set(comments.map((comment) => comment.id));
     const changes = generated.changes.map((change) => {
       const block = blocks.find((candidate) => candidate.id === change.blockId);

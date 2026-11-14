@@ -45,6 +45,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  return <Context.Provider value={{ workspace, update, error, reload, status: saving ? "저장 중…" : dirty ? "저장 대기" : "저장됨" }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ workspace, update, error, reload, status: error ? "저장 실패" : saving ? "저장 중…" : dirty ? "저장 대기" : "저장됨" }}>{children}</Context.Provider>;
 }
 export function useWorkspace() { const value = useContext(Context); if (!value) throw new Error("WorkspaceProvider가 필요합니다."); return value; }

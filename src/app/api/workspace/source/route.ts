@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       if (!text.trim()) throw new HttpError(400, "자료를 입력해 주세요.");
       source = { type: "text", originalText: text, pages: [] };
     }
-    const document = ReviewDocumentSchema.parse({ id: randomUUID(), kind, title, source, text: source.originalText.replace(/\r\n?/g, "\n"), annotations: [], proposal: null, history: [], updatedAt: new Date().toISOString() });
+    const document = ReviewDocumentSchema.parse({ id: randomUUID(), kind, title, source, warnings, text: source.originalText.replace(/\r\n?/g, "\n"), annotations: [], proposal: null, history: [], updatedAt: new Date().toISOString() });
     return NextResponse.json({ ok: true, data: { document, warnings } });
   } catch (error) { return apiErrorResponse(error); }
 }
