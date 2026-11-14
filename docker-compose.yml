@@ -13,6 +13,7 @@ services:
     tty: true
     volumes:
       - codex-home:/root/.codex
+      - ./private-data:/app/private-data
 
 volumes:
   codex-home:

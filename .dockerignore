@@ -1,4 +1,7 @@
 .git
+private-data
+.env
+.env.*
 .gitignore
 .github
 .next

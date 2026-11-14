@@ -2,5 +2,5 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  redirect("/resume" as Route);
+  redirect("/workspace/resume" as Route);
 }
