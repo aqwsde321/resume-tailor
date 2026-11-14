@@ -1,0 +1,83 @@
+import { z } from "zod";
+import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
+import { DocumentChangeSchema } from "./document-review";
+
+const Id = z.string().uuid();
+const Timestamp = z.string().datetime();
+export const AnnotationSchema = z.object({
+  id: Id,
+  instruction: z.string().trim().min(1).max(4000),
+  anchor: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("text"), start: z.number().int().nonnegative(), end: z.number().int().nonnegative(), quote: z.string() }).strict(),
+    z.object({ type: z.literal("document") }).strict(),
+    z.object({ type: z.literal("region"), page: z.number().int().positive(), x: z.number().min(0).max(1), y: z.number().min(0).max(1), width: z.number().positive().max(1), height: z.number().positive().max(1) }).strict(),
+  ]),
+  status: z.enum(["pending", "accepted", "dismissed"]),
+  createdAt: Timestamp,
+}).strict();
+
+export const ReviewDocumentSchema = z.object({
+  id: Id,
+  kind: z.enum(["resume", "job"]),
+  title: z.string().max(300),
+  source: z.object({
+    type: z.enum(["text", "markdown", "url", "pdf", "image"]),
+    url: z.string().url().optional(),
+    attachmentId: Id.optional(),
+    originalText: z.string().max(500000),
+    pages: z.array(z.object({ page: z.number().int().positive(), text: z.string(), method: z.enum(["text", "ocr"]) }).strict()).default([]),
+  }).strict(),
+  text: z.string().max(500000),
+  annotations: z.array(AnnotationSchema).max(500),
+  proposal: z.object({ sourceText: z.string(), changes: z.array(DocumentChangeSchema) }).strict().nullable(),
+  history: z.array(z.object({ text: z.string(), annotationIds: z.array(Id), createdAt: Timestamp }).strict()),
+  updatedAt: Timestamp,
+}).strict();
+
+export const EnrichmentSchema = z.object({
+  id: Id,
+  topic: z.string().max(2000),
+  messages: z.array(ExperienceDiscoveryMessageSchema),
+  drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
+}).strict();
+
+export const MasterResumeSchema = z.object({
+  id: Id,
+  version: z.number().int().positive(),
+  document: ReviewDocumentSchema,
+  resume: ResumeSchema.nullable(),
+  enrichment: z.array(EnrichmentSchema),
+  updatedAt: Timestamp,
+}).strict();
+
+export const CompanyWorkSchema = z.object({
+  id: Id,
+  title: z.string().max(300),
+  document: ReviewDocumentSchema,
+  company: CompanySchema.nullable(),
+  sourceResumeVersion: z.number().int().positive().nullable(),
+  sourceResume: ResumeSchema.nullable(),
+  resume: ResumeSchema.nullable(),
+  intro: IntroSchema.nullable(),
+  enrichment: z.array(EnrichmentSchema),
+  versions: z.array(z.object({ id: Id, resume: ResumeSchema, intro: IntroSchema.nullable(), createdAt: Timestamp }).strict()),
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+}).strict();
+
+export const WorkspaceSchema = z.object({
+  formatVersion: z.literal(1),
+  revision: z.number().int().nonnegative(),
+  master: MasterResumeSchema.nullable(),
+  works: z.array(CompanyWorkSchema),
+  settings: z.object({ model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema }).strict(),
+  // 기존 브라우저 데이터는 마이그레이션 후에도 원형을 보존한다.
+  legacyBackup: z.record(z.string(), z.unknown()).nullable(),
+}).strict();
+export type Workspace = z.infer<typeof WorkspaceSchema>;
+export type ReviewDocument = z.infer<typeof ReviewDocumentSchema>;
+export type Annotation = z.infer<typeof AnnotationSchema>;
+export type CompanyWork = z.infer<typeof CompanyWorkSchema>;
+export function createEmptyWorkspace(): Workspace {
+  return { formatVersion: 1, revision: 0, master: null, works: [], settings: { model: "", modelReasoningEffort: "medium" }, legacyBackup: null };
+}
