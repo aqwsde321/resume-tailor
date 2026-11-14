@@ -15,6 +15,9 @@ export function mergeTailoringSelection(current: Resume, source: Resume, plan: R
     return result;
   }
   return ResumeSchema.parse({ ...current,
+    techStack: selected.includes("skills") ? plan.skillIds.flatMap((id) => source.techStack[Number(id.slice(6)) - 1] ?? []) : current.techStack,
+    pdfHighlights: selected.includes("highlights") ? plan.highlightIds.flatMap((id) => (source.pdfHighlights.length ? source.pdfHighlights : source.achievements)[Number(id.slice(10)) - 1] ?? []) : current.pdfHighlights,
+    pdfStrengths: selected.includes("strengths") ? plan.strengthIds.flatMap((id) => (source.pdfStrengths.length ? source.pdfStrengths : source.strengths)[Number(id.slice(9)) - 1] ?? []) : current.pdfStrengths,
     headline: selected.includes("headline") ? plan.headline.text : current.headline,
     summary: selected.includes("summary") ? plan.summary.text : current.summary,
     experience: merge<ResumeExperienceItem>(current.experience, source.experience, plan.experience, "experience", (item) => [item.company, item.role, item.period].join("\u0000")),

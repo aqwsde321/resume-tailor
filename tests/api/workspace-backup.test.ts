@@ -21,7 +21,7 @@ describe("workspace backup", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     const document = newTextDocument("resume", "원본", "내용"); document.source.attachmentId = id;
     const workspace = { ...createEmptyWorkspace(), master: { id, version: 1, document, resume: null, enrichment: [], updatedAt: new Date().toISOString() } };
-    const response = await POST(new Request("http://localhost/api/workspace/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format: "resume-workspace-backup-v1", workspace, attachments: [] }) }));
+    const response = await POST(new Request("http://localhost/api/workspace/backup", { method: "POST", headers: { "Content-Type": "application/json", "If-Match": "0" }, body: JSON.stringify({ format: "resume-workspace-backup-v1", workspace, attachments: [] }) }));
     expect(response.status).toBe(400);
     expect(mocks.save).not.toHaveBeenCalled(); expect(saveAttachment).not.toHaveBeenCalled();
   });

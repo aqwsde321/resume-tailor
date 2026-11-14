@@ -24,7 +24,7 @@ export default function SettingsPage() {
       <label><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />백업 내용으로 현재 작업 전체를 복원합니다. 복원 전 데이터도 로컬에 보관됩니다.</label>
       <button disabled={busy || !restore || !confirmed || status !== "저장됨"} onClick={async () => {
         setBusy(true); setError("");
-        try { if (restore!.size > 150 * 1024 * 1024) throw new Error("백업은 150MB 이하만 가져올 수 있습니다."); await workspaceRequest("/api/workspace/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: await restore!.text() }); await reload(); setConfirmed(false); }
+        try { if (restore!.size > 150 * 1024 * 1024) throw new Error("백업은 150MB 이하만 가져올 수 있습니다."); await workspaceRequest("/api/workspace/backup", { method: "POST", headers: { "Content-Type": "application/json", "If-Match": String(workspace.revision) }, body: await restore!.text() }); await reload(); setConfirmed(false); }
         catch (error) { setError((error as Error).message); } finally { setBusy(false); }
       }}>백업 복원</button>
     </section>
@@ -45,7 +45,7 @@ export default function SettingsPage() {
               result.workspace.works = result.workspace.works.map((work) => work.id === mapping.workId ? { ...work, artifacts: [{ id: artifact.id, name: "이전 제출 이력서.pdf", createdAt: work.createdAt }] } : work);
             } catch { warnings.push("일부 이전 PDF를 가져오지 못했습니다. 이전 지원 기록에서 확인해 주세요."); }
           }
-          update(() => result.workspace); setError(warnings.join(" ") || "이전 자료를 가져왔습니다.");
+          update((previous) => { if (previous !== workspace) throw new Error("가져오는 동안 작업이 변경됐습니다. 이전 자료 가져오기를 다시 시도해 주세요."); return result.workspace; }); setError(warnings.join(" ") || "이전 자료를 가져왔습니다.");
         } catch (error) { setError((error as Error).message); } finally { setBusy(false); }
       }}>{workspace.legacyBackup ? "이전 자료 가져오기 완료" : "이전 자료 가져오기"}</button>
       <p><Link href="/applications">이전 지원 기록·PDF 확인</Link></p>

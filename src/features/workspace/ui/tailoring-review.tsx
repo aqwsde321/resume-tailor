@@ -14,6 +14,9 @@ export function TailoringReview({ work, onApply, onDismiss }: { work: CompanyWor
   const rows = [
     { id: "headline", label: "한 줄 소개", before: source.headline, after: review.plan.headline.text, evidenceIds: review.plan.headline.evidenceIds },
     { id: "summary", label: "소개", before: source.summary, after: review.plan.summary.text, evidenceIds: review.plan.summary.evidenceIds },
+    { id: "skills", label: "강조할 기술", before: source.techStack.join("\n"), after: review.resume.techStack.join("\n"), evidenceIds: review.plan.skillIds },
+    { id: "highlights", label: "강조할 성과", before: (source.pdfHighlights.length ? source.pdfHighlights : source.achievements).join("\n"), after: review.resume.pdfHighlights.join("\n"), evidenceIds: review.plan.highlightIds },
+    { id: "strengths", label: "강조할 강점", before: (source.pdfStrengths.length ? source.pdfStrengths : source.strengths).join("\n"), after: review.resume.pdfStrengths.join("\n"), evidenceIds: review.plan.strengthIds },
     ...review.plan.experience.map((item) => ({ id: item.sourceId, label: source.experience[Number(item.sourceId.split("-")[1]) - 1]?.company ?? "경력", before: source.experience[Number(item.sourceId.split("-")[1]) - 1]?.description ?? "", after: item.description, evidenceIds: item.evidenceIds })),
     ...review.plan.projects.map((item) => ({ id: item.sourceId, label: source.projects[Number(item.sourceId.split("-")[1]) - 1]?.name ?? "프로젝트", before: source.projects[Number(item.sourceId.split("-")[1]) - 1]?.description ?? "", after: item.description, evidenceIds: item.evidenceIds })),
   ];

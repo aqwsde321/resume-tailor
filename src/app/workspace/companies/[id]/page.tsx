@@ -14,18 +14,23 @@ import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { postSseJson } from "@/shared/lib/stream-client";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 import type { ResumeTailoringResult } from "@/entities/resume/model/resume-tailoring";
-import { addDiscoveredExperienceToResume } from "@/entities/intro/model/experience-discovery";
+import { applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
 import { WorkExport } from "@/features/workspace/ui/work-export";
 
 export default function CompanyWorkPage() {
   const { id } = useParams<{ id: string }>(); const { workspace, update } = useWorkspace();
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [candidate, setCandidate] = useState<{ company: Company; sourceText: string } | null>(null);
+  const [editedCandidate, setEditedCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
   if (!workspace) return null;
   const work = workspace.works.find((item) => item.id === id);
   if (!work) return <><p>작업을 찾지 못했습니다.</p><Link href="/workspace/companies">목록으로</Link></>;
   const change = (updater: (work: CompanyWork) => CompanyWork) => update((previous) => ({ ...previous, works: previous.works.map((item) => item.id === id ? { ...updater(item), updatedAt: new Date().toISOString() } : item) }));
-  const setResume = (resume: Resume) => change((current) => ({ ...current, resume: ResumeSchema.parse(resume), resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null }));
+  const setResume = (resume: Resume) => change((current) => {
+    const document = current.resumeDocument ?? newTextDocument("resume", current.title, resumeToMarkdown(current.resume!));
+    return { ...current, resume: ResumeSchema.parse(resume), resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null,
+      versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] };
+  });
   const agent = toAgentRunOptions(workspace.settings);
   async function task(action: () => Promise<void>) { setBusy(true); setError(""); try { await action(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); } }
   const companyCurrent = work.company && work.companySourceText === work.document.text;
@@ -58,14 +63,15 @@ export default function CompanyWorkPage() {
         <section className="card"><h2>회사별 편집본</h2><pre>{resumeToMarkdown(work.resume)}</pre>
           <button disabled={busy} onClick={() => change((current) => ({ ...current, versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 버전 보관</button>
         </section>
-        <details><summary>이력서 직접 수정·추가 댓글</summary><DocumentEditor document={work.resumeDocument ?? newTextDocument("resume", work.title, resumeToMarkdown(work.resume))} settings={workspace.settings} onChange={(resumeDocument) => change((current) => ({ ...current, resumeDocument }))} />
+        <details><summary>이력서 직접 수정·추가 댓글</summary><DocumentEditor document={work.resumeDocument ?? newTextDocument("resume", work.title, resumeToMarkdown(work.resume))} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} />
           <button disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => void task(async () => {
             const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: work.resumeDocument!.text, agent }));
-            setResume(resume);
+            setEditedCandidate({ resume, sourceText: work.resumeDocument!.text });
           })}>검토한 문서를 편집본에 반영</button>
+          {editedCandidate && <section><h3>편집본 반영 전 확인</h3><pre>{resumeToMarkdown(editedCandidate.resume)}</pre><button disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}
         </details>
         <EnrichmentPanel resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings} onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
-          const resume = ResumeSchema.parse(drafts.reduce<Resume>((value, item) => addDiscoveredExperienceToResume(value, item.draft), current.resume!));
+          const resume = ResumeSchema.parse(applyEnrichmentDrafts(current.resume!, drafts));
           return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) };
         })} />
         <details><summary>소개글 · 선택 사항</summary><p>소개글 없이 이력서를 내보낼 수 있습니다.</p><button disabled={busy || !companyCurrent} onClick={() => void task(async () => {

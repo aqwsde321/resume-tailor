@@ -40,12 +40,15 @@ export async function POST(request: Request) {
     if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) throw new HttpError(403, "이 앱에서 복원해 주세요.");
     if (Number(request.headers.get("content-length") ?? 0) > 150 * 1024 * 1024) throw new HttpError(413, "백업 파일은 150MB 이하만 가져올 수 있습니다.");
     const bundle = await parseJsonBody(request, BundleSchema);
+    const expectedRevision = Number(request.headers.get("if-match"));
+    if (!request.headers.has("if-match") || !Number.isInteger(expectedRevision) || expectedRevision < 0) throw new HttpError(400, "현재 작업의 저장 버전이 필요합니다.");
     const attachedIds = new Set(bundle.attachments.map((attachment) => attachment.id));
     if (attachedIds.size !== bundle.attachments.length || referencedAttachments(bundle.workspace).some((id) => !attachedIds.has(id))) throw new HttpError(400, "백업의 원본 파일이나 출력물이 누락됐습니다.");
     const map = new Map<string, string>();
     for (const attachment of bundle.attachments) map.set(attachment.id, await saveAttachment(Buffer.from(attachment.data, "base64"), attachment.name, attachment.mime));
     const imported = WorkspaceSchema.parse(JSON.parse(JSON.stringify(bundle.workspace, (_key, value) => typeof value === "string" ? map.get(value) ?? value : value)));
     const current = await store.read();
+    if (current.revision !== expectedRevision) throw new HttpError(409, "다른 창에서 작업이 변경됐습니다. 다시 불러온 뒤 복원해 주세요.");
     const backupDirectory = path.join(WORKSPACE_DIRECTORY, "before-restore");
     await mkdir(backupDirectory, { recursive: true, mode: 0o700 });
     await writeFile(path.join(backupDirectory, `${randomUUID()}.json`), JSON.stringify(current, null, 2), { mode: 0o600, flag: "wx" });

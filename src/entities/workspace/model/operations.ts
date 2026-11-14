@@ -21,6 +21,13 @@ export function createCompanyWork(master: NonNullable<Workspace["master"]>, docu
 export function refreshCompanySource(work: CompanyWork, master: NonNullable<Workspace["master"]>): CompanyWork {
   return { ...work, sourceResumeVersion: master.version, sourceResume: structuredClone(master.resume), updatedAt: new Date().toISOString() };
 }
+export function sortResumeChronologically(resume: Resume): Resume {
+  const startDate = (period: string) => { const match = period.match(/(\d{4})(?:\s*[.\-/년]\s*(\d{1,2}))?/); return match ? Number(match[1]) * 100 + Number(match[2] ?? 1) : 0; };
+  return { ...resume,
+    experience: [...resume.experience].sort((a, b) => startDate(b.period) - startDate(a.period)),
+    projects: [...resume.projects].sort((a, b) => startDate(b.period || b.subtitle) - startDate(a.period || a.subtitle)),
+  };
+}
 
 export function resumeToMarkdown(resume: Resume): string {
   const list = (items: string[]) => items.map((item) => `- ${item}`).join("\n");

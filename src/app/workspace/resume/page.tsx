@@ -5,14 +5,15 @@ import { SourceInput } from "@/features/workspace/ui/source-input";
 import { DocumentEditor } from "@/features/workspace/ui/document-editor";
 import { EnrichmentPanel } from "@/features/workspace/ui/enrichment-panel";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
-import { publishMasterResume, resumeToMarkdown } from "@/entities/workspace/model/operations";
-import { addDiscoveredExperienceToResume } from "@/entities/intro/model/experience-discovery";
+import { publishMasterResume, resumeToMarkdown, sortResumeChronologically } from "@/entities/workspace/model/operations";
+import { applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
 import type { Resume } from "@/shared/lib/types";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 export default function MyResumePage() {
   const { workspace, update } = useWorkspace();
   const [candidate, setCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [latestFirst, setLatestFirst] = useState(true);
   if (!workspace) return null;
   const master = workspace.master;
   return <>
@@ -22,9 +23,10 @@ export default function MyResumePage() {
     }} /></details>
     {master && <>
       <DocumentEditor document={master.document} settings={workspace.settings} onChange={(document) => { update((previous) => ({ ...previous, master: { ...previous.master!, document } })); setCandidate(null); }} />
+      <label><input type="checkbox" checked={latestFirst} onChange={(event) => setLatestFirst(event.target.checked)} />경력·프로젝트를 시작일 최신순으로 정리</label>
       <button className="primary" disabled={busy || !master.document.text.trim() || Boolean(master.document.proposal) || master.document.annotations.some((item) => item.status === "pending")} onClick={async () => {
         setBusy(true); setError("");
-        try { setCandidate({ resume: await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: master.document.text, agent: toAgentRunOptions(workspace.settings) })), sourceText: master.document.text }); }
+        try { const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: master.document.text, agent: toAgentRunOptions(workspace.settings) })); setCandidate({ resume: latestFirst ? sortResumeChronologically(resume) : resume, sourceText: master.document.text }); }
         catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
       }}>{busy ? "이력서 항목 정리 중…" : "검토한 내용으로 이력서 정리"}</button>
@@ -34,9 +36,8 @@ export default function MyResumePage() {
       {master.resume && <><details><summary>확정 이력서 · 버전 {master.version}</summary><pre>{resumeToMarkdown(master.resume)}</pre></details>
         <EnrichmentPanel resume={master.resume} sessions={master.enrichment} settings={workspace.settings} onChange={(enrichment) => update((previous) => ({ ...previous, master: { ...previous.master!, enrichment } }))} onApply={(drafts) => update((previous) => {
           const current = previous.master!;
-          const resume = drafts.reduce<Resume>((value, item) => addDiscoveredExperienceToResume(value, item.draft), current.resume!);
-          const additions = drafts.map((item) => `### ${item.draft.title} | ${item.draft.organization} | ${item.draft.role} | ${item.draft.period}\n\n${item.draft.description}\n\n기술: ${item.draft.techStack.join(", ")}`).join("\n\n");
-          const document = { ...current.document, text: `${current.document.text}\n\n## 질문으로 보완한 경험\n\n${additions}`, proposal: null };
+          const resume = applyEnrichmentDrafts(current.resume!, drafts);
+          const document = { ...current.document, text: resumeToMarkdown(resume), proposal: null, history: [...current.document.history, { text: current.document.text, annotationIds: [], createdAt: new Date().toISOString() }] };
           const next = publishMasterResume(previous, document, resume);
           return { ...next, master: { ...next.master!, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) } };
         })} />
