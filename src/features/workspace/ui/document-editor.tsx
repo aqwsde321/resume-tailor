@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@astryxdesign/core/Button";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
 import type { Annotation, ReviewDocument, Workspace } from "@/entities/workspace/model/workspace";
 import { acceptDocumentChanges } from "@/entities/workspace/model/document-review";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
@@ -189,13 +191,13 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
       </aside>}
     </div>
     {error && <p role="alert">{error}</p>}
-    {document.proposal && <section aria-label="변경 검토"><h3>변경 내용 확인</h3>
-      {document.proposal.changes.map((change) => <article className="review-change" key={change.id}>
-        <label><input type="checkbox" checked={selected.includes(change.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, change.id] : selected.filter((id) => id !== change.id))} />이 변경 수락</label>
-        <p>{change.reason}</p><div className="review-columns"><pre>{change.before}</pre><pre>{change.after}</pre></div>
+    {document.proposal && <section className="document-proposal" aria-label="변경 검토"><header className="document-proposal-heading"><h3>변경 내용 확인</h3><p>수정 제안 {document.proposal.changes.length}개를 검토하고 반영할 내용을 선택해 주세요.</p></header>
+      {document.proposal.changes.map((change) => <article className="document-proposal-change" data-selected={selected.includes(change.id)} key={change.id}>
+        <header><CheckboxInput label="이 변경 수락" value={selected.includes(change.id)} onChange={(checked) => setSelected(checked ? [...selected, change.id] : selected.filter((id) => id !== change.id))} /><span>연결된 댓글 {change.commentIds.length}개</span></header>
+        <p className="document-proposal-reason">{change.reason}</p><div className="document-proposal-columns"><section aria-label="반영 전"><h4>반영 전</h4><p>{change.before}</p></section><section aria-label="반영 후"><h4>반영 후</h4><p>{change.after}</p></section></div>
       </article>)}
       {document.proposal.unresolved.map((item) => <p key={item.commentId}>추가 확인: {item.message}</p>)}
-      <button className="primary" disabled={!selected.length} onClick={() => {
+      <footer className="document-proposal-footer"><p aria-live="polite">{selected.length} / {document.proposal.changes.length}개 변경 선택</p><div><Button label="제안 닫기" variant="secondary" onClick={() => update({ proposal: null })} /><Button label="선택한 변경 적용" variant="primary" isDisabled={!selected.length} onClick={() => {
         try {
           const proposal = document.proposal!;
           if (proposal.sourceText !== document.text) throw new Error("문서가 바뀌었습니다. 다시 제안받아 주세요.");
@@ -205,8 +207,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
           setAnchor({ type: "document" }); setActiveComment(null);
           if (pending.length === acceptedComments.length) setListOpen(false);
         } catch (error) { setError((error as Error).message); }
-      }}>선택한 변경 적용</button>
-      <button onClick={() => update({ proposal: null })}>제안 닫기</button>
+      }} /></div></footer>
     </section>}
     <button disabled={!document.history.length || busy} onClick={() => {
       const last = document.history[document.history.length - 1];

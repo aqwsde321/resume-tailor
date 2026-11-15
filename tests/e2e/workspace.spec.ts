@@ -275,6 +275,7 @@ test("긴 원문 비교는 양쪽 패널 높이를 맞추고 내부에서 스크
   await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/workspace/resume");
+  expect((await page.locator(".studio-document-column").boundingBox())!.height).toBeLessThanOrEqual(760);
   await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
   const original = await page.locator(".review-original-panel").boundingBox();
   const review = await page.locator(".studio-document-column").boundingBox();
