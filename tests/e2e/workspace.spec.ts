@@ -1,3 +1,4 @@
+import { mockModelCatalog } from "./helpers/model-catalog";
 import { test, expect, type Page } from "@playwright/test";
 import { createEmptyWorkspace, type Workspace } from "../../src/entities/workspace/model/workspace";
 import { newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
@@ -188,9 +189,10 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
     const plan = { headline: { text: "맞춤 제목", evidenceIds: ["summary"] }, summary: { text: "맞춤 소개", evidenceIds: ["summary"] }, experience: [], projects: [], requirementMatches: [], skillIds: [], highlightIds: [], strengthIds: [] };
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume: request.resume } })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
+  await mockModelCatalog(page);
   await page.goto("/workspace/settings");
-  await page.getByRole("combobox", { name: "모델 선택", exact: true }).selectOption("direct");
-  await page.getByLabel("모델 ID", { exact: true }).fill("test-model");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "test-model", exact: true }).click();
   await expect.poll(() => stored().settings.model).toBe("test-model");
   await page.getByRole("link", { name: "회사별 이력서", exact: true }).click();
   await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();

@@ -1,3 +1,4 @@
+import { mockModelCatalog } from "./helpers/model-catalog";
 import { test, expect } from "@playwright/test";
 import { createCompanyWork, newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
 import { CompanySchema, ResumeSchema } from "../../src/shared/lib/schemas";
@@ -8,6 +9,7 @@ test("처음 불러오기 실패는 저장 실패와 구분하고 다시 불러�
   await page.route("**/api/workspace", (route) => route.fulfill(fail
     ? { status: 503, json: { ok: false, error: { message: "일시적인 연결 오류" } } }
     : { json: { ok: true, data: createEmptyWorkspace() } }));
+  await mockModelCatalog(page);
   await page.goto("/workspace/settings");
   await expect(page.getByRole("heading", { name: "자료를 불러오지 못했습니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "편집 내용 복구 파일 저장" })).toHaveCount(0);
@@ -26,15 +28,17 @@ test("저장 실패 후 입력을 유지하고 최신 편집본을 다시 저장
     }
     return route.fulfill({ json: { ok: true, data: stored } });
   });
+  await mockModelCatalog(page);
   await page.goto("/workspace/settings");
-  await page.getByLabel("모델 선택").selectOption("direct");
-  await page.getByLabel("모델 ID").fill("first-model");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "first-model", exact: true }).click();
   await expect(page.getByRole("heading", { name: "편집 내용을 저장하지 못했습니다" })).toBeVisible();
-  await page.getByLabel("모델 ID").fill("latest-model");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "latest-model", exact: true }).click();
   fail = false;
   await page.getByRole("button", { name: "다시 저장", exact: true }).click();
   await expect.poll(() => stored.settings.model).toBe("latest-model");
-  await expect(page.getByLabel("모델 ID")).toHaveValue("latest-model");
+  await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("latest-model");
 });
 
 test("409 충돌은 덮어쓰지 않고 복구 파일 저장 후 명시적으로 다시 불러온다", async ({ page }) => {
@@ -48,16 +52,17 @@ test("409 충돌은 덮어쓰지 않고 복구 파일 저장 후 명시적으로
     reads += 1;
     return route.fulfill({ json: { ok: true, data: createEmptyWorkspace() } });
   });
+  await mockModelCatalog(page);
   await page.goto("/workspace/settings");
-  await page.getByLabel("모델 선택").selectOption("direct");
-  await page.getByLabel("모델 ID").fill("local-model");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "local-model", exact: true }).click();
   await expect(page.getByRole("heading", { name: "다른 창에서 자료가 변경되었습니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "다시 저장", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "서버 자료 다시 불러오기", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "서버 자료로 바꾸기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "편집본을 보관했고 서버 자료 불러오기" })).toBeDisabled();
   await page.getByRole("button", { name: "계속 편집", exact: true }).click();
-  await expect(page.getByLabel("모델 ID")).toHaveValue("local-model");
+  await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("local-model");
   expect(reads).toBe(1);
   expect(writes).toBe(1);
   const download = page.waitForEvent("download");

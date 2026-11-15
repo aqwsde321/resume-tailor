@@ -1,12 +1,14 @@
 # ResumeTailor (Local MVP)
 
-로컬에서 이력서와 채용공고 텍스트를 `@openai/codex-sdk`와 로컬 `SKILL.md` 파이프라인으로 구조화하고, 원본 근거를 확인할 수 있는 회사 맞춤 이력서와 자기소개를 PDF로 만드는 Next.js 앱입니다.
+로컬에서 이력서와 채용공고 텍스트를 Codex SDK 또는 Claude Code CLI와 로컬 `SKILL.md` 파이프라인으로 구조화하고, 원본 근거를 확인할 수 있는 회사 맞춤 이력서와 자기소개를 PDF로 만드는 Next.js 앱입니다.
 
 ## 사용 흐름
 
 - **내 이력서** (`/workspace/resume`): PDF·스캔 PDF·이미지·URL·텍스트·Markdown 등록 → 추출 자료 직접 확인 → Markdown 이력서 편집·드래그 댓글·선택형 경험 보완 → 공통 이력서 저장
 - **회사별 이력서** (`/workspace/companies`): 공고별 작업 생성 → 공고 원문 검토·확정 → 맞춤 표현별 선택 적용 → 회사별 편집·버전 보관 → PDF/Markdown 다운로드
-- **설정** (`/workspace/settings`): 기본 모델 또는 모델 ID 직접 지정, 생각 깊이, 원본 파일을 포함한 백업·복원, 이전 브라우저 자료 가져오기
+- **설정** (`/workspace/settings`): Codex·Claude Code와 모델 선택 상자, 생각 깊이, 원본 파일을 포함한 백업·복원, 이전 브라우저 자료 가져오기
+
+AI 도구별 설치·인증·모델 목록과 검증 범위는 [AI 실행 설정](docs/AI_EXECUTION_SETTINGS.md)을 참고하세요.
 
 소개글은 선택 사항입니다. 생성하지 않아도 회사별 맞춤 이력서를 편집하고 PDF를 출력할 수 있습니다. 부족한 경험은 AI 질문에 답하며 초안을 모아 검토 후 반영합니다.
 

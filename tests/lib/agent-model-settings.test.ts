@@ -10,3 +10,11 @@ describe("model settings", () => {
     expect(toAgentRunOptions(normalizeAgentSettings({ model: " ", modelReasoningEffort: "medium" }))).toEqual({ modelReasoningEffort: "medium" });
   });
 });
+
+describe("AI 제공자 설정", () => {
+  it("Claude Code 선택과 모델을 실제 실행 옵션에 전달한다", () => {
+    const settings = normalizeAgentSettings({ provider: "claude", model: "sonnet", modelReasoningEffort: "high" });
+    expect(settings).toMatchObject({ provider: "claude", model: "sonnet" });
+    expect(toAgentRunOptions(settings)).toEqual({ provider: "claude", model: "sonnet", modelReasoningEffort: "high" });
+  });
+});

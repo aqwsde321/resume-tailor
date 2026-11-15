@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
 import { formatReasoningEffortValue } from "@/shared/lib/agent-settings";
+import { runClaudeJson } from "./claude-client";
 import { buildPrompt } from "@/server/codex-prompt";
 import { HttpError } from "@/server/http";
 import { readSkillSource } from "@/server/skills";
@@ -189,6 +190,7 @@ export async function runSkillJson<T>(params: {
   skillName: SkillName;
   inputText: string;
   outputSchema: JsonSchema;
+  provider?: AgentRunOptions["provider"];
   model?: string;
   modelReasoningEffort?: AgentRunOptions["modelReasoningEffort"];
 }): Promise<T> {
@@ -202,9 +204,13 @@ export async function runSkillJson<T>(params: {
         sourcePath: source.path,
         skillSha256: source.sha256,
         promptSha256: createHash("sha256").update(prompt).digest("hex"),
-        model: params.model ?? "sdk-default",
+        provider: params.provider ?? "codex",
+        model: params.model ?? "cli-default",
         modelReasoningEffort: params.modelReasoningEffort ?? "sdk-default"
       }));
+      if (params.provider === "claude") {
+        return runClaudeJson<T>({ prompt, outputSchema: params.outputSchema, model: params.model, modelReasoningEffort: params.modelReasoningEffort });
+      }
       const thread = startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort
@@ -226,6 +232,7 @@ export async function runSkillJsonStream<T>(params: {
   outputSchema: JsonSchema;
   onLog?: (payload: StreamLogPayload) => void;
   signal?: AbortSignal;
+  provider?: AgentRunOptions["provider"];
   model?: string;
   modelReasoningEffort?: AgentRunOptions["modelReasoningEffort"];
 }): Promise<T> {
@@ -239,9 +246,16 @@ export async function runSkillJsonStream<T>(params: {
         sourcePath: source.path,
         skillSha256: source.sha256,
         promptSha256: createHash("sha256").update(prompt).digest("hex"),
-        model: params.model ?? "sdk-default",
+        provider: params.provider ?? "codex",
+        model: params.model ?? "cli-default",
         modelReasoningEffort: params.modelReasoningEffort ?? "sdk-default"
       }));
+      if (params.provider === "claude") {
+        emitLog(params.onLog, { level: "info", phase: "start", message: `${SKILL_LABEL[params.skillName]} · Claude Code 실행을 시작합니다.` });
+        const result = await runClaudeJson<T>({ prompt, outputSchema: params.outputSchema, model: params.model, modelReasoningEffort: params.modelReasoningEffort, signal: params.signal });
+        emitLog(params.onLog, { level: "success", phase: "turn", message: "Claude Code 분석을 완료했습니다." });
+        return result;
+      }
       const thread = startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort

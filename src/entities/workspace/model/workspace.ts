@@ -93,7 +93,7 @@ export const WorkspaceSchema = z.object({
   revision: z.number().int().nonnegative(),
   master: MasterResumeSchema.nullable(),
   works: z.array(CompanyWorkSchema),
-  settings: z.object({ model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema }).strict(),
+  settings: z.object({ provider: z.enum(["codex", "claude"]).optional(), model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema }).strict(),
   // 기존 브라우저 데이터는 마이그레이션 후에도 원형을 보존한다.
   legacyBackup: z.record(z.string(), z.unknown()).nullable(),
 }).strict().transform((workspace) => workspace.master?.resultDraft ? { ...workspace, master: { ...workspace.master, resultDraft: upgradeResultDraftMarkdown(workspace.master.resultDraft) } } : workspace);

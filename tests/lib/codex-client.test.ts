@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSkillJson, runSkillJsonStream } from "@/server/codex-client";
 
+const claude = vi.hoisted(() => vi.fn());
+vi.mock("@/server/claude-client", () => ({ runClaudeJson: claude }));
+
 const sdk = vi.hoisted(() => ({
   run: vi.fn(),
   runStreamed: vi.fn(),
@@ -44,6 +47,19 @@ describe("Codex prompt execution", () => {
       expect(metadata.promptSha256).toBe(createHash("sha256").update(prompt).digest("hex"));
       expect(metadata.skillSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(JSON.stringify(metadata)).not.toContain("비공개 이력서");
+    });
+  }
+});
+
+describe("AI 제공자 분기", () => {
+  for (const streaming of [false, true]) {
+    it(`${streaming ? "stream" : "sync"} 경로는 Claude 선택 시 Codex를 실행하지 않는다`, async () => {
+      claude.mockResolvedValue({ ok: true }); sdk.startThread.mockClear();
+      const params = { skillName: "company-to-json" as const, inputText: "합성 공고", outputSchema: { type: "object" }, provider: "claude" as const, model: "sonnet" };
+      const result = await (streaming ? runSkillJsonStream(params) : runSkillJson(params));
+      expect(result).toEqual({ ok: true });
+      expect(sdk.startThread).not.toHaveBeenCalled();
+      expect(claude).toHaveBeenLastCalledWith(expect.objectContaining({ model: "sonnet", outputSchema: params.outputSchema }));
     });
   }
 });

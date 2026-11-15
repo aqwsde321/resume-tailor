@@ -18,12 +18,16 @@ export type LogLevel = "info" | "success" | "error";
 export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 export type IntroTone = "balanced" | "confident" | "collaborative" | "problemSolving";
 
+export type AgentProvider = "codex" | "claude";
+
 export interface AgentSettings {
+  provider?: AgentProvider;
   model: string;
   modelReasoningEffort: ModelReasoningEffort | "";
 }
 
 export interface AgentRunOptions {
+  provider?: AgentProvider;
   model?: string;
   modelReasoningEffort?: ModelReasoningEffort;
 }

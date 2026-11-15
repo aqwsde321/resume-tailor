@@ -31,6 +31,7 @@ export function normalizeAgentSettings(raw: unknown): AgentSettings {
   const value = raw as Partial<AgentSettings>;
 
   return {
+    ...(value.provider === "claude" ? { provider: "claude" as const } : {}),
     model: typeof value.model === "string" ? value.model.trim().slice(0, 120) : "",
     modelReasoningEffort: isModelReasoningEffort(value.modelReasoningEffort)
       ? value.modelReasoningEffort
@@ -40,6 +41,7 @@ export function normalizeAgentSettings(raw: unknown): AgentSettings {
 
 export function toAgentRunOptions(settings: AgentSettings): AgentRunOptions {
   return {
+    ...(settings.provider === "claude" ? { provider: "claude" as const } : {}),
     ...(settings.model.trim() ? { model: settings.model.trim() } : {}),
     modelReasoningEffort: settings.modelReasoningEffort || "medium"
   };

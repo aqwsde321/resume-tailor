@@ -5,6 +5,7 @@ export const ModelReasoningEffortSchema = z.enum(["minimal", "low", "medium", "h
 export const IntroToneSchema = z.enum(["balanced", "confident", "collaborative", "problemSolving"]);
 export const AgentRunOptionsSchema = z
   .object({
+    provider: z.enum(["codex", "claude"]).optional(),
     model: z.string().trim().min(1).max(120).optional(),
     modelReasoningEffort: ModelReasoningEffortSchema.optional()
   })

@@ -1,0 +1,28 @@
+import { test, expect } from "@playwright/test";
+import { createEmptyWorkspace, type Workspace } from "../../src/entities/workspace/model/workspace";
+import { mockModelCatalog } from "./helpers/model-catalog";
+test("실행 도구와 모델은 선택 상자로 고르고 저장·새로고침 후에도 유지한다", async ({ page }) => {
+  let stored: Workspace = createEmptyWorkspace();
+  await mockModelCatalog(page);
+  await page.route("**/api/workspace", async (route) => {
+    if (route.request().method() === "PUT") stored = { ...route.request().postDataJSON().workspace, revision: stored.revision + 1 };
+    await route.fulfill({ json: { ok: true, data: stored } });
+  });
+  await page.goto("/workspace/settings");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "test-model", exact: true }).click();
+  await expect.poll(() => stored.settings.model).toBe("test-model");
+  await page.getByRole("combobox", { name: "AI 실행 도구", exact: true }).click();
+  await page.getByRole("option", { name: "Claude Code", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("Claude Code 기본 모델");
+  await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
+  await page.getByRole("option", { name: "Sonnet", exact: true }).click();
+  await expect.poll(() => stored.settings).toMatchObject({ provider: "claude", model: "sonnet" });
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "AI 실행 도구", exact: true })).toContainText("Claude Code");
+  await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("Sonnet");
+  await expect(page.locator("input[name=model-id]")).toHaveCount(0);
+  await page.getByRole("combobox", { name: "AI 실행 도구", exact: true }).click();
+  await page.getByRole("option", { name: "Codex", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("Codex 기본 모델");
+});
