@@ -429,19 +429,19 @@
 .resume-document-preview .resume-text-separator { position: absolute; width: 0; height: 0; overflow: hidden; font-size: 0; line-height: 0; white-space: pre; }
 .resume-document-preview .resume-document-meta { margin: 6px 0; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #626b7e; }
 .resume-document-preview > header { padding-bottom: 18px; border-bottom: 1px solid #dee2eb; }
-.resume-document-preview h3 { font-size: 21px; letter-spacing: 0; }
-.resume-document-preview h4 { color: #343b4b; font-size: 14px; margin-bottom: 10px; }
-.resume-document-preview > section { margin-top: 22px; }
+.resume-document-preview h3 { font-size: 24px; line-height: 1.4; font-weight: 700; letter-spacing: 0; }
+.resume-document-preview > section > h4 { margin: 0 0 18px; padding-bottom: 10px; border-bottom: 2px solid #596174; color: #283042; font-size: 18px; line-height: 1.5; font-weight: 700; }
+.resume-document-preview > section { margin-top: 36px; }
 .resume-document-preview .studio-preview-copy { margin: 0 0 16px; white-space: pre-wrap; font-size: 14px; line-height: 1.9; }
 .resume-studio .review-document.review-resume-preview { padding: 24px 28px; white-space: normal; }
 .review-resume-preview > .resume-document-preview { margin-bottom: 0; padding: 0; max-width: 760px; }
 .resume-result-editor > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }
 @media(max-width: 680px) { .resume-studio .review-document.review-resume-preview, .resume-result-editor > .resume-document-preview { padding: 20px 16px; } }
 
-.resume-document-preview .resume-review-entry { margin: 0; padding: 16px 0; font-size: 14px; line-height: 1.9; }
+.resume-document-preview .resume-review-entry { margin: 0; padding: 22px 0; font-size: 14px; line-height: 1.9; }
 .resume-document-preview .resume-review-entry + .resume-review-entry { border-top: 1px solid #e9ebf1; }
 .resume-document-preview .resume-review-entry:first-of-type { padding-top: 0; }
-.resume-document-preview .resume-review-entry h5 { margin: 0 0 6px; font-size: 15px; line-height: 1.6; font-weight: 650; color: #343b4b; }
+.resume-document-preview .resume-review-entry h5 { margin: 0 0 6px; font-size: 15px; line-height: 1.6; font-weight: 600; color: #343b4b; }
 .resume-document-preview .resume-entry-meta { margin-bottom: 10px; font-size: 13px; color: #626b7e; white-space: pre-wrap; }
 .resume-document-preview .resume-entry-line { margin: 4px 0; white-space: pre-wrap; }
 .resume-document-preview .resume-entry-line[data-bullet=true] { padding-left: 14px; text-indent: -14px; }
