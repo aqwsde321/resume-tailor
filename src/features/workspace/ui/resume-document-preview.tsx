@@ -17,17 +17,8 @@ export function ResumeDocumentPreview({ text, renderRange = (start, end) => text
     else groups[groups.length - 1].blocks.push(block);
   }
   const separator = (end: number) => end < text.length ? <span className="resume-text-separator">{"\n\n"}</span> : null;
-  function content(block: Block, skills: boolean) {
-    if (!skills) return renderRange(block.start, block.end);
-    let lineOffset = block.start;
-    return <span className="resume-document-skills">{block.value.split("\n").map((line) => {
-      const start = lineOffset;
-      lineOffset += line.length + 1;
-      return <Fragment key={start}><span className="resume-document-skill">{renderRange(start, start + line.length)}</span>{lineOffset <= block.end ? <span className="resume-text-separator">{"\n"}</span> : null}</Fragment>;
-    })}</span>;
-  }
   return <article className="studio-resume-preview resume-document-preview" aria-label="정리된 이력서">{groups.map((group, groupIndex) => {
-    const children = <>{group.heading && <><h4>{renderRange(group.heading.start, group.heading.end)}</h4>{separator(group.heading.end)}</>}{group.blocks.map((block, index) => <Fragment key={block.start}>{groupIndex === 0 && index === 0 ? <h3>{content(block, false)}</h3> : <div className={groupIndex === 0 ? "resume-document-meta" : "studio-preview-copy"}>{content(block, group.heading?.value === "핵심 기술")}</div>}{separator(block.end)}</Fragment>)}</>;
+    const children = <>{group.heading && <><h4>{renderRange(group.heading.start, group.heading.end)}</h4>{separator(group.heading.end)}</>}{group.blocks.map((block, index) => <Fragment key={block.start}>{groupIndex === 0 && index === 0 ? <h3>{renderRange(block.start, block.end)}</h3> : <div className={groupIndex === 0 ? "resume-document-meta" : "studio-preview-copy"}>{renderRange(block.start, block.end)}</div>}{separator(block.end)}</Fragment>)}</>;
     return groupIndex === 0 ? <header key="header">{children}</header> : <section key={group.heading!.start}>{children}</section>;
   })}</article>;
 }

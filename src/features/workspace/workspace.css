@@ -424,14 +424,15 @@
 .result-editor-footer button, .result-restructure button { margin: 0; }
 @media(max-width: 680px) { .result-editor-footer, .result-restructure { align-items: stretch; flex-direction: column; } }
 
-/* 같은 완성본을 검토와 최종 확인에서 사용한다. 구분자는 문자 위치만 보존한다. */
+/* 공통 이력서는 장식 없이 내용을 검토한다. 구분자는 댓글의 문자 위치를 보존한다. */
 .resume-document-preview { white-space: normal; background: #fff; }
 .resume-document-preview .resume-text-separator { position: absolute; width: 0; height: 0; overflow: hidden; font-size: 0; line-height: 0; white-space: pre; }
 .resume-document-preview .resume-document-meta { margin: 6px 0; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #626b7e; }
-.resume-document-preview > header > .resume-document-meta:first-of-type { color: #6554c0; font-size: 14px; }
+.resume-document-preview > header { padding-bottom: 18px; border-bottom: 1px solid #dee2eb; }
+.resume-document-preview h3 { font-size: 21px; letter-spacing: 0; }
+.resume-document-preview h4 { color: #343b4b; font-size: 14px; margin-bottom: 10px; }
+.resume-document-preview > section { margin-top: 22px; }
 .resume-document-preview .studio-preview-copy { margin: 0 0 16px; white-space: pre-wrap; font-size: 14px; line-height: 1.9; }
-.resume-document-skills { display: inline-flex; flex-wrap: wrap; gap: 8px; white-space: normal; }
-.resume-document-skill { padding: 4px 10px; border-radius: 5px; background: #f2effb; color: #55467c; font-size: 13px; }
 .resume-studio .review-document.review-resume-preview { padding: 24px 28px; white-space: normal; }
 .review-resume-preview > .resume-document-preview { margin-bottom: 0; padding: 0; max-width: 760px; }
 .resume-result-editor > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }

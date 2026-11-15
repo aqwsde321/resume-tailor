@@ -18,7 +18,7 @@ export function ResumeResultEditor({ draft, settings, stale, onChange, onConfirm
   const confirming = draft.stage === "confirm";
   const blocked = busy || stale || pending || hasProposal || dirty;
   return <section className="resume-result-editor" aria-label="정리 결과 편집">
-    <header><h2>{confirming ? "최종 확인" : "정리 결과 검토"}</h2><p>{confirming ? "검토한 이력서를 마지막으로 확인하고 확정하세요. 수정이 필요하면 결과 검토로 돌아가 주세요." : "이력서에서 문장이나 핵심 기술을 드래그해 수정 요청을 남기세요. 여러 댓글을 모아 한 번에 반영할 수 있습니다."}</p></header>
+    <header><h2>{confirming ? "공통 이력서 확인" : "정리 결과 검토"}</h2><p>{confirming ? "회사별 맞춤에 사용할 공통 이력서를 확인하세요. PDF 디자인은 회사별 이력서를 완성한 뒤 선택합니다." : "이력서에서 문장이나 핵심 기술을 드래그해 수정 요청을 남기세요. 여러 댓글을 모아 한 번에 반영할 수 있습니다."}</p></header>
     {confirming ? <ResumeDocumentPreview text={draft.document.text} /> : <>
     <div inert={busy}><DocumentEditor active={!busy} variant="studio" presentation="resume" hideHeading document={draft.document} settings={settings} onChange={(document) => onChange({ ...draft, document })} /></div>
     {dirty && <div className="result-restructure"><p>수정한 문서를 이력서 항목에 반영하려면 다시 정리해 주세요. 이 작업은 AI를 사용합니다.</p><Button label={busy ? "수정 결과 정리 중…" : "수정한 결과 다시 정리"} isDisabled={busy || pending || hasProposal} onClick={async () => { setBusy(true); setError(""); try { const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: draft.document.text, agent: toAgentRunOptions(settings) })); const next = createResultDraft({ ...resume, pdfProfileImageDataUrl: draft.resume.pdfProfileImageDataUrl, pdfProfileImageVisible: draft.resume.pdfProfileImageVisible }, draft.sourceText, draft.skillCatalog, true); onChange({ ...next, document: { ...draft.document, text: next.structuredText, proposal: null } }); } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); } }} /></div>}
@@ -27,8 +27,8 @@ export function ResumeResultEditor({ draft, settings, stale, onChange, onConfirm
     {error && <p role="alert">{error}</p>}
     <footer className="result-editor-footer">
       <Button label={confirming ? "결과 검토로 돌아가기" : "원문에서 다시 수정"} onClick={confirming ? () => onChange({ ...draft, stage: "review" }) : onCancel} isDisabled={busy} />
-      <p>{pending || hasProposal ? "남은 수정 댓글과 제안을 먼저 확인해 주세요." : dirty ? "수정한 결과를 다시 정리한 뒤 진행할 수 있습니다." : confirming ? "확정한 이력서가 회사별 맞춤 작업의 기준이 됩니다." : "다음 단계에서는 검토한 이력서를 마지막으로 확인합니다."}</p>
-      <Button label={confirming ? "공통 이력서로 확정" : "최종 확인으로"} variant="primary" isDisabled={blocked} onClick={confirming ? onConfirm : () => onChange({ ...draft, stage: "confirm" })} />
+      <p>{pending || hasProposal ? "남은 수정 댓글과 제안을 먼저 확인해 주세요." : dirty ? "수정한 결과를 다시 정리한 뒤 진행할 수 있습니다." : confirming ? "저장한 공통 이력서로 회사별 맞춤 작업을 시작할 수 있습니다." : "다음 단계에서는 검토한 이력서를 마지막으로 확인합니다."}</p>
+      <Button label={confirming ? "공통 이력서로 저장" : "공통 이력서 확인으로"} variant="primary" isDisabled={blocked} onClick={confirming ? onConfirm : () => onChange({ ...draft, stage: "confirm" })} />
     </footer>
   </section>;
 }

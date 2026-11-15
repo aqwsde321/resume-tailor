@@ -63,8 +63,8 @@ test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정
   await page.getByRole("button", { name: "선택한 변경 적용", exact: true }).click();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("Java 개발자");
   await page.getByRole("button", { name: "검토한 내용으로 이력서 정리", exact: true }).click();
-  await page.getByRole("button", { name: "최종 확인으로", exact: true }).click();
-  await page.getByRole("button", { name: "공통 이력서로 확정", exact: true }).click();
+  await page.getByRole("button", { name: "공통 이력서 확인으로", exact: true }).click();
+  await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
   await expect.poll(() => stored().master?.resume?.name).toBe("예시 개발자");
   await page.reload();
   await expect(page.getByText("확정 이력서 · 버전 1", { exact: true })).toBeVisible();
