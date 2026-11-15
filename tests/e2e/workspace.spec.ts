@@ -249,7 +249,9 @@ test("PDF 원본 비교는 페이지 이동과 확대를 제공한다", async ({
   await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
   await page.goto("/workspace/resume");
   await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
-  await page.getByRole("combobox", { name: "원본 페이지", exact: true }).selectOption("2");
+  await page.getByRole("button", { name: "다음 원본 페이지", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "원본 페이지", exact: true })).toHaveValue("2");
+  await expect(page.getByRole("button", { name: "다음 원본 페이지", exact: true })).toBeDisabled();
   await expect(page.getByRole("img", { name: "원본 2페이지. 드래그로 영역을 선택할 수 있습니다.", exact: true })).toHaveAttribute("src", /000000000003/);
   await page.getByRole("combobox", { name: "원본 확대", exact: true }).selectOption("150");
   await expect(page.locator(".source-region")).toHaveAttribute("style", /150%/);
