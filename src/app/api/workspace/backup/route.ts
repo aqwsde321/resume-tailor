@@ -7,6 +7,7 @@ import { WorkspaceSchema, type Workspace } from "@/entities/workspace/model/work
 import { createWorkspaceStore, WORKSPACE_DIRECTORY } from "@/server/workspace-store";
 import { readAttachment, saveAttachment } from "@/server/workspace-attachments";
 import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { assertWorkspaceSameOrigin } from "@/server/workspace-origin";
 export const runtime = "nodejs";
 const store = createWorkspaceStore();
 const BundleSchema = z.object({
@@ -37,7 +38,7 @@ export async function GET() {
 }
 export async function POST(request: Request) {
   try {
-    if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) throw new HttpError(403, "이 앱에서 복원해 주세요.");
+    assertWorkspaceSameOrigin(request);
     if (Number(request.headers.get("content-length") ?? 0) > 150 * 1024 * 1024) throw new HttpError(413, "백업 파일은 150MB 이하만 가져올 수 있습니다.");
     const bundle = await parseJsonBody(request, BundleSchema);
     const expectedRevision = Number(request.headers.get("if-match"));
