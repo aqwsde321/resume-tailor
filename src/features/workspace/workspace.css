@@ -518,3 +518,12 @@
   .studio-sidebar[data-menu-open=false] nav { display: none; }
   .studio-saved-document-header { flex-wrap: wrap; }
 }
+
+.company-registration { margin-bottom: 28px; }
+.company-registration[hidden] { display: none; }
+.company-list-title { margin: 28px 0 16px; font-size: 18px; }
+.company-list-title span { margin-left: 8px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.studio-companies .work-list a { padding: 20px 24px; border-radius: 10px; }
+.studio-companies .work-list strong { font-size: 16px; }
+.studio-companies .work-list span { color: var(--muted); font-size: 14px; }
+.studio-companies .work-list small { color: var(--muted); font-size: 12px; }

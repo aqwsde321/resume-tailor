@@ -93,3 +93,58 @@ test("소개글 재작성 중 사용자가 고친 문장은 늦은 응답으로 
   await expect(page.getByRole("textbox", { name: "소개글", exact: true })).toHaveValue("지금 직접 고친 소개글");
   await expect.poll(() => stored().works[0].intro?.longIntro).toBe("지금 직접 고친 소개글");
 });
+
+test("회사 편집은 한 문서에서 읽기와 댓글을 제공하고 내보내기는 내부 스크롤로 확인한다", async ({ page }) => {
+  const { work } = await companyWithDeferredAi(page);
+  await page.goto(`/workspace/companies/${work.id}`);
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toBeVisible();
+  await expect(page.locator(".company-detail-current > .studio-resume-preview")).toHaveCount(0);
+  await page.getByRole("button", { name: "직접 편집", exact: true }).click();
+  const editor = page.locator("textarea[name=review-document]").filter({ visible: true });
+  await editor.fill("## 소개\n\n작성 중인 회사별 문장");
+  await page.getByRole("button", { name: "공고 검토", exact: true }).click();
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
+  await expect(editor).toHaveValue("## 소개\n\n작성 중인 회사별 문장");
+  await page.getByRole("button", { name: "내보내기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toHaveCSS("overflow-y", "auto");
+  await expect(page.getByRole("button", { name: "PDF 생성·다운로드", exact: true })).toBeVisible();
+  const template = page.getByRole("combobox", { name: "PDF 템플릿", exact: true });
+  await template.click();
+  await page.getByRole("option", { name: "Modern", exact: true }).click();
+  await expect(template).toContainText("Modern");
+});
+
+test("새 회사 공고 등록은 명시적으로 열고 닫아도 입력을 보존한다", async ({ page }) => {
+  await companyWithDeferredAi(page);
+  await page.goto("/workspace/companies");
+  const toggle = page.getByRole("button", { name: "새 공고로 이력서 만들기", exact: true });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
+  await page.getByRole("textbox", { name: "원문", exact: true }).fill("입력 중인 공고");
+  await toggle.click();
+  await expect(page.getByRole("textbox", { name: "원문", exact: true })).toBeHidden();
+  await toggle.click();
+  await expect(page.getByRole("textbox", { name: "원문", exact: true })).toHaveValue("입력 중인 공고");
+});
+
+test("회사별 Markdown 문장에서 댓글을 달고 단계 왕복 후에도 유지한다", async ({ page }) => {
+  const { work, stored } = await companyWithDeferredAi(page);
+  await page.goto(`/workspace/companies/${work.id}`);
+  const document = page.getByRole("region", { name: "추출 문서", exact: true });
+  await document.locator("p").filter({ hasText: "기존 소개" }).evaluate((element) => {
+    const range = element.ownerDocument.createRange(); range.selectNodeContents(element);
+    const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+    element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
+  await page.getByRole("textbox", { name: "수정 요청", exact: true }).fill("회사에 필요한 경험을 강조해 주세요");
+  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
+  await expect.poll(() => stored().works[0].resumeDocument?.annotations.length).toBe(1);
+  await page.getByRole("button", { name: "공고 검토", exact: true }).click();
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
+  await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
+});

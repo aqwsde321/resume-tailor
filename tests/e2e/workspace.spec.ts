@@ -193,7 +193,7 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await page.getByLabel("모델 ID", { exact: true }).fill("test-model");
   await expect.poll(() => stored().settings.model).toBe("test-model");
   await page.getByRole("link", { name: "회사별 이력서", exact: true }).click();
-  await page.getByLabel("입력 방법").selectOption("text");
+  await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
   await page.getByLabel("원문", { exact: true }).fill("예시 회사 Java 채용");
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
   await page.getByRole("button", { name: "검토한 공고 정리", exact: true }).click();

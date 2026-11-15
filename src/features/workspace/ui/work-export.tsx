@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Selector } from "@astryxdesign/core/Selector";
 import type { CompanyWork } from "@/entities/workspace/model/workspace";
 import { resumeToMarkdown } from "@/entities/workspace/model/operations";
 import { PDF_TEMPLATE_OPTIONS } from "@/entities/pdf/model/templates";
@@ -12,9 +13,10 @@ export function WorkExport({ work, onSaved }: { work: CompanyWork; onSaved: (id:
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [pdfId, setPdfId] = useState("");
   if (!work.resume || !work.company) return null;
   const safeName = work.title.replace(/[\\/:*?"<>|]/g, "-").slice(0, 100);
-  return <section className="card"><h2>다운로드</h2><p>소개글을 생성하지 않아도 이력서를 출력할 수 있습니다.</p>
-    <label>PDF 템플릿<select value={templateId} onChange={(event) => setTemplate(event.target.value)}>{PDF_TEMPLATE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
-    <label>PDF 색상<select value={themeId} onChange={(event) => setTheme(event.target.value)}>{PDF_THEME_OPTIONS.filter((option) => option.id !== "custom").map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+  return <section className="card company-export-tools"><h2>파일 만들기</h2><p>제출할 내용이 준비되면 PDF 디자인을 선택하세요. 소개글은 선택 사항입니다.</p><div className="company-export-options">
+    <Selector label="PDF 템플릿" value={templateId} options={PDF_TEMPLATE_OPTIONS.map((option) => ({ value: option.id, label: option.label }))} onChange={setTemplate} />
+    <Selector label="PDF 색상" value={themeId} options={PDF_THEME_OPTIONS.filter((option) => option.id !== "custom").map((option) => ({ value: option.id, label: option.label }))} onChange={setTheme} />
+    </div><div className="company-export-actions">
     <button className="primary" disabled={busy} onClick={async () => {
       setBusy(true); setError("");
       try {
@@ -26,7 +28,7 @@ export function WorkExport({ work, onSaved }: { work: CompanyWork; onSaved: (id:
       } catch (error) { setError((error as Error).message); }
       finally { setBusy(false); }
     }}>{busy ? "PDF 만드는 중…" : "PDF 생성·다운로드"}</button>
-    <button onClick={() => download(new Blob([resumeToMarkdown(work.resume!) + (work.intro ? `\n\n## 별도 소개글\n\n${work.intro.longIntro}` : "")], { type: "text/markdown;charset=utf-8" }), `${safeName}.md`)}>Markdown 다운로드</button>
+    <button onClick={() => download(new Blob([resumeToMarkdown(work.resume!) + (work.intro ? `\n\n## 별도 소개글\n\n${work.intro.longIntro}` : "")], { type: "text/markdown;charset=utf-8" }), `${safeName}.md`)}>Markdown 다운로드</button></div>
     {pdfId && <a href={`/api/workspace/attachment/${pdfId}`} target="_blank" rel="noreferrer">생성한 PDF 미리보기</a>}
     {work.artifacts?.map((artifact) => <p key={artifact.id}><a href={`/api/workspace/attachment/${artifact.id}`} target="_blank" rel="noreferrer">{artifact.name} · {new Date(artifact.createdAt).toLocaleString("ko-KR")}</a></p>)}
     {error && <p role="alert">{error}</p>}
