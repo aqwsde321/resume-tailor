@@ -1,0 +1,16 @@
+.workspace-recovery,.workspace-task{margin:0 0 24px;padding:20px 24px;border:1px solid #d9d3ed;border-left:4px solid #6653be;border-radius:12px;background:#fff;color:#292c41;overflow-wrap:anywhere}
+.workspace-recovery h2{margin:0 0 8px;font-size:18px;line-height:1.5}
+.workspace-recovery p,.workspace-task p{max-width:76ch;margin:8px 0 14px;line-height:1.65;color:#555b72}
+.workspace-recovery-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.workspace-recovery-actions button{min-height:42px;padding:9px 14px;border:1px solid #d3cce7;border-radius:8px;background:#fff;color:#493a96;font:inherit;cursor:pointer}
+.workspace-recovery-actions button:hover:not(:disabled){background:#f3f0fb}
+.workspace-recovery-actions button:focus-visible{outline:3px solid #7a69cb;outline-offset:3px}
+.workspace-recovery-actions button:disabled{opacity:.55;cursor:not-allowed}
+.workspace-recovery .workspace-recovery-note{margin-bottom:0;font-size:12px}
+.workspace-recovery-dialog{max-width:min(580px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:28px;border:1px solid #d3cce7;border-radius:16px;color:#292c41;overflow:auto}
+.workspace-recovery-dialog::backdrop{background:rgba(27,25,47,.38)}
+.workspace-recovery-dialog h2{margin-top:0}
+.workspace-recovery-dialog p{line-height:1.7}
+.workspace-task{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#faf9fe}
+.workspace-task strong{font-size:15px}.workspace-task-time{font-size:13px;color:#646a82;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.workspace-recovery,.workspace-task{padding:18px 16px}.workspace-task{align-items:stretch;flex-direction:column;gap:12px}.workspace-recovery-actions button{flex-grow:1}.workspace-recovery-dialog{padding:20px}}
