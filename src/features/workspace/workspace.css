@@ -437,3 +437,11 @@
 .review-resume-preview > .resume-document-preview { margin-bottom: 0; padding: 0; max-width: 760px; }
 .resume-result-editor > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }
 @media(max-width: 680px) { .resume-studio .review-document.review-resume-preview, .resume-result-editor > .resume-document-preview { padding: 20px 16px; } }
+
+.resume-document-preview .resume-review-entry { margin: 0; padding: 16px 0; font-size: 14px; line-height: 1.9; }
+.resume-document-preview .resume-review-entry + .resume-review-entry { border-top: 1px solid #e9ebf1; }
+.resume-document-preview .resume-review-entry:first-of-type { padding-top: 0; }
+.resume-document-preview .resume-review-entry h5 { margin: 0 0 6px; font-size: 15px; line-height: 1.6; font-weight: 650; color: #343b4b; }
+.resume-document-preview .resume-entry-meta { margin-bottom: 10px; font-size: 13px; color: #626b7e; white-space: pre-wrap; }
+.resume-document-preview .resume-entry-line { margin: 4px 0; white-space: pre-wrap; }
+.resume-document-preview .resume-entry-line[data-bullet=true] { padding-left: 14px; text-indent: -14px; }
