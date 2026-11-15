@@ -419,36 +419,20 @@
 .resume-result-editor > header { margin-bottom: 24px; }
 .resume-result-editor > header h2 { margin: 0 0 8px; font-size: 24px; }
 .resume-result-editor > header p { margin: 0; font-size: 14px; line-height: 1.8; color: #626b7e; }
-.core-skills-editor { margin-bottom: 28px; padding: 24px; border: 1px solid #dee2eb; border-radius: 12px; background: #fff; }
-.core-skills-editor > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-.core-skills-editor h3 { margin: 0 0 8px; font-size: 18px; }
-.core-skills-editor p { color: #626b7e; font-size: 13px; line-height: 1.8; }
-.core-skills-editor > header strong { flex-shrink: 0; font-size: 13px; color: #6554c0; }
- .core-skills-editor h3 > span { margin-left: 8px; font-size: 13px; font-weight: 500; color: #626b7e; }
-.core-skills-editor header p { margin: 0; }
-.core-skills-editor header > button { flex-shrink: 0; margin: 0; }
-.core-skills-selected { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 18px 0 0; }
-.core-skills-selected > li { display: flex; align-items: center; gap: 6px; padding: 3px 4px 3px 12px; background: #f2effb; border: 1px solid #e3dcf5; border-radius: 7px; color: #47377b; font-size: 14px; }
-.core-skills-selected button { margin: 0; }
-.core-skills-tools { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ebf1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 28px; }
-.core-skills-tools > [role=status], .core-skills-tools > [role=alert], .core-skills-tools > form { grid-column: 1 / -1; }
-.core-skills-candidates { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; max-height: 176px; overflow-y: auto; margin-top: 12px; padding: 4px; }
-.core-skills-candidates button { margin: 0; }
-.core-skills-arrange h4 { margin: 0; font-size: 14px; font-weight: 600; }
-.core-skills-arrange .core-skills-order { margin: 8px 0 0; }
-@media(max-width: 800px) { .core-skills-tools { grid-template-columns: minmax(0, 1fr); } }
-
-.core-skills-order { padding: 0; margin: 18px 0; list-style: none; }
-.core-skills-order > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f0f1f5; }
-.core-skills-order > li > span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
-.core-skills-order > li > div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.core-skills-order button { margin: 0; }
-.core-skills-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.core-skills-add > :first-child { flex: 1; min-width: 160px; max-width: 360px; }
-.core-skills-add button { margin: 0; }
-.resume-result-editor .result-document-block[data-heading=true] { font-size: 18px; font-weight: 650; color: #34304b; }
-.resume-result-editor .result-document-block[data-name=true] { font-size: 24px; font-weight: 700; }
 .result-editor-footer, .result-restructure { display: flex; align-items: center; gap: 16px; margin-top: 24px; padding: 20px; border: 1px solid #dee2eb; border-radius: 10px; background: #fff; }
 .result-editor-footer p, .result-restructure p { flex: 1; margin: 0; font-size: 13px; line-height: 1.8; color: #626b7e; }
 .result-editor-footer button, .result-restructure button { margin: 0; }
-@media(max-width: 680px) { .core-skills-editor { padding: 18px 16px; } .core-skills-order > li { align-items: flex-start; flex-direction: column; } .result-editor-footer, .result-restructure { align-items: stretch; flex-direction: column; } }
+@media(max-width: 680px) { .result-editor-footer, .result-restructure { align-items: stretch; flex-direction: column; } }
+
+/* 같은 완성본을 검토와 최종 확인에서 사용한다. 구분자는 문자 위치만 보존한다. */
+.resume-document-preview { white-space: normal; background: #fff; }
+.resume-document-preview .resume-text-separator { position: absolute; width: 0; height: 0; overflow: hidden; font-size: 0; line-height: 0; white-space: pre; }
+.resume-document-preview .resume-document-meta { margin: 6px 0; white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #626b7e; }
+.resume-document-preview > header > .resume-document-meta:first-of-type { color: #6554c0; font-size: 14px; }
+.resume-document-preview .studio-preview-copy { margin: 0 0 16px; white-space: pre-wrap; font-size: 14px; line-height: 1.9; }
+.resume-document-skills { display: inline-flex; flex-wrap: wrap; gap: 8px; white-space: normal; }
+.resume-document-skill { padding: 4px 10px; border-radius: 5px; background: #f2effb; color: #55467c; font-size: 13px; }
+.resume-studio .review-document.review-resume-preview { padding: 24px 28px; white-space: normal; }
+.review-resume-preview > .resume-document-preview { margin-bottom: 0; padding: 0; max-width: 760px; }
+.resume-result-editor > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }
+@media(max-width: 680px) { .resume-studio .review-document.review-resume-preview, .resume-result-editor > .resume-document-preview { padding: 20px 16px; } }

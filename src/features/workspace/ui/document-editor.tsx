@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useCallback, useEffect, useId, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@astryxdesign/core/Button";
 import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
@@ -8,10 +8,11 @@ import { acceptDocumentChanges } from "@/entities/workspace/model/document-revie
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { StudioIcon } from "./studio-icon";
+import { ResumeDocumentPreview } from "./resume-document-preview";
 import { OriginalSourceToolbar } from "./original-source-toolbar";
 
-export function DocumentEditor({ document, settings, onChange, variant = "default", active = true, heading = "원문 검토", description = "추출한 내용이 맞는지 확인해 주세요. 수정할 문장을 드래그하면 댓글을 남길 수 있어요.", presentation = "text" }: {
-  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio"; active?: boolean; heading?: string; description?: string; presentation?: "text" | "resume";
+export function DocumentEditor({ document, settings, onChange, variant = "default", active = true, heading = "원문 검토", description = "추출한 내용이 맞는지 확인해 주세요. 수정할 문장을 드래그하면 댓글을 남길 수 있어요.", presentation = "text", hideHeading = false }: {
+  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio"; active?: boolean; heading?: string; description?: string; presentation?: "text" | "resume"; hideHeading?: boolean;
 }) {
   const studio = variant === "studio";
   const formId = useId();
@@ -111,14 +112,15 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
   }, [hasPlacement, composerOpen, place, anchor, active]);
   const highlights = pending.flatMap((comment) => comment.anchor.type === "text" && document.text.slice(comment.anchor.start, comment.anchor.end) === comment.anchor.quote ? [{ ...comment.anchor, id: comment.id, instruction: comment.instruction }] : []);
   const draft = composerOpen && anchor.type === "text" && document.text.slice(anchor.start, anchor.end) === anchor.quote ? [anchor] : [];
-  let paragraphOffset = 0;
-  const paragraphs = document.text.split("\n\n").map((text) => { const start = paragraphOffset; paragraphOffset += text.length + 2; return { text, start, end: start + text.length }; });
-  const boundaries = [...new Set([0, document.text.length, ...(presentation === "resume" ? paragraphs.flatMap((item) => [item.start, item.end]) : []), ...[...highlights, ...draft].flatMap((item) => [item.start, item.end])])].sort((a, b) => a - b);
-  const renderBetween = (from: number, to: number) => boundaries.filter((offset) => offset >= from && offset <= to).slice(0, -1).map((start, index) => {
-          const offsets = boundaries.filter((offset) => offset >= from && offset <= to); const end = offsets[index + 1]; const comments = highlights.filter((item) => item.start <= start && item.end >= end);
-          const drafting = draft.some((item) => item.start <= start && item.end >= end);
-          return comments.length ? <mark className="comment-mark" key={start} data-comment-count={comments.length} data-active={comments.some((item) => item.id === activeComment)} title={comments.map((item) => item.instruction).join("\n")}><button className="comment-anchor" aria-label={`${comments.length > 1 ? `댓글 ${comments.length}개 보기` : "댓글 보기"}: ${document.text.slice(start, end)}`} onClick={(event) => { if (event.detail === 0 || window.getSelection()?.isCollapsed) showComment(comments[0].id); }}>{document.text.slice(start, end)}</button></mark> : drafting ? <mark className="comment-draft-mark" key={start}>{document.text.slice(start, end)}</mark> : <span key={start}>{document.text.slice(start, end)}</span>;
-        });
+  const boundaries = [...new Set([0, document.text.length, ...[...highlights, ...draft].flatMap((item) => [item.start, item.end])])].sort((a, b) => a - b);
+  const renderBetween = (from: number, to: number) => {
+    const offsets = [...new Set([from, to, ...boundaries.filter((offset) => offset > from && offset < to)])].sort((a, b) => a - b);
+    return offsets.slice(0, -1).map((start, index) => {
+      const end = offsets[index + 1]; const comments = highlights.filter((item) => item.start <= start && item.end >= end);
+      const drafting = draft.some((item) => item.start <= start && item.end >= end);
+      return comments.length ? <mark className="comment-mark" key={start} data-comment-count={comments.length} data-active={comments.some((item) => item.id === activeComment)} title={comments.map((item) => item.instruction).join("\n")}><button className="comment-anchor" aria-label={`${comments.length > 1 ? `댓글 ${comments.length}개 보기` : "댓글 보기"}: ${document.text.slice(start, end)}`} onClick={(event) => { if (event.detail === 0 || window.getSelection()?.isCollapsed) showComment(comments[0].id); }}>{document.text.slice(start, end)}</button></mark> : drafting ? <mark className="comment-draft-mark" key={start}>{document.text.slice(start, end)}</mark> : <span key={start}>{document.text.slice(start, end)}</span>;
+    });
+  };
   function selectText() {
     if (!active || composerOpen) return;
     const selection = window.getSelection(); if (!selection?.rangeCount || selection.isCollapsed || !readRef.current) { setPlacement(null); return; }
@@ -133,7 +135,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     }
   }
   return <section className={studio ? "studio-document-review" : "card document-review"}>
-    <header className={studio ? "studio-document-heading" : undefined}><div><h2>{heading}</h2><p>{description}</p></div></header>
+    {!hideHeading && <header className={studio ? "studio-document-heading" : undefined}><div><h2>{heading}</h2><p>{description}</p></div></header>}
     <div className="review-desk-toolbar">
       <div className="review-mode-switch" role="group" aria-label="원본 비교 방식"><button type="button" aria-pressed={!comparing} onClick={() => { setComparing(false); setMobilePane("review"); }}>검토 내용</button><button type="button" aria-pressed={comparing} onClick={() => setComparing(true)}>원본과 비교</button></div>
       <div className="review-desk-actions"><button aria-expanded={listOpen} aria-controls={`${formId}-list`} onClick={() => { if (listOpen) setActiveComment(null); setListOpen(!listOpen); }}><StudioIcon name="comment" size={16} />댓글 {pending.length}개</button><details className="review-more"><summary>더보기</summary><div><button disabled={busy} onClick={(event) => { setAnchor({ type: "document" }); rangeRef.current = null; sourceRef.current = event.currentTarget; place(event.currentTarget.getBoundingClientRect()); openComposer(event.currentTarget); event.currentTarget.closest("details")?.removeAttribute("open"); }}>문서 전체에 댓글</button><button disabled={busy || anchor.type === "document"} onClick={(event) => openComposer(event.currentTarget)}>선택 영역에 댓글 추가</button></div></details></div>
@@ -165,7 +167,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
       <div className={studio ? "studio-document-column" : undefined}>
         <div className={studio ? "studio-paper-toolbar" : undefined}>{studio && <span className="studio-paper-filename" title={document.title}>{document.title}</span>}<div className={studio ? "studio-view-switch" : undefined} role="group" aria-label="문서 보기 방식"><button aria-pressed={!editing} onClick={() => setEditing(false)}>읽기·댓글</button><button aria-pressed={editing} onClick={() => setEditing(true)}>직접 편집</button></div></div>
         {comparing && <div className="review-edit-hint">검토 내용 · 문장을 선택해 수정 댓글을 남기세요.</div>}
-        {!editing && <div ref={readRef} className="review-document" role="region" tabIndex={0} aria-label="추출 문서" onMouseUp={selectText} onKeyUp={selectText}>{presentation === "resume" ? paragraphs.map((paragraph, index) => <Fragment key={paragraph.start}><div className="result-document-block" data-heading={["소개", "핵심 기술", "경력", "프로젝트", "학력", "자격·교육", "주요 성과", "강점"].includes(paragraph.text)} data-name={index === 0}>{renderBetween(paragraph.start, paragraph.end)}</div>{paragraph.end < document.text.length ? "\n\n" : null}</Fragment>) : renderBetween(0, document.text.length)}</div>}
+        {!editing && <div ref={readRef} className={`review-document ${presentation === "resume" ? "review-resume-preview" : ""}`} role="region" tabIndex={0} aria-label="추출 문서" onMouseUp={selectText} onKeyUp={selectText}>{presentation === "resume" ? <ResumeDocumentPreview text={document.text} renderRange={renderBetween} /> : renderBetween(0, document.text.length)}</div>}
         {editing && <label>추출 문서<textarea ref={textRef} name="review-document" className="review-text" value={document.text} disabled={busy} onMouseUp={(event) => { if (event.currentTarget.selectionStart !== event.currentTarget.selectionEnd) { rangeRef.current = null; sourceRef.current = event.currentTarget; place({ left: event.clientX, bottom: event.clientY }); } }} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
         if (beforeEdit.current !== document.text) update({ history: [...document.history, { text: beforeEdit.current, annotationIds: [], createdAt: new Date().toISOString() }] });
       }} onSelect={(event) => {

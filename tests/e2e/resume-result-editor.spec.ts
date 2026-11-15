@@ -26,31 +26,41 @@ async function comment(page: Page, quote: string, instruction: string) {
   await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
 }
 
-test("핵심 기술 선택·추가·이름 수정·순서를 초안에 저장하고 원본을 보존한다", async ({ page }) => {
+test("완성본에서 핵심 기술에 댓글로 수정 요청하고 최종 확인은 읽기 전용으로 보여준다", async ({ page }) => {
   const stored = await setup(page);
-  await expect(page.getByRole("region", { name: "핵심 기술 편집", exact: true })).toHaveCount(0);
-  await expect(page.locator("[aria-current=step]")).toHaveText(/정리 결과 검토/);
+  const documentRegion = page.getByRole("region", { name: "추출 문서", exact: true });
+  await expect(documentRegion.getByRole("article", { name: "정리된 이력서", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "정리 결과 검토", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "정리 결과 수정", exact: true })).toHaveCount(0);
+  expect(await documentRegion.textContent()).toBe(stored().master!.resultDraft!.document.text);
+  await page.route("**/api/workspace/review", (route) => {
+    const { document } = route.request().postDataJSON();
+    const before = "• Java\n• Spring\n• Redis";
+    const start = document.text.indexOf(before);
+    expect(document.annotations[0].anchor).toMatchObject({ type: "text", quote: "Java", start: start + 2 });
+    return route.fulfill({ json: { ok: true, data: { sourceText: document.text, changes: [{ id: "skills", start, end: start + before.length, before, after: "• Spring\n• Redis", reason: "핵심 기술 선택 변경", commentIds: document.annotations.map((item: { id: string }) => item.id) }], unresolved: [] } } });
+  });
+  await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: { ...resume, techStack: ["Spring", "Redis"] } } }));
+  await comment(page, "Java", "핵심 기술에서 Java를 빼 주세요. 프로젝트 사용 기술은 유지해 주세요.");
+  await expect.poll(() => stored().master?.resultDraft?.document.annotations.length).toBe(1);
+  await page.reload();
+  await expect(documentRegion.locator("mark")).toHaveText("Java");
+  await page.getByRole("button", { name: "댓글 1개", exact: true }).click();
+  await page.getByRole("button", { name: "수정 요청 1개 반영", exact: true }).click();
+  await page.getByRole("button", { name: "선택한 변경 적용", exact: true }).click();
+  await page.getByRole("button", { name: "수정한 결과 다시 정리", exact: true }).click();
+  await expect.poll(() => stored().master?.resultDraft?.resume.techStack).toEqual(["Spring", "Redis"]);
+  const reviewedText = await documentRegion.textContent();
   await page.getByRole("button", { name: "최종 확인으로", exact: true }).click();
   await expect(page.locator("[aria-current=step]")).toHaveText(/최종 확인/);
-  await expect(page.getByRole("region", { name: "기술 편집 도구", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "기술 편집", exact: true }).click();
-  await page.getByRole("button", { name: "Spring 선택 해제", exact: true }).click();
-  await page.getByRole("textbox", { name: "기술 후보 검색", exact: true }).fill("post");
-  await expect(page.getByRole("button", { name: "Spring 추가", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "PostgreSQL 추가", exact: true }).click();
-  await page.getByRole("textbox", { name: "추가할 기술", exact: true }).fill("Kotlin");
-  await page.getByRole("button", { name: "기술 추가", exact: true }).click();
-  await page.getByRole("button", { name: "Kotlin 앞으로", exact: true }).click();
-  await page.getByRole("button", { name: "Redis 이름 수정", exact: true }).click();
-  await page.getByRole("textbox", { name: "수정할 기술명", exact: true }).fill("Redis Cache");
-  await page.getByRole("button", { name: "기술명 저장", exact: true }).click();
-  await expect.poll(() => stored().master?.resultDraft?.resume.techStack).toEqual(["Java", "Redis Cache", "Kotlin", "PostgreSQL"]);
+  await expect(page.getByRole("button", { name: "기술 편집", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "읽기·댓글", exact: true })).toHaveCount(0);
+  expect(await page.getByRole("article", { name: "정리된 이력서", exact: true }).first().textContent()).toBe(reviewedText);
+  await expect.poll(() => stored().master?.resultDraft?.stage).toBe("confirm");
   await page.reload();
-  await expect(page.getByRole("button", { name: "Spring 선택 해제", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "기술 편집 도구", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "결과 검토로 돌아가기", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "공통 이력서로 확정", exact: true }).click();
-  await expect.poll(() => stored().master?.resume?.techStack).toEqual(["Java", "Redis Cache", "Kotlin", "PostgreSQL"]);
-  expect(stored().master?.skillCatalog).toContain("Spring");
+  await expect.poll(() => stored().master?.resume?.techStack).toEqual(["Spring", "Redis"]);
   expect(stored().master?.document.text).toBe("보존할 원문");
   expect(stored().master?.resume?.projects[0].techStack).toEqual(["PostgreSQL"]);
 });
