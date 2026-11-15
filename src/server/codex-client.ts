@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
 import { formatReasoningEffortValue } from "@/shared/lib/agent-settings";
+import { buildPrompt } from "@/server/codex-prompt";
 import { HttpError } from "@/server/http";
-import { readSkillMarkdown } from "@/server/skills";
+import { readSkillSource } from "@/server/skills";
 import type { AgentRunOptions, SkillName, StreamLogPayload } from "@/shared/lib/types";
 
 type JsonSchema = Record<string, unknown>;
@@ -51,24 +53,6 @@ function enqueue<T>(job: () => Promise<T>): Promise<T> {
     () => undefined
   );
   return run;
-}
-
-// SKILL.md의 파일 입출력 규칙을 실제 파일 대신 프롬프트 안의 가상 입력으로 치환한다.
-function buildPrompt(skillMarkdown: string, inputText: string): string {
-  return [
-    "당신은 SKILL.md 기반 JSON 파이프라인 엔진입니다.",
-    "",
-    "[중요 규칙]",
-    "1) SKILL.md의 파일 입출력 지시(input/*.txt, output/*.json)는 실제 파일 접근 없이 아래 입력 텍스트를 해당 파일 내용으로 간주합니다.",
-    "2) 출력은 반드시 outputSchema를 만족하는 JSON 객체 하나만 반환합니다.",
-    "3) 코드펜스, 설명문, 주석을 절대 포함하지 않습니다.",
-    "",
-    "[SKILL.md]",
-    skillMarkdown,
-    "",
-    "[입력 데이터]",
-    inputText
-  ].join("\n");
 }
 
 function parseFinalResponse<T>(finalResponse: unknown): T {
@@ -210,13 +194,23 @@ export async function runSkillJson<T>(params: {
 }): Promise<T> {
   return enqueue(async () => {
     try {
-      const skillMarkdown = await readSkillMarkdown(params.skillName);
+      const source = await readSkillSource(params.skillName);
+      const prompt = buildPrompt(source.markdown, params.inputText);
+      // 입력 원문이나 자격 증명은 기록하지 않는다.
+      console.info("[prompt-run]", JSON.stringify({
+        skill: params.skillName,
+        sourcePath: source.path,
+        skillSha256: source.sha256,
+        promptSha256: createHash("sha256").update(prompt).digest("hex"),
+        model: params.model ?? "sdk-default",
+        modelReasoningEffort: params.modelReasoningEffort ?? "sdk-default"
+      }));
       const thread = startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort
       });
 
-      const turn = await thread.run(buildPrompt(skillMarkdown, params.inputText), {
+      const turn = await thread.run(prompt, {
         outputSchema: params.outputSchema
       });
       return parseFinalResponse<T>(turn.finalResponse);
@@ -237,7 +231,17 @@ export async function runSkillJsonStream<T>(params: {
 }): Promise<T> {
   return enqueue(async () => {
     try {
-      const skillMarkdown = await readSkillMarkdown(params.skillName);
+      const source = await readSkillSource(params.skillName);
+      const prompt = buildPrompt(source.markdown, params.inputText);
+      // 입력 원문이나 자격 증명은 기록하지 않는다.
+      console.info("[prompt-run]", JSON.stringify({
+        skill: params.skillName,
+        sourcePath: source.path,
+        skillSha256: source.sha256,
+        promptSha256: createHash("sha256").update(prompt).digest("hex"),
+        model: params.model ?? "sdk-default",
+        modelReasoningEffort: params.modelReasoningEffort ?? "sdk-default"
+      }));
       const thread = startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort
@@ -254,7 +258,7 @@ export async function runSkillJsonStream<T>(params: {
         message: `실행 설정 확인 · 생각 깊이 ${formatReasoningEffortValue(params.modelReasoningEffort ?? "medium")}`
       });
 
-      const { events } = await thread.runStreamed(buildPrompt(skillMarkdown, params.inputText), {
+      const { events } = await thread.runStreamed(prompt, {
         outputSchema: params.outputSchema,
         signal: params.signal
       });

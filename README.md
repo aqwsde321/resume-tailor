@@ -158,14 +158,11 @@ npm run dev
 필수는 아니지만, 아래 변수를 사용하면 실행 환경을 조정할 수 있습니다.
 
 - `CODEX_CLI_PATH`: `codex` 바이너리가 PATH에 없을 때 직접 경로 지정
-- `CODEX_SKILLS_DIR`: 외부 스킬 디렉터리를 우선 탐색하고 싶을 때 지정
+- `CODEX_SKILLS_DIR`: 저장소 대신 외부 스킬 디렉터리를 명시적으로 사용할 때 지정
 - `RESUME_TAILOR_IMAGE`: `docker compose` 실행 시 사용할 이미지 경로를 바꾸고 싶을 때 지정
 - `APP_PORT`: `docker compose` 실행 시 앱 포트를 바꾸고 싶을 때 지정
 
-기본 스킬 탐색 순서:
-
-1. `$CODEX_SKILLS_DIR/<skill>/SKILL.md`
-2. `./skills/<skill>/SKILL.md`
+기본적으로 `./skills/<skill>/SKILL.md`를 사용합니다. `CODEX_SKILLS_DIR`을 지정하면 해당 디렉터리만 사용하며, 파일이 없으면 다른 파일로 대체하지 않고 실패합니다. 홈 디렉터리 스킬을 자동으로 우선 로딩하지 않습니다.
 
 예시:
 

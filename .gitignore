@@ -25,3 +25,6 @@ output/playwright/
 
 # Local personal resumes, company details, and application records
 /private-data/
+
+# Model prompt evaluation outputs
+output/prompt-evals/

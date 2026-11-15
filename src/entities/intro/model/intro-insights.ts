@@ -126,6 +126,7 @@ export type IntroQualityIssueCode =
   | "long_missing_anchor_coverage"
   | "long_not_richer_than_short"
   | "long_has_duplicate_sentence"
+  | "matched_skill_out_of_guidance"
   | "fit_reason_out_of_guidance"
   | "gap_note_out_of_guidance"
   | "missing_relevant_out_of_guidance";
@@ -786,7 +787,15 @@ export function evaluateIntroQuality(intro: Intro, resume: Resume, company: Comp
       longSentenceCount > shortSentenceCount ||
       longTokenCount > shortTokenCount + 4);
 
-  if (normalizedIntro.shortIntro && normalizedIntro.longIntro && !longCarriesMoreInfo) {
+  // 근거가 한 문장뿐이면 정보량을 늘리기 위해 사실을 보태도록 강제하지 않는다.
+  const evidenceDetails = unique([
+    ...splitIntroSentences(resume.summary),
+    ...resume.experience.flatMap((item) => splitIntroSentences(item.description)),
+    ...resume.projects.flatMap((item) => [...splitIntroSentences(item.description), ...item.highlights.flatMap(splitIntroSentences)]),
+    ...resume.achievements,
+    ...resume.strengths
+  ].map((item) => item.trim()).filter(Boolean));
+  if (evidenceDetails.length > 1 && normalizedIntro.shortIntro && normalizedIntro.longIntro && !longCarriesMoreInfo) {
     issues.push({
       code: "long_not_richer_than_short",
       message: "longIntro는 shortIntro보다 정보량이 더 많아야 합니다."
@@ -797,6 +806,15 @@ export function evaluateIntroQuality(intro: Intro, resume: Resume, company: Comp
     issues.push({
       code: "long_has_duplicate_sentence",
       message: "longIntro에 동일 문장이 반복되면 안 됩니다."
+    });
+  }
+
+  if (intro.matchedSkills.some((skill) =>
+    !guidance.matchedSkills.some((allowed) => normalizePhrase(skill) === normalizePhrase(allowed))
+  )) {
+    issues.push({
+      code: "matched_skill_out_of_guidance",
+      message: "matchedSkills는 분석 힌트의 직접 일치 기술 범위 안에서만 선택해야 합니다."
     });
   }
 
@@ -1049,6 +1067,9 @@ export function buildIntroSkillInput(
     ...buildToneGuidance(tone),
     "",
     "[출력 제약]",
+    "- 사실성 > 근거 연결 > 구성 > 분량 > 톤 순으로 따릅니다. 아래 최소 분량과 필수 요건 반영은 근거가 충분할 때의 목표입니다.",
+    "- 근거가 없으면 요건을 보유 사실로 쓰지 않습니다. gapCandidates 범위에서 gapNotes로 기록하고 분량을 억지로 채우지 않습니다.",
+    "- careerYears가 0이고 연차가 확인되지 않으면 연차를 생략합니다. 톤으로 역할이나 성과를 부풀리지 않습니다.",
     "- oneLineIntro는 25~45자 안팎으로 작성합니다.",
     "- shortIntro는 120~220자, 2~4문장으로 작성합니다.",
     "- longIntro는 450~700자, 5~8문장으로 작성합니다.",

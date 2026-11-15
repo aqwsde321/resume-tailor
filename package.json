@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:prompts": "vitest run --config vitest.eval.config.ts",
     "test:pdf-visual": "vitest run tests/lib/pdf-visual.test.ts",
     "test:e2e": "playwright test",
     "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs"
