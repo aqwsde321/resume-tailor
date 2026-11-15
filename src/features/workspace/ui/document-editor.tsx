@@ -232,7 +232,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
         <p className="document-proposal-reason">{change.reason}</p><div className="document-proposal-columns"><section aria-label="반영 전"><h4>반영 전</h4><p>{change.before}</p></section><section aria-label="반영 후"><h4>반영 후</h4><p>{change.after}</p></section></div>
       </article>)}
       {document.proposal.unresolved.map((item) => <p key={item.commentId}>추가 확인: {item.message}</p>)}
-      <footer className="document-proposal-footer"><p aria-live="polite">{selected.length} / {document.proposal.changes.length}개 변경 선택</p><div><Button label="제안 닫기" variant="secondary" onClick={() => update({ proposal: null })} /><Button label="선택한 변경 적용" variant="primary" isDisabled={!selected.length} onClick={() => {
+      <footer className="document-proposal-footer"><p aria-live="polite">{selected.length} / {document.proposal.changes.length}개 변경 선택</p><div><Button className="studio-secondary-action" label="제안 닫기" variant="secondary" onClick={() => update({ proposal: null })} /><Button label="선택한 변경 적용" className="primary" variant="primary" isDisabled={!selected.length} onClick={() => {
         try {
           const proposal = document.proposal!;
           if (proposal.sourceText !== document.text) throw new Error("문서가 바뀌었습니다. 다시 제안받아 주세요.");

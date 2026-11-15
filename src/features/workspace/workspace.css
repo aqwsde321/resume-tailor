@@ -500,3 +500,9 @@
 
 .company-enrichment > .ai-enrichment-trigger::after { content: ""; width: 6px; height: 6px; margin-left: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
 .company-enrichment[open] > .ai-enrichment-trigger::after { transform: rotate(225deg); }
+
+/* Astryx actions follow the studio palette while preserving component behavior. */
+.resume-studio button.studio-secondary-action { background: #fff; border-color: var(--line); color: var(--text); }
+.resume-studio button.studio-secondary-action:hover:not(:disabled):not([aria-disabled="true"]) { background: #f2f0fa; border-color: #bdb4e0; }
+.resume-studio button.primary[aria-disabled="true"] { cursor: not-allowed; opacity: .5; }
+.resume-studio button.primary:hover[aria-disabled="true"] { background: var(--primary); border-color: var(--primary); }

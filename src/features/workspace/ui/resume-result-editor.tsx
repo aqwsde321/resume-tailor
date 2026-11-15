@@ -35,9 +35,9 @@ export function ResumeResultEditor({ draft, settings, stale, onChange, onConfirm
     {stale && <p role="alert">원문이 변경되었습니다. 원문에서 다시 정리한 뒤 확정해 주세요.</p>}
     {error && <p role="alert">{error}</p>}
     <footer className="result-editor-footer">
-      <Button label={confirming ? "이전: 이력서 편집" : "이전: 자료 확인"} onClick={() => onNavigate(confirming ? "edit" : "source")} isDisabled={busy} />
+      <Button className="studio-secondary-action" variant="secondary" label={confirming ? "이전: 이력서 편집" : "이전: 자료 확인"} onClick={() => onNavigate(confirming ? "edit" : "source")} isDisabled={busy} />
       <p>{commentDraft ? "작성 중인 댓글을 등록하거나 취소해 주세요." : pending || hasProposal ? "남은 수정 댓글과 제안을 먼저 확인해 주세요." : dirty ? "수정한 결과를 다시 정리한 뒤 진행할 수 있습니다." : confirming ? "저장한 공통 이력서로 회사별 맞춤 작업을 시작할 수 있습니다." : "다음 단계에서는 검토한 이력서를 마지막으로 확인합니다."}</p>
-      <Button label={confirming ? "공통 이력서로 저장" : "공통 이력서 확인으로"} variant="primary" isDisabled={blocked} onClick={confirming ? onConfirm : () => onNavigate("save")} />
+      <Button label={confirming ? "공통 이력서로 저장" : "공통 이력서 확인으로"} className="primary" variant="primary" isDisabled={blocked} onClick={confirming ? onConfirm : () => onNavigate("save")} />
     </footer>
   </section>;
 }
