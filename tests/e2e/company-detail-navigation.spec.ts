@@ -18,6 +18,7 @@ test("회사별 단계 전환은 댓글 초안을 보존하고 변경된 공고�
   await expect(page.getByRole("button", { name: "맞춤 편집", exact: true })).toHaveAttribute("aria-current", "step");
   await page.getByRole("button", { name: "공고 검토", exact: true }).click();
   await expect(page.getByText("공고 원문 검토·수정", { exact: true })).toBeVisible();
+  await page.getByRole("region", { name: "공고 검토 단계", exact: true }).getByText("더보기", { exact: true }).click();
   await page.getByRole("button", { name: "문서 전체에 댓글", exact: true }).click();
   await page.getByRole("textbox", { name: "수정 요청", exact: true }).fill("작성 중인 요청");
   await page.getByRole("button", { name: "내보내기", exact: true }).click();

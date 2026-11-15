@@ -220,3 +220,37 @@ test("자료 교체는 별도 창에서 안내하고 취소하면 기존 문서�
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("기존 문서");
   expect(stored().master?.document.text).toBe("기존 문서");
 });
+
+test("원본 비교는 최초 원문과 편집본을 구분하고 댓글 보조 도구는 더보기에서 연다", async ({ page }) => {
+  const document = newTextDocument("resume", "내 이력서.md", "최초 원문");
+  document.text = "수정 중인 내용";
+  await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
+  await page.goto("/workspace/resume");
+  await expect(page.getByRole("region", { name: "보관된 원본", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
+  await expect(page.getByRole("region", { name: "보관된 원본", exact: true })).toContainText("최초 원문");
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("수정 중인 내용");
+  await expect(page.getByRole("button", { name: "문서 전체에 댓글", exact: true })).not.toBeVisible();
+  await page.getByText("더보기", { exact: true }).click();
+  await page.getByRole("button", { name: "문서 전체에 댓글", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "수정 댓글 작성", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "원본 보기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "보관된 원본", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "검토 내용 보기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("PDF 원본 비교는 페이지 이동과 확대를 제공한다", async ({ page }) => {
+  const document = newTextDocument("resume", "예시.pdf", "추출한 PDF 내용");
+  document.source = { type: "pdf", originalText: "PDF 원문", attachmentId: "00000000-0000-4000-8000-000000000001", pages: [{ page: 1, text: "첫 페이지", method: "text", imageId: "00000000-0000-4000-8000-000000000002" }, { page: 2, text: "둘째 페이지", method: "ocr", imageId: "00000000-0000-4000-8000-000000000003" }] };
+  await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
+  await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
+  await page.getByRole("combobox", { name: "원본 페이지", exact: true }).selectOption("2");
+  await expect(page.getByRole("img", { name: "원본 2페이지. 드래그로 영역을 선택할 수 있습니다.", exact: true })).toHaveAttribute("src", /000000000003/);
+  await page.getByRole("combobox", { name: "원본 확대", exact: true }).selectOption("150");
+  await expect(page.locator(".source-region")).toHaveAttribute("style", /150%/);
+});
