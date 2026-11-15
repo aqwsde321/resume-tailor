@@ -206,3 +206,17 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await expect.poll(() => stored().works[0]?.resume?.summary).toBe("맞춤 소개");
   expect(model).toBe("test-model");
 });
+
+test("자료 교체는 별도 창에서 안내하고 취소하면 기존 문서를 유지한다", async ({ page }) => {
+  const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "내 이력서.md", "기존 문서"), resume);
+  const stored = await mockStorage(page, initial);
+  await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "자료 교체", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "이력서 자료 교체", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("새 자료를 추출하면 현재 검토 문서와 수정 댓글이 교체됩니다.");
+  await page.getByRole("button", { name: "교체 취소", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("기존 문서");
+  expect(stored().master?.document.text).toBe("기존 문서");
+});

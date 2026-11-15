@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/features/workspace/context";
 import { SourceInput } from "@/features/workspace/ui/source-input";
@@ -17,16 +17,17 @@ export default function MyResumePage() {
   const [candidate, setCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [latestFirst, setLatestFirst] = useState(true);
+  const replaceDialog = useRef<HTMLDialogElement>(null);
   if (!workspace) return null;
   const master = workspace.master;
   const stage = !master ? 0 : candidate || master.resume ? 2 : 1;
   const sourceInput = <SourceInput kind="resume" variant="studio" onImport={(document) => {
-      update((previous) => ({ ...previous, master: { id: previous.master?.id ?? crypto.randomUUID(), version: previous.master?.version ?? 1, document, resume: previous.master?.resume ?? null, enrichment: previous.master?.enrichment ?? [], updatedAt: new Date().toISOString() } })); setCandidate(null);
+      update((previous) => ({ ...previous, master: { id: previous.master?.id ?? crypto.randomUUID(), version: previous.master?.version ?? 1, document, resume: previous.master?.resume ?? null, enrichment: previous.master?.enrichment ?? [], updatedAt: new Date().toISOString() } })); setCandidate(null); replaceDialog.current?.close();
     }} />;
   return <div className="studio-resume-page">
     <header className="studio-page-heading"><div><h1>내 이력서</h1><p>당신의 경험을 정리하는 곳. 회사별 이력서의 기준이 됩니다.</p></div><span className="studio-state-badge"><StudioIcon name={master?.resume ? "check" : "document"} size={15} />{master?.resume ? `공통 원본 · 버전 ${master.version}` : master ? "원문 검토 중" : "공통 이력서"}</span></header>
     <ol className="studio-progress" aria-label="이력서 정리 단계">{["자료 등록", "원문 검토", "이력서 확정"].map((label, index) => <li key={label} aria-current={stage === index ? "step" : undefined} data-complete={stage > index}><span className="studio-step-dot">{stage > index ? <StudioIcon name="check" size={12} /> : index + 1}</span>{label}</li>)}</ol>
-    {!master ? <div className="studio-registration">{sourceInput}<aside className="studio-registration-help"><span className="studio-help-icon"><StudioIcon name="sparkle" size={23} /></span><h2>완벽하게 정리하지<br />않아도 괜찮아요.</h2><p>기존에 작성한 이력서부터 시작하세요.<br />부족한 부분은 함께 채울 수 있습니다.</p><ol><li><strong>자료를 읽어올게요</strong><span>PDF부터 복사한 텍스트까지.</span></li><li><strong>원문을 보고 바로잡으세요</strong><span>문장을 선택하고 수정 댓글을 남기세요.</span></li><li><strong>빠진 경험은 질문으로</strong><span>AI 질문에 답하며 내용을 보완하세요.</span></li></ol><p className="studio-storage-note"><StudioIcon name="check" size={14} />자료는 이 컴퓨터에 보관됩니다.</p></aside></div> : <details className="studio-replace-source"><summary>다른 원본 자료 등록</summary>{sourceInput}</details>}
+    {!master ? <div className="studio-registration">{sourceInput}<aside className="studio-registration-help"><span className="studio-help-icon"><StudioIcon name="sparkle" size={23} /></span><h2>완벽하게 정리하지<br />않아도 괜찮아요.</h2><p>기존에 작성한 이력서부터 시작하세요.<br />부족한 부분은 함께 채울 수 있습니다.</p><ol><li><strong>자료를 읽어올게요</strong><span>PDF부터 복사한 텍스트까지.</span></li><li><strong>원문을 보고 바로잡으세요</strong><span>문장을 선택하고 수정 댓글을 남기세요.</span></li><li><strong>빠진 경험은 질문으로</strong><span>AI 질문에 답하며 내용을 보완하세요.</span></li></ol><p className="studio-storage-note"><StudioIcon name="check" size={14} />자료는 이 컴퓨터에 보관됩니다.</p></aside></div> : <><div className="review-source-bar"><span><StudioIcon name="document" size={18} /><strong>{master.document.title}</strong></span><button type="button" onClick={() => replaceDialog.current?.showModal()}>자료 교체</button></div><dialog ref={replaceDialog} className="review-replace-dialog" aria-labelledby="replace-source-title"><header><h2 id="replace-source-title">이력서 자료 교체</h2><button type="button" onClick={() => replaceDialog.current?.close()}>교체 취소</button></header><p>새 자료를 추출하면 현재 검토 문서와 수정 댓글이 교체됩니다.</p><p>확정된 공통 이력서와 회사별 이력서는 유지됩니다. 새 자료를 검토한 뒤 공통 이력서를 다시 확정해 주세요.</p>{sourceInput}</dialog></>}
     {master && <>
       <DocumentEditor variant="studio" document={master.document} settings={workspace.settings} onChange={(document) => { update((previous) => ({ ...previous, master: { ...previous.master!, document } })); setCandidate(null); }} />
       <div className="studio-review-actions"><div><label><input type="checkbox" checked={latestFirst} onChange={(event) => setLatestFirst(event.target.checked)} />경력·프로젝트를 시작일 최신순으로 정리</label><p>남은 수정 댓글을 반영하거나 삭제한 후 다음 단계로 진행하세요.</p></div>

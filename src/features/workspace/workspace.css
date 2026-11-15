@@ -306,3 +306,16 @@
   .studio-skip { left: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .resume-studio *, .resume-studio *::before, .resume-studio *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.review-source-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 24px; padding: 14px 18px; background: #fff; border: 1px solid #dee2eb; border-radius: 10px; }
+.review-source-bar > span { display: flex; align-items: center; gap: 10px; min-width: 0; color: #545c72; font-size: 14px; }
+.review-source-bar strong { overflow-wrap: anywhere; font-weight: 500; }
+.review-source-bar button { flex-shrink: 0; }
+.review-replace-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100svh - 48px); overflow: auto; padding: 26px; border: 1px solid #dee2eb; border-radius: 14px; background: #f7f8fc; color: #202536; }
+.review-replace-dialog::backdrop { background: #20253666; }
+.review-replace-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.review-replace-dialog h2 { margin: 0; font-size: 22px; }
+.review-replace-dialog > p { color: #626b7e; font-size: 14px; line-height: 1.8; }
+.review-replace-dialog .studio-source-card { margin-top: 20px; }
+.review-replace-dialog button:focus-visible { outline: 3px solid #9d8dde; outline-offset: 3px; }
+@media(max-width: 680px) { .review-replace-dialog { padding: 18px; } .review-replace-dialog > header { align-items: flex-start; } }
