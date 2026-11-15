@@ -1,3 +1,4 @@
+import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
 import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
 import { DocumentChangeSchema } from "./document-review";
@@ -60,6 +61,7 @@ export const MasterResumeSchema = z.object({
   document: ReviewDocumentSchema,
   resume: ResumeSchema.nullable(),
   resultDraft: ResumeResultDraftSchema.nullable().optional(),
+  reviewMarkdown: z.string().max(500000).optional(),
   skillCatalog: z.array(z.string().max(120)).optional(),
   enrichment: z.array(EnrichmentSchema),
   updatedAt: Timestamp,
@@ -92,7 +94,7 @@ export const WorkspaceSchema = z.object({
   settings: z.object({ model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema }).strict(),
   // 기존 브라우저 데이터는 마이그레이션 후에도 원형을 보존한다.
   legacyBackup: z.record(z.string(), z.unknown()).nullable(),
-}).strict();
+}).strict().transform((workspace) => workspace.master?.resultDraft ? { ...workspace, master: { ...workspace.master, resultDraft: upgradeResultDraftMarkdown(workspace.master.resultDraft) } } : workspace);
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 export type ReviewDocument = z.infer<typeof ReviewDocumentSchema>;
 export type Annotation = z.infer<typeof AnnotationSchema>;

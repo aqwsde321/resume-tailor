@@ -35,10 +35,10 @@ test("완성본에서 핵심 기술에 댓글로 수정 요청하고 최종 확�
   expect(await documentRegion.textContent()).toBe(stored().master!.resultDraft!.document.text);
   await page.route("**/api/workspace/review", (route) => {
     const { document } = route.request().postDataJSON();
-    const before = "• Java\n• Spring\n• Redis";
+    const before = "- Java\n- Spring\n- Redis";
     const start = document.text.indexOf(before);
     expect(document.annotations[0].anchor).toMatchObject({ type: "text", quote: "Java", start: start + 2 });
-    return route.fulfill({ json: { ok: true, data: { sourceText: document.text, changes: [{ id: "skills", start, end: start + before.length, before, after: "• Spring\n• Redis", reason: "핵심 기술 선택 변경", commentIds: document.annotations.map((item: { id: string }) => item.id) }], unresolved: [] } } });
+    return route.fulfill({ json: { ok: true, data: { sourceText: document.text, changes: [{ id: "skills", start, end: start + before.length, before, after: "- Spring\n- Redis", reason: "핵심 기술 선택 변경", commentIds: document.annotations.map((item: { id: string }) => item.id) }], unresolved: [] } } });
   });
   await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: { ...resume, techStack: ["Spring", "Redis"] } } }));
   await comment(page, "Java", "핵심 기술에서 Java를 빼 주세요. 프로젝트 사용 기술은 유지해 주세요.");
@@ -85,4 +85,35 @@ test("정리 결과에 댓글 두 개를 모아 적용하고 다시 구조화한
   await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
   await expect.poll(() => stored().master?.resume?.summary).toBe("검토한 소개");
   expect(stored().master?.document.text).toBe("보존할 원문");
+});
+
+test("Markdown 목차 위계를 직접 바꿔도 댓글 위치와 저장한 위계를 보존한다", async ({ page }) => {
+  const stored = await setup(page);
+  await page.getByRole("button", { name: "직접 편집", exact: true }).click();
+  const editor = page.locator("textarea[name=review-document]");
+  const markdown = (await editor.inputValue()).replace("## 프로젝트", "### 프로젝트").replace("### 서비스", "#### 서비스").replace("구현 경험", "**구현 경험**");
+  await editor.fill(markdown);
+  await page.getByRole("button", { name: "읽기·댓글", exact: true }).click();
+  const region = page.getByRole("region", { name: "추출 문서", exact: true });
+  await expect(region.getByRole("heading", { name: "프로젝트", level: 3, exact: true })).toBeVisible();
+  await expect(region.getByRole("heading", { name: "서비스", level: 4, exact: true })).toBeVisible();
+  await expect(region.locator("strong")).toHaveText("**구현 경험**");
+  await comment(page, "구현 경험", "구체적인 역할을 확인해 주세요");
+  await expect.poll(() => stored().master?.resultDraft?.document.annotations.length).toBe(1);
+  const anchor = stored().master!.resultDraft!.document.annotations[0].anchor;
+  expect(anchor).toMatchObject({ type: "text", start: markdown.indexOf("구현 경험"), quote: "구현 경험" });
+  await page.reload();
+  await expect(region.locator("mark")).toHaveText("구현 경험");
+  // 댓글을 삭제하고 다시 구조화해도 사용자가 편집한 제목 위계를 덮어쓰지 않는다.
+  await page.getByRole("button", { name: "댓글 1개", exact: true }).click();
+  await page.getByRole("button", { name: "댓글 삭제", exact: true }).click();
+  await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: resume } }));
+  await page.getByRole("button", { name: "수정한 결과 다시 정리", exact: true }).click();
+  await page.getByRole("button", { name: "공통 이력서 확인으로", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "서비스", level: 4, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
+  await expect.poll(() => stored().master?.reviewMarkdown).toBe(markdown);
+  await page.reload();
+  await page.locator("summary").filter({ hasText: "확정 이력서" }).click();
+  await expect(page.getByRole("heading", { name: "서비스", level: 4, exact: true })).toBeVisible();
 });

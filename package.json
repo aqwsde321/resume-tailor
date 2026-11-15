@@ -21,6 +21,7 @@
     "@openai/codex-sdk": "latest",
     "@stylexjs/stylex": "^0.19.2",
     "cheerio": "^1.2.0",
+    "mdast-util-from-markdown": "2.1.0",
     "next": "latest",
     "playwright": "^1.58.2",
     "react": "latest",
