@@ -44,11 +44,23 @@ export const EnrichmentSchema = z.object({
   drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, target: z.string().optional(), status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
 }).strict();
 
+export const ResumeResultDraftSchema = z.object({
+  stage: z.enum(["review", "confirm"]).optional(),
+  resume: ResumeSchema,
+  document: ReviewDocumentSchema,
+  sourceText: z.string().max(500000),
+  structuredText: z.string().max(500000),
+  skillCatalog: z.array(z.string().trim().min(1).max(120)).max(300),
+}).strict();
+export type ResumeResultDraft = z.infer<typeof ResumeResultDraftSchema>;
+
 export const MasterResumeSchema = z.object({
   id: Id,
   version: z.number().int().positive(),
   document: ReviewDocumentSchema,
   resume: ResumeSchema.nullable(),
+  resultDraft: ResumeResultDraftSchema.nullable().optional(),
+  skillCatalog: z.array(z.string().max(120)).optional(),
   enrichment: z.array(EnrichmentSchema),
   updatedAt: Timestamp,
 }).strict();

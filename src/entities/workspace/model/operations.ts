@@ -7,7 +7,7 @@ export function publishMasterResume(workspace: Workspace, document: ReviewDocume
   return { ...workspace, master: {
     id: workspace.master?.id ?? crypto.randomUUID(),
     version: (workspace.master?.resume ? workspace.master.version : 0) + 1,
-    document, resume: ResumeSchema.parse(resume), enrichment: workspace.master?.enrichment ?? [], updatedAt: now,
+    document, resume: ResumeSchema.parse(resume), resultDraft: null, skillCatalog: [...new Set([...(workspace.master?.resultDraft?.skillCatalog ?? workspace.master?.skillCatalog ?? []), ...resume.techStack])], enrichment: workspace.master?.enrichment ?? [], updatedAt: now,
   } };
 }
 export function createCompanyWork(master: NonNullable<Workspace["master"]>, document: ReviewDocument): CompanyWork {
