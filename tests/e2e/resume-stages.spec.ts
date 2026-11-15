@@ -66,6 +66,7 @@ test("수정 되돌리기는 문서 도구 모음에서 동작하고 원문 비�
 test("저장본의 자료를 교체하면 자료 확인 상태를 새로고침 후에도 유지한다", async ({ page }) => {
   const stored = await storage(page, publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "이전 자료", "이전 원문"), resume));
   await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("resume", "새 자료", "새 원문"), warnings: [] } } }));
+  await page.getByRole("button", { name: "자료 확인 단계", exact: true }).click();
   await page.getByRole("button", { name: "자료 교체", exact: true }).click();
   await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
   await page.getByRole("textbox", { name: "원문", exact: true }).fill("새 원문");
@@ -81,4 +82,25 @@ test("저장본의 자료를 교체하면 자료 확인 상태를 새로고침 �
   await page.getByRole("button", { name: "이전: 자료 확인", exact: true }).click();
   await expect(page.locator("[aria-current=step]")).toHaveText(/자료 확인/);
   expect(stored().master?.resume?.summary).toBe("기존 소개");
+});
+
+test("저장 화면은 완료 상태와 문서 상단 수정 버튼을 표시하고 본문만 내부 스크롤한다", async ({ page }) => {
+  await page.setViewportSize({ width: 967, height: 976 });
+  const longResume = ResumeSchema.parse({ ...resume, projects: Array.from({ length: 20 }, (_, index) => ({ name: `프로젝트 ${index + 1}`, description: "직접 수행한 업무와 성과입니다.\n".repeat(10), techStack: ["Java"] })) });
+  await storage(page, publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "원본.pdf", "원문"), longResume));
+  await expect(page.locator(".studio-progress [aria-current=step]")).toHaveCount(0);
+  await expect(page.locator(".studio-progress > li[data-complete=true]")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "자료 교체", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "회사별 이력서 만들기", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "회사별 이력서", exact: true })).toBeVisible();
+  const header = page.locator(".studio-saved-document-header");
+  await expect(header.getByRole("button", { name: "이력서 수정하기", exact: true })).toBeVisible();
+  const body = page.getByRole("region", { name: "저장된 이력서 본문", exact: true });
+  expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
+  const box = await body.boundingBox();
+  expect(box!.height).toBeLessThanOrEqual(760);
+  await body.press("PageDown");
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await header.getByRole("button", { name: "이력서 수정하기", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "이력서 편집", exact: true })).toBeVisible();
 });

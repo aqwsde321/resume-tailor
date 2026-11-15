@@ -212,6 +212,7 @@ test("자료 교체는 별도 창에서 안내하고 취소하면 기존 문서�
   const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "내 이력서.md", "기존 문서"), resume);
   const stored = await mockStorage(page, initial);
   await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "자료 확인 단계", exact: true }).click();
   await page.getByRole("button", { name: "자료 교체", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "이력서 자료 교체", exact: true });
   await expect(dialog).toBeVisible();
