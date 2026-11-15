@@ -4,9 +4,9 @@ import { publishMasterResume, newTextDocument } from "../../src/entities/workspa
 import { createResultDraft } from "../../src/entities/workspace/model/resume-result-draft";
 import { ResumeSchema } from "../../src/shared/lib/schemas";
 const resume = ResumeSchema.parse({ name: "예시 개발자", summary: "원래 소개", techStack: ["Java", "Spring", "Redis"], projects: [{ name: "서비스", description: "구현 경험", techStack: ["PostgreSQL"] }] });
-async function setup(page: Page) {
-  let stored = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "원본 PDF", "보존할 원문"), resume);
-  stored.master!.resultDraft = createResultDraft(resume, "보존할 원문");
+async function setup(page: Page, resumeValue = resume) {
+  let stored = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "원본 PDF", "보존할 원문"), resumeValue);
+  stored.master!.resultDraft = createResultDraft(resumeValue, "보존할 원문");
   await page.route("**/api/workspace", async (route) => {
     if (route.request().method() === "PUT") stored = { ...route.request().postDataJSON().workspace, revision: stored.revision + 1 };
     await route.fulfill({ json: { ok: true, data: stored } });
@@ -117,3 +117,30 @@ test("Markdown 목차 위계를 직접 바꿔도 댓글 위치와 저장한 위�
   await expect(page.getByRole("heading", { name: "저장된 공통 이력서", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "서비스", level: 4, exact: true })).toBeVisible();
 });
+
+for (const width of [1254, 967]) {
+  test(`편집·확인·저장 문서의 너비와 내부 스크롤이 일관된다 (${width}px)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 976 });
+    const long = ResumeSchema.parse({ ...resume, projects: Array.from({ length: 16 }, (_, index) => ({ name: `프로젝트 ${index}`, description: "내용을 확인합니다.\n".repeat(12) })) });
+    await setup(page, long);
+    const editFrame = await page.locator(".studio-document-column:visible").boundingBox();
+    const editText = await page.getByRole("region", { name: "추출 문서", exact: true }).getByRole("article", { name: "정리된 이력서", exact: true }).boundingBox();
+    await page.getByRole("button", { name: "공통 이력서 확인으로", exact: true }).click();
+    const confirmation = page.getByRole("region", { name: "확인할 이력서 본문", exact: true });
+    await expect(confirmation).toBeVisible();
+    const confirmFrame = await page.locator(".resume-confirm-document-card").boundingBox();
+    const confirmText = await confirmation.getByRole("article", { name: "정리된 이력서", exact: true }).boundingBox();
+    expect(Math.abs(confirmFrame!.width - editFrame!.width)).toBeLessThan(2);
+    expect(Math.abs(confirmText!.width - editText!.width)).toBeLessThan(2);
+    expect(await confirmation.evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
+    await confirmation.press("PageDown");
+    await expect.poll(() => confirmation.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
+    const saved = page.getByRole("region", { name: "저장된 이력서 본문", exact: true });
+    await expect(saved).toBeVisible();
+    const savedFrame = await page.locator(".studio-saved-document-card").boundingBox();
+    const savedText = await saved.getByRole("article", { name: "정리된 이력서", exact: true }).boundingBox();
+    expect(Math.abs(savedFrame!.width - editFrame!.width)).toBeLessThan(2);
+    expect(Math.abs(savedText!.width - editText!.width)).toBeLessThan(2);
+  });
+}

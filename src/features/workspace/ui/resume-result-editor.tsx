@@ -7,7 +7,8 @@ import type { Resume } from "@/shared/lib/types";
 import { jsonRequest, workspaceRequest } from "../api";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { DocumentEditor } from "./document-editor";
-import { ResumeDocumentPreview } from "./resume-document-preview";
+import { ResumeReadonlyDocument } from "./resume-readonly-document";
+import { StudioIcon } from "./studio-icon";
 
 export function ResumeResultEditor({ draft, settings, stale, onChange, onConfirm, onNavigate, originalSource, enrichment, active = true, onBusyChange, onCommentDraftChange }: { draft: ResumeResultDraft; settings: Workspace["settings"]; stale: boolean; onChange: (draft: ResumeResultDraft) => void; onConfirm: () => void; onNavigate: (step: "source" | "edit" | "save") => void; active?: boolean; onBusyChange?: (busy: boolean) => void; onCommentDraftChange?: (draft: boolean) => void; originalSource?: ReviewDocument["source"]; enrichment?: ReactNode }) {
   const [busy, setBusy] = useState(false);
@@ -25,9 +26,9 @@ export function ResumeResultEditor({ draft, settings, stale, onChange, onConfirm
   const blocked = busy || documentBusy || commentDraft || stale || pending || hasProposal || dirty;
   return <section className="resume-result-editor" aria-label="정리 결과 편집">
     <header><h2>{confirming ? "공통 이력서 확인" : "이력서 편집"}</h2><p>{confirming ? "회사별 맞춤에 사용할 공통 이력서를 확인하세요. PDF 디자인은 회사별 이력서를 완성한 뒤 선택합니다." : "이력서에서 문장이나 핵심 기술을 드래그해 수정 요청을 남기세요. 여러 댓글을 모아 한 번에 반영할 수 있습니다."}</p></header>
-    {confirming && <ResumeDocumentPreview text={draft.document.text} />}
+    {confirming && <ResumeReadonlyDocument text={draft.document.text} />}
     <div hidden={confirming}>
-    {enrichment && <div className="resume-enrichment-tools"><Button label={enrichmentOpen ? "공통 경험 보완 닫기" : "공통 경험 보완"} variant="secondary" onClick={() => setEnrichmentOpen(!enrichmentOpen)} /><div hidden={!enrichmentOpen}><p>선택한 경험은 편집 초안에 추가됩니다. 확인 후 공통 이력서로 저장해 주세요.</p>{(pending || dirty || hasProposal) && <p role="status">문서 수정과 댓글을 먼저 마무리하면 경험을 보완할 수 있습니다.</p>}<div inert={pending || dirty || hasProposal || busy}>{enrichment}</div></div></div>}
+    {enrichment && <div className="resume-enrichment-tools"><Button className="ai-enrichment-trigger" icon={<StudioIcon name="sparkle" size={18} />} aria-expanded={enrichmentOpen} label={enrichmentOpen ? "공통 경험 보완 닫기" : "공통 경험 보완"} variant="secondary" onClick={() => setEnrichmentOpen(!enrichmentOpen)} /><div hidden={!enrichmentOpen}><p>선택한 경험은 편집 초안에 추가됩니다. 확인 후 공통 이력서로 저장해 주세요.</p>{(pending || dirty || hasProposal) && <p role="status">문서 수정과 댓글을 먼저 마무리하면 경험을 보완할 수 있습니다.</p>}<div inert={pending || dirty || hasProposal || busy}>{enrichment}</div></div></div>}
     <div inert={busy}><DocumentEditor onActivityChange={handleActivity} originalSource={originalSource} active={active && !busy && !confirming} variant="studio" presentation="resume" hideHeading document={draft.document} settings={settings} onChange={(document) => onChange({ ...draft, document })} /></div>
     {dirty && <div className="result-restructure"><p>수정한 문서를 이력서 항목에 반영하려면 다시 정리해 주세요. 이 작업은 AI를 사용합니다.</p><Button label={busy ? "수정 결과 정리 중…" : "수정한 결과 다시 정리"} isDisabled={busy || pending || hasProposal} onClick={async () => { setBusy(true); setError(""); try { const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: draft.document.text, agent: toAgentRunOptions(settings) })); const next = createResultDraft({ ...resume, pdfProfileImageDataUrl: draft.resume.pdfProfileImageDataUrl, pdfProfileImageVisible: draft.resume.pdfProfileImageVisible }, draft.sourceText, draft.skillCatalog, true); onChange({ ...next, structuredText: draft.document.text, document: { ...draft.document, proposal: null } }); } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); } }} /></div>}
     </div>

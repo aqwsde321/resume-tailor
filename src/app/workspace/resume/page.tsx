@@ -14,7 +14,7 @@ import { StudioIcon } from "@/features/workspace/ui/studio-icon";
 import { ResumeResultEditor } from "@/features/workspace/ui/resume-result-editor";
 import { createResultDraft, resumeToReviewText } from "@/entities/workspace/model/resume-result-draft";
 import { getResumeView, navigateResume, resumeSaveBlockReason } from "@/entities/workspace/model/resume-navigation";
-import { ResumeDocumentPreview } from "@/features/workspace/ui/resume-document-preview";
+import { ResumeReadonlyDocument } from "@/features/workspace/ui/resume-readonly-document";
 export default function MyResumePage() {
   const { workspace, update } = useWorkspace();
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
@@ -84,12 +84,7 @@ export default function MyResumePage() {
           })} />}
       /></div>}
       {master.resume && view === "saved" && <section className="studio-saved-resume" aria-label="저장된 공통 이력서">
-        <div className="studio-saved-document-card">
-          <header className="studio-saved-document-header"><div><h2>저장된 공통 이력서</h2><p>버전 {master.version}</p></div><button type="button" onClick={() => navigate("edit")}>이력서 수정하기</button></header>
-          <div className="studio-saved-document-scroll" role="region" aria-label="저장된 이력서 본문" tabIndex={0}>
-            <ResumeDocumentPreview text={master.reviewMarkdown ?? resumeToReviewText(master.resume)} />
-          </div>
-        </div>
+        <ResumeReadonlyDocument saved text={master.reviewMarkdown ?? resumeToReviewText(master.resume)} toolbar={<><div><h2>저장된 공통 이력서</h2><p>버전 {master.version}</p></div><button type="button" onClick={() => navigate("edit")}>이력서 수정하기</button></>} />
       </section>}
 
 

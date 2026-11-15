@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useWorkspace } from "@/features/workspace/context";
 import { DocumentEditor } from "@/features/workspace/ui/document-editor";
 import { TailoringReview } from "@/features/workspace/ui/tailoring-review";
+import { StudioIcon } from "@/features/workspace/ui/studio-icon";
 import { EnrichmentPanel } from "@/features/workspace/ui/enrichment-panel";
 import { ResumePreview } from "@/features/workspace/ui/resume-preview";
 import { AiTaskStatus } from "@/features/workspace/ui/ai-task-status";
@@ -106,7 +107,7 @@ export default function CompanyWorkPage() {
           const sourceText = work.resumeDocument!.text;
           void aiTask.run({ label: "편집 문서 정리", execute: (signal) => workspaceRequest<Resume>("/api/resume", { ...jsonRequest({ text: sourceText, agent }), signal }), onSuccess: (resume) => setEditedCandidate({ resume, sourceText }) });
         }}>검토한 문서를 편집본에 반영</button></div>{editedCandidate && <section className="company-detail-candidate"><h3>편집본 반영 전 확인</h3><ResumePreview resume={editedCandidate.resume} /><button className="primary" disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}</div></details>
-        <details className="company-enrichment"><summary>공고에 맞춰 경험 보완</summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings} onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
+        <details className="company-enrichment"><summary className="ai-enrichment-trigger"><StudioIcon name="sparkle" size={18} /><span>공고에 맞춰 경험 보완</span></summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings} onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
           const resume = ResumeSchema.parse(applyEnrichmentDrafts(current.resume!, drafts));
           return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) };
         })} /></details>
