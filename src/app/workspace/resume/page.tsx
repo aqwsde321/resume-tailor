@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { Button } from "@astryxdesign/core/Button";
 import { useWorkspace } from "@/features/workspace/context";
 import { SourceInput } from "@/features/workspace/ui/source-input";
 import { DocumentEditor } from "@/features/workspace/ui/document-editor";
@@ -54,12 +55,12 @@ export default function MyResumePage() {
     {master && <>
       <div hidden={!showSource}><DocumentEditor active={showSource} allowComments={false} heading="추출 자료 확인" description="원본과 비교해 누락되거나 깨진 글자를 직접 고치세요. 내용에 대한 수정 요청은 다음 이력서 편집 단계에서 남깁니다." variant="studio" document={master.document} settings={workspace.settings} onChange={(document) => { update((previous) => ({ ...previous, master: { ...previous.master!, document, sourceNeedsReview: true } })); }} />
       <div className="studio-review-actions"><div><label><input type="checkbox" checked={latestFirst} onChange={(event) => setLatestFirst(event.target.checked)} />경력·프로젝트를 시작일 최신순으로 정리</label><p>남은 수정 댓글을 반영하거나 삭제한 후 다음 단계로 진행하세요.</p></div>
-      {candidate || master.resume && !master.sourceNeedsReview ? <button className="primary" onClick={() => navigate("edit")}>다음: 이력서 편집<StudioIcon name="arrow" size={16} /></button> : <button className="primary" disabled={busy || !master.document.text.trim() || Boolean(master.document.proposal) || master.document.annotations.some((item) => item.status === "pending")} onClick={async () => {
+      {candidate || master.resume && !master.sourceNeedsReview ? <Button variant="primary" label="다음: 이력서 편집" onClick={() => navigate("edit")} /> : <Button variant="primary" label={busy ? "이력서 항목 정리 중…" : "검토한 내용으로 이력서 정리"} isDisabled={busy || !master.document.text.trim() || Boolean(master.document.proposal) || master.document.annotations.some((item) => item.status === "pending")} onClick={async () => {
         setBusy(true); setError("");
         try { const resume = await workspaceRequest<Resume>("/api/resume", jsonRequest({ text: master.document.text, agent: toAgentRunOptions(workspace.settings) })); update((previous) => ({ ...previous, master: { ...previous.master!, viewStep: "edit", resultDraft: createResultDraft(latestFirst ? sortResumeChronologically(resume) : resume, master.document.text, previous.master?.skillCatalog) } })); }
         catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
-      }}>{busy ? "이력서 항목 정리 중…" : "검토한 내용으로 이력서 정리"}<StudioIcon name="arrow" size={16} /></button>}</div></div>
+      }} />}</div></div>
       {error && <p role="alert">{error}</p>}
       {candidate && <div hidden={showSource || view === "saved"}><ResumeResultEditor active={!showSource && view !== "saved"} onBusyChange={setEditorBusy} onCommentDraftChange={setCommentDraft} onNavigate={navigate} key={candidate.document.id} draft={candidate} settings={workspace.settings} originalSource={master.document.source} stale={candidate.sourceText !== master.document.text}
         onChange={(draft) => update((previous) => previous.master?.resultDraft?.document.id !== draft.document.id ? previous : ({ ...previous, master: { ...previous.master!, resultDraft: draft } }))}
