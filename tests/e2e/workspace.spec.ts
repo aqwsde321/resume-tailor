@@ -15,6 +15,19 @@ async function mockStorage(page: Page, initial = createEmptyWorkspace()) {
   });
   return () => stored;
 }
+async function selectDocumentText(page: Page, start: number, end: number) {
+  await page.getByRole("region", { name: "추출 문서", exact: true }).evaluate((element, offsets) => {
+    const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const range = element.ownerDocument.createRange(); let offset = 0; let started = false; let node = walker.nextNode();
+    while (node) {
+      const length = node.textContent?.length ?? 0;
+      if (!started && offsets.start < offset + length) { range.setStart(node, offsets.start - offset); started = true; }
+      if (started && offsets.end <= offset + length) { range.setEnd(node, offsets.end - offset); break; }
+      offset += length; node = walker.nextNode();
+    }
+    const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  }, { start, end });
+}
 test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정하고 다시 불러온다", async ({ page }) => {
   const stored = await mockStorage(page);
   await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("resume", "새 이력서", "J a v a 개발자"), warnings: [] } } }));
@@ -28,16 +41,25 @@ test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정
   await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
   await page.getByLabel("원문", { exact: true }).fill("J a v a 개발자");
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toHaveCount(0);
   await page.getByRole("region", { name: "추출 문서", exact: true }).evaluate((element) => {
     const node = element.firstChild!.firstChild!;
     const range = element.ownerDocument.createRange(); range.setStart(node, 0); range.setEnd(node, 7);
     const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
     element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
   });
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
   await page.getByLabel("수정 요청", { exact: true }).fill("Java로 합쳐줘");
   await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
   await expect(page.locator(".review-document mark")).toHaveText("J a v a");
-  await page.getByRole("button", { name: "수정 요청 1개 반영", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toHaveCount(0);
+  await selectDocumentText(page, 8, 11);
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
+  await page.getByLabel("수정 요청", { exact: true }).fill("직무 표현도 확인해줘");
+  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
+  await page.getByRole("button", { name: "댓글 2개", exact: true }).click();
+  await page.getByRole("button", { name: "수정 요청 2개 반영", exact: true }).click();
   await page.getByRole("button", { name: "선택한 변경 적용", exact: true }).click();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("Java 개발자");
   await page.getByRole("button", { name: "검토한 내용으로 이력서 정리", exact: true }).click();
@@ -45,6 +67,39 @@ test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정
   await expect.poll(() => stored().master?.resume?.name).toBe("예시 개발자");
   await page.reload();
   await expect(page.getByText("확정 이력서 · 버전 1", { exact: true })).toBeVisible();
+});
+
+test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다시 열기를 지원한다", async ({ page }) => {
+  const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "원본", "선택할 문장입니다."), resume);
+  const stored = await mockStorage(page, initial);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/workspace/resume");
+  await selectDocumentText(page, 0, 3);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toBeFocused();
+  const box = await page.getByRole("dialog", { name: "수정 댓글 작성" }).boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(391);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(845);
+  await page.getByLabel("수정 요청", { exact: true }).fill("취소할 내용");
+  await page.getByLabel("수정 요청", { exact: true }).press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".review-document mark")).toHaveCount(0);
+  expect(stored().master!.document.annotations).toHaveLength(0);
+  await selectDocumentText(page, 0, 3);
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
+  await page.getByLabel("수정 요청", { exact: true }).fill("등록할 수정 요청");
+  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
+  await expect.poll(() => stored().master!.document.annotations.length).toBe(1);
+  await page.reload();
+  await expect(page.locator(".review-document .comment-mark")).toHaveText("선택할");
+  await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "댓글 보기: 선택할", exact: true }).focus();
+  await page.getByRole("button", { name: "댓글 보기: 선택할", exact: true }).press("Enter");
+  await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toBeVisible();
+  await expect(page.locator(".comment-mark")).toHaveAttribute("data-active", "true");
+  await page.getByRole("button", { name: "댓글 목록 닫기", exact: true }).click();
+  await expect(page.locator(".comment-mark")).toHaveAttribute("data-active", "false");
 });
 
 test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용할 수 있다", async ({ page }) => {
@@ -69,6 +124,7 @@ test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText(longText);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const documentBox = await page.getByRole("region", { name: "추출 문서", exact: true }).boundingBox();
+  await page.getByRole("button", { name: "댓글 0개", exact: true }).click();
   const comments = await page.getByRole("complementary", { name: "수정 댓글", exact: true }).boundingBox();
   expect(comments!.y).toBeGreaterThanOrEqual(documentBox!.y + documentBox!.height);
   await page.getByRole("button", { name: "직접 편집", exact: true }).click();

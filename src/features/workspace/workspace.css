@@ -20,6 +20,31 @@
 .source-region img { display: block; width: 100%; height: auto; pointer-events: none; }
 .region-selection { position: absolute; border: 2px solid #2950c8; background: #2950c830; pointer-events: none; }
 .workspace-app summary { cursor: pointer; padding-block: 12px; }
+.annotation-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.annotation-layout:not(.is-list-open) { grid-template-columns: minmax(0, 1fr); }
+.annotation-layout:not(.is-list-open) .studio-document-column { max-width: 960px; width: 100%; margin-inline: auto; }
+.annotation-selection-button { position: fixed; z-index: 110; display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #d4cce9; border-radius: 7px; background: white; color: #5341a8; box-shadow: 0 4px 16px #20253624; font: 500 13px system-ui, sans-serif; cursor: pointer; }
+.annotation-composer { position: fixed; z-index: 120; width: min(332px, calc(100vw - 24px)); max-height: min(440px, calc(100svh - 24px)); overflow: auto; padding: 18px; border: 1px solid #d6d1e4; border-radius: 12px; background: white; color: #202536; box-shadow: 0 10px 40px #2025362b; font: 13px/1.6 "Apple SD Gothic Neo", system-ui, sans-serif; overscroll-behavior: contain; }
+.annotation-composer h3 { margin: 0 0 10px; font-size: 14px; }
+.annotation-composer-quote { max-height: 100px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px 10px; border-left: 2px solid #a89acd; background: #f5f2fc; color: #5c5277; }
+.annotation-composer label { display: block; margin: 12px 0 6px; font-size: 12px; }
+.annotation-composer textarea { display: block; box-sizing: border-box; width: 100%; min-height: 100px; padding: 10px; border: 1px solid #8892a8; border-radius: 7px; resize: vertical; font: inherit; background: #fff; color: #202536; }
+.annotation-composer footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.annotation-composer button { padding: 8px 13px; border: 1px solid #d9dce6; border-radius: 6px; background: white; color: #41465a; font: inherit; cursor: pointer; }
+.annotation-composer button[type=submit] { background: #6554c0; border-color: #6554c0; color: white; }
+.annotation-composer button:disabled { opacity: .5; cursor: not-allowed; }
+.annotation-composer :is(button,textarea):focus-visible, .annotation-selection-button:focus-visible { outline: 3px solid #8b78dd; outline-offset: 3px; }
+.annotation-composer button:hover:not(:disabled), .annotation-selection-button:hover { filter: brightness(.96); }
+.review-document::selection, .review-document *::selection { background: #dcd4f3; color: #242038; }
+.workspace-app .review-document .comment-anchor { display: inline; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font: inherit; line-height: inherit; color: inherit; text-align: inherit; user-select: text; cursor: pointer; }
+.workspace-app .review-document .comment-anchor:hover { background: #e8dff7; border: 0; transform: none; }
+.workspace-app .review-document .comment-mark[data-active=true], .review-document .comment-draft-mark { background: #e5dcfa; border-bottom-color: #7960bb; }
+.comment-mark::after { display: inline-block; width: 4px; height: 4px; margin-left: 2px; border-radius: 50%; background: #aa852c; vertical-align: super; content: ""; }
+.review-comment[data-active=true] { border-color: #8b78dd; box-shadow: 0 0 0 1px #8b78dd; }
+.workspace-app .annotation-region-marker { position: absolute; min-height: 0; margin: 0; padding: 0; border: 2px solid #aa852c; border-radius: 0; background: #fff0ad30; cursor: pointer; }
+.annotation-layout.is-list-open .studio-comments { max-height: calc(100svh - 40px); overflow: auto; }
+@media(max-width: 980px) { .annotation-layout.is-list-open .studio-comments { max-height: none; } }
+@media(max-width: 680px) { .annotation-composer { top: auto !important; right: 0; bottom: 0; left: 0 !important; width: 100%; max-height: 70svh; border-radius: 16px 16px 0 0; padding-bottom: max(18px, env(safe-area-inset-bottom)); } }
 .workspace-app .work-list { display: grid; gap: 12px; }
 .workspace-app .work-list a { padding: 20px; display: grid; gap: 8px; color: inherit; text-decoration: none; border: 1px solid #d8dce5; border-radius: 12px; background: white; }
 @media(max-width: 760px) { .workspace-app { padding: 12px; } .workspace-app .card { padding: 16px; } .review-columns { grid-template-columns: 1fr; } .workspace-header, .workspace-header nav { gap: 14px; } }
