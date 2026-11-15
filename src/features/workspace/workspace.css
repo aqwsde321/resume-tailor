@@ -399,7 +399,13 @@
 .review-pdf-controls { gap: 12px; padding: 10px 16px; }
 .review-page-controls, .review-zoom-controls { height: 32px; gap: 0; padding: 0 2px; border: 1px solid #dfe3ec; border-radius: 6px; background: #fff; }
 .resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button { display: grid; place-items: center; width: 28px; height: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #545c72; font-size: 17px; line-height: 1; }
-.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > select { height: 30px; padding: 3px 6px; border: 0; border-radius: 0; background: transparent; color: #41495c; font-size: 12px; }
+.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > select { height: 30px; padding: 3px 24px 3px 6px; border: 0; border-radius: 4px; appearance: none; background-color: transparent; background-image: linear-gradient(45deg, transparent 50%, #697287 50%), linear-gradient(135deg, #697287 50%, transparent 50%); background-position: right 11px center, right 7px center; background-size: 4px 4px; background-repeat: no-repeat; color: #41495c; font-size: 12px; }
+.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > select:focus { outline: none; box-shadow: none; }
+.review-page-controls:has(> select:focus-visible), .review-zoom-controls:has(> select:focus-visible) { border-color: #7965bd; outline: 1px solid #7965bd; outline-offset: 0; }
+.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button:focus-visible { outline: 1px solid #7965bd; outline-offset: -2px; }
 .resume-studio .review-original-panel .review-pdf-controls button:disabled { opacity: .35; }
 .review-source-more > summary { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-color: transparent; background: transparent; color: #626b7e; }
 @media(max-width: 440px) { .review-pdf-controls { gap: 6px; padding-inline: 8px; } .review-zoom-controls { margin-left: 0; } .resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button { width: 24px; } }
+
+.resume-studio .review-original-panel .review-page-controls > select { width: 104px; }
+.resume-studio .review-original-panel .review-zoom-controls > select { width: 76px; }
