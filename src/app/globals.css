@@ -1,5 +1,8 @@
-@import "../shared/styles/base.css";
-@import "../shared/styles/pdf-and-frame.css";
-@import "../shared/styles/editorial-refresh.css";
-@import "../features/pdf/ui/resume-tailoring.css";
-@import "../features/jobs/jobs.css";
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+@import "../shared/styles/base.css" layer(legacy);
+@import "../shared/styles/pdf-and-frame.css" layer(legacy);
+@import "../shared/styles/editorial-refresh.css" layer(legacy);
+@import "../features/pdf/ui/resume-tailoring.css" layer(legacy);
+@import "../features/jobs/jobs.css" layer(legacy);

@@ -1,3 +1,4 @@
+@layer legacy {
 .workspace-recovery,.workspace-task{margin:0 0 24px;padding:20px 24px;border:1px solid #d9d3ed;border-left:4px solid #6653be;border-radius:12px;background:#fff;color:#292c41;overflow-wrap:anywhere}
 .workspace-recovery h2{margin:0 0 8px;font-size:18px;line-height:1.5}
 .workspace-recovery p,.workspace-task p{max-width:76ch;margin:8px 0 14px;line-height:1.65;color:#555b72}
@@ -14,3 +15,5 @@
 .workspace-task{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#faf9fe}
 .workspace-task strong{font-size:15px}.workspace-task-time{font-size:13px;color:#646a82;font-variant-numeric:tabular-nums}
 @media(max-width:600px){.workspace-recovery,.workspace-task{padding:18px 16px}.workspace-task{align-items:stretch;flex-direction:column;gap:12px}.workspace-recovery-actions button{flex-grow:1}.workspace-recovery-dialog{padding:20px}}
+
+}

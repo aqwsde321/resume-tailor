@@ -1,3 +1,4 @@
+@layer legacy {
 .resume-studio .tailoring-review {
   --review-line: #dee2eb;
   --review-muted: #626b7e;
@@ -81,4 +82,6 @@
   .tailoring-review-footer { padding: 18px 16px; align-items: stretch; }
   .tailoring-review-footer > button { width: 100%; }
   .resume-studio .tailoring-review-notice { padding-inline: 16px; }
+}
+
 }

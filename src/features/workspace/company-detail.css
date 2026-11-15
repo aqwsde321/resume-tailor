@@ -1,3 +1,4 @@
+@layer legacy {
 /* Company work follows the document desk palette used by the workspace. */
 .company-detail { --detail-ink: #202536; --detail-muted: #626b7e; --detail-line: #dee2eb; --detail-purple: #6554c0; color: var(--detail-ink); min-width: 0; }
 .company-detail [hidden] { display: none !important; }
@@ -82,4 +83,6 @@
   .company-detail-disclosure > summary { padding: 18px 16px; }
   .company-detail-disclosure-content { padding: 20px 16px; }
   .company-detail-requirements { grid-template-columns: 1fr; gap: 12px; }
+}
+
 }

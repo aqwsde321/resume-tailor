@@ -1,3 +1,4 @@
+@layer legacy {
 .workspace-app { max-width: 1400px; margin: auto; padding: 24px; }
 .workspace-app .card { margin-block: 20px; padding: 24px; }
 .workspace-header, .workspace-header nav { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
@@ -369,15 +370,7 @@
 .review-original-heading strong { font-size: 13px; font-weight: 600; }
 .review-original-links { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .resume-studio .review-original-links button { border: 0; background: transparent; min-height: 28px; padding: 3px; font-size: 17px; color: #697287; }
-.review-pdf-controls, .review-edit-hint { display: flex; align-items: center; gap: 8px; height: 52px; flex-shrink: 0; padding: 8px 12px; border-bottom: 1px solid #e9ebf1; background: #fafbfe; }
-.review-page-controls, .review-zoom-controls { display: flex; align-items: center; gap: 3px; }
-.review-zoom-controls { margin-left: 8px; }
-.review-source-more { margin-left: auto; }
-.resume-studio .review-pdf-controls button { min-height: 30px; margin: 0; padding: 2px 7px; font-size: 18px; }
-.resume-studio .review-pdf-controls select { width: auto; min-width: 0; height: 30px; margin: 0; padding: 3px 5px; font-size: 12px; }
-.review-pdf-controls .review-more > summary { padding: 3px 7px; line-height: 22px; }
-.review-pdf-controls .review-more > div { width: 190px; }
-.resume-studio .review-pdf-controls .review-more button { font-size: 12px; padding: 8px; }
+.review-edit-hint { display: flex; align-items: center; gap: 8px; height: 52px; flex-shrink: 0; padding: 8px 12px; border-bottom: 1px solid #e9ebf1; background: #fafbfe; }
 .review-edit-hint { color: #697287; font-size: 12px; }
 .annotation-layout.is-comparing .studio-paper-toolbar { height: 57px; min-height: 57px; flex-wrap: nowrap; }
 .review-original-panel .source-original { margin: 0; }
@@ -388,24 +381,15 @@
   .review-mobile-tabs button[aria-pressed=true] { border-color: #6554c0; color: #5341a8; background: #f0ecfa; }
   .annotation-layout.is-comparing[data-mobile-pane=review] > .review-original-panel, .annotation-layout.is-comparing[data-mobile-pane=original] > .studio-document-column { display: none; }
 }
-@media(max-width: 440px) { .review-pdf-controls { gap: 4px; padding-inline: 6px; } .resume-studio .review-pdf-controls button { padding-inline: 5px; } }
-.resume-studio .review-original-panel .review-pdf-controls select { padding: 3px 7px; line-height: normal; }
 .review-source-info { position: relative; }
 .review-source-info > summary { list-style: none; cursor: pointer; padding: 4px; font-size: 17px; color: #697287; }
 .review-source-info > summary::-webkit-details-marker { display: none; }
 .review-source-info > p { position: absolute; top: 100%; right: 0; z-index: 20; width: 220px; margin: 4px 0 0; padding: 12px; border: 1px solid #dee2eb; border-radius: 8px; background: #fff; color: #626b7e; font-size: 12px; line-height: 1.8; box-shadow: 0 4px 16px #20253616; }
 
-/* Viewer controls share a 32px rhythm and a single outline per group. */
-.review-pdf-controls { gap: 12px; padding: 10px 16px; }
-.review-page-controls, .review-zoom-controls { height: 32px; gap: 0; padding: 0 2px; border: 1px solid #dfe3ec; border-radius: 6px; background: #fff; }
-.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button { display: grid; place-items: center; width: 28px; height: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #545c72; font-size: 17px; line-height: 1; }
-.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > select { height: 30px; padding: 3px 24px 3px 6px; border: 0; border-radius: 4px; appearance: none; background-color: transparent; background-image: linear-gradient(45deg, transparent 50%, #697287 50%), linear-gradient(135deg, #697287 50%, transparent 50%); background-position: right 11px center, right 7px center; background-size: 4px 4px; background-repeat: no-repeat; color: #41495c; font-size: 12px; }
-.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > select:focus { outline: none; box-shadow: none; }
-.review-page-controls:has(> select:focus-visible), .review-zoom-controls:has(> select:focus-visible) { border-color: #7965bd; outline: 1px solid #7965bd; outline-offset: 0; }
-.resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button:focus-visible { outline: 1px solid #7965bd; outline-offset: -2px; }
-.resume-studio .review-original-panel .review-pdf-controls button:disabled { opacity: .35; }
-.review-source-more > summary { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-color: transparent; background: transparent; color: #626b7e; }
-@media(max-width: 440px) { .review-pdf-controls { gap: 6px; padding-inline: 8px; } .review-zoom-controls { margin-left: 0; } .resume-studio .review-original-panel .review-pdf-controls :is(.review-page-controls,.review-zoom-controls) > button { width: 24px; } }
+}
 
-.resume-studio .review-original-panel .review-page-controls > select { width: 104px; }
-.resume-studio .review-original-panel .review-zoom-controls > select { width: 76px; }
+.astryx-source-toolbar { display: flex; align-items: center; gap: 16px; height: 52px; flex-shrink: 0; padding: 8px 12px; border-bottom: 1px solid #e9ebf1; background: #fafbfe; }
+.astryx-source-group { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.astryx-source-menu { margin-left: auto; }
+.astryx-source-toolbar button { margin: 0; }
+@media(max-width: 520px) { .astryx-source-toolbar { gap: 4px; padding-inline: 4px; height: auto; min-height: 52px; flex-wrap: wrap; } .astryx-source-group { gap: 0; } }

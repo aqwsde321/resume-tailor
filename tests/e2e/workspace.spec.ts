@@ -250,11 +250,24 @@ test("PDF 원본 비교는 페이지 이동과 확대를 제공한다", async ({
   await page.goto("/workspace/resume");
   await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
   await page.getByRole("button", { name: "다음 원본 페이지", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "원본 페이지", exact: true })).toHaveValue("2");
+  await expect(page.getByRole("combobox", { name: "원본 페이지", exact: true })).toContainText("2 / 2페이지");
+  await page.getByRole("combobox", { name: "원본 페이지", exact: true }).click();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await expect(page.getByRole("option")).toHaveCount(2);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("combobox", { name: "원본 페이지", exact: true })).toBeFocused();
   await expect(page.getByRole("button", { name: "다음 원본 페이지", exact: true })).toBeDisabled();
   await expect(page.getByRole("img", { name: "원본 2페이지. 드래그로 영역을 선택할 수 있습니다.", exact: true })).toHaveAttribute("src", /000000000003/);
-  await page.getByRole("combobox", { name: "원본 확대", exact: true }).selectOption("150");
+  await page.getByRole("combobox", { name: "원본 확대", exact: true }).click();
+  await page.getByRole("option", { name: "150%", exact: true }).click();
   await expect(page.locator(".source-region")).toHaveAttribute("style", /150%/);
+  await page.getByRole("button", { name: "원본 추가 도구", exact: true }).click();
+  await page.getByRole("menuitem", { name: "현재 페이지에 댓글", exact: true }).click();
+  const composer = page.getByRole("dialog", { name: "수정 댓글 작성", exact: true });
+  await expect(composer).toBeVisible();
+  expect((await composer.boundingBox())!.x).toBeGreaterThan(100);
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(page.getByRole("button", { name: "원본 추가 도구", exact: true })).toBeFocused();
 });
 
 test("긴 원문 비교는 양쪽 패널 높이를 맞추고 내부에서 스크롤한다", async ({ page }) => {
