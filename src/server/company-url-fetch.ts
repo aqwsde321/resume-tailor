@@ -4,6 +4,8 @@ import { load } from "cheerio";
 
 import { extractTextFromImages, isImageOcrAvailable } from "@/server/company-image-ocr";
 import { HttpError } from "@/server/http";
+import { COMPANY_PLATFORM_WEB_ENDPOINTS, getCompanyPlatform } from "./company-platforms";
+import { readWantedJobDescription } from "./wanted-job-description";
 
 const FETCH_TIMEOUT_MS = 10000;
 const BROWSER_TIMEOUT_MS = 15000;
@@ -84,36 +86,6 @@ const JSON_ASSIGNMENT_PATTERNS = [
   /(?:window\.)?__APOLLO_STATE__\s*=\s*({[\s\S]+})\s*;?\s*$/
 ];
 
-const DOMAIN_SELECTORS: Array<{
-  match: (hostname: string) => boolean;
-  selectors: string[];
-}> = [
-  {
-    match: (hostname) => hostname.includes("greenhouse.io"),
-    selectors: ["#content", "#app_body", ".content", ".opening"]
-  },
-  {
-    match: (hostname) => hostname.includes("lever.co"),
-    selectors: [".posting-page", ".posting", ".main-content", ".section-wrapper"]
-  },
-  {
-    match: (hostname) => hostname.includes("workable.com"),
-    selectors: ["[data-ui='job-description']", ".job-description", ".content"]
-  },
-  {
-    match: (hostname) => hostname.includes("wanted.co.kr"),
-    selectors: ["main", "[class*='JobDescription']", "[class*='JobContent']", ".content"]
-  },
-  {
-    match: (hostname) => hostname.includes("jobkorea.co.kr") || hostname.includes("saramin.co.kr"),
-    selectors: ["#content", ".tplJobView", ".viewArea", "main"]
-  },
-  {
-    match: (hostname) => hostname.includes("jumpit.saramin.co.kr") || hostname.includes("jumpit.co.kr"),
-    selectors: ["main", "[class*='JobDescription']", "[class*='Position']", ".content"]
-  }
-];
-
 const GENERIC_SELECTORS = [
   "main",
   "article",
@@ -141,6 +113,7 @@ interface BrowserFallbackResult {
   candidate: ExtractedCandidate | null;
   imageOcr: ImageOcrAttemptResult;
   failure?: string;
+  incomplete?: boolean;
 }
 
 interface ImageFetchHeaders {
@@ -474,7 +447,7 @@ async function fetchSaraminRelayCandidate(
   const tRefScnid = pageUrl.searchParams.get("t_ref_scnid") || "";
   const referNonce = pageUrl.searchParams.get("referNonce") || "";
   const refDp = pageUrl.searchParams.get("ref_dp") || tRefContent;
-  const ajaxUrl = new URL("/zf_user/jobs/relay/view-ajax", pageUrl);
+  const ajaxUrl = new URL(COMPANY_PLATFORM_WEB_ENDPOINTS.saramin.relayAjax, pageUrl);
 
   const ajaxResponse = await fetch(ajaxUrl, {
     method: "POST",
@@ -686,7 +659,7 @@ async function fetchJobkoreaGiReadCandidate(
   }
 
   const summaryCandidate = extractJobkoreaSummaryCandidate(pageHtml);
-  const detailUrl = new URL("/Recruit/GI_Read_Comt_Ifrm", pageUrl);
+  const detailUrl = new URL(COMPANY_PLATFORM_WEB_ENDPOINTS.jobkorea.detailIframe, pageUrl);
 
   for (const [key, value] of pageUrl.searchParams.entries()) {
     detailUrl.searchParams.set(key, value);
@@ -862,7 +835,7 @@ function normalizeBlock(value: string): string {
 }
 
 function getSelectors(hostname: string): string[] {
-  const matched = DOMAIN_SELECTORS.find((entry) => entry.match(hostname));
+  const matched = getCompanyPlatform(hostname);
   return matched ? [...matched.selectors, ...GENERIC_SELECTORS] : GENERIC_SELECTORS;
 }
 
@@ -1087,6 +1060,10 @@ function extractTextFromHtml(html: string, url: URL, source: ExtractionSource): 
       hostnameToLabel(url.hostname)
   );
 
+  const wanted = readWantedJobDescription(html, url.hostname);
+  if (wanted?.text) {
+    return { title, siteName, text: wanted.text, source, score: scoreTextQuality(wanted.text, title) + scoreCandidate(wanted.text, "article") + 1000 };
+  }
   const selectors = getSelectors(url.hostname.toLowerCase());
   const candidates = selectors
     .flatMap((selector) =>
@@ -1459,6 +1436,13 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
 
     // SPA 공고는 렌더링된 DOM, 내부 JSON 응답, 이미지 OCR 후보를 함께 비교해 가장 강한 후보를 고른다.
     const resolvedUrl = new URL(page.url());
+    const platform = getCompanyPlatform(resolvedUrl.hostname);
+    if (platform?.descriptionSelector && platform.expandButtonName) {
+      const expand = page.locator(platform.descriptionSelector).getByRole("button", { name: platform.expandButtonName }).first();
+      if (await expand.isVisible()) {
+        await expand.click({ timeout: 3000 }).then(() => expand.waitFor({ state: "hidden", timeout: 3000 })).catch(() => {});
+      }
+    }
     const renderedHtml = await page.content();
     const htmlCandidate = extractTextFromHtml(renderedHtml, resolvedUrl, "browser");
     const browserTitle = htmlCandidate.title;
@@ -1484,9 +1468,11 @@ async function extractCandidateWithBrowser(url: URL): Promise<BrowserFallbackRes
       : NO_IMAGE_OCR_ATTEMPT;
     const mergedCandidate = mergeCandidates(htmlCandidate, imageOcrResult.candidate, "browser", 220);
 
+    const wanted = readWantedJobDescription(renderedHtml, resolvedUrl.hostname);
     return {
-      candidate: pickBestCandidate([embeddedCandidate, mergedCandidate, imageOcrResult.candidate, htmlCandidate]),
-      imageOcr: imageOcrResult
+      candidate: wanted?.text ? htmlCandidate : pickBestCandidate([embeddedCandidate, mergedCandidate, imageOcrResult.candidate, htmlCandidate]),
+      imageOcr: imageOcrResult,
+      incomplete: platform?.id === "wanted" && (!wanted || wanted.collapsed)
     };
   } catch (error) {
     return {
@@ -1657,7 +1643,8 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
         )
       : NO_IMAGE_OCR_ATTEMPT;
     const staticMergedCandidate = mergeCandidates(htmlCandidate, staticImageResult.candidate, "html", 180);
-    const staticBest = pickBestCandidate([
+    const wantedStatic = readWantedJobDescription(body, resolved.hostname);
+    const staticBest = wantedStatic?.text ? htmlCandidate : pickBestCandidate([
       embeddedCandidate,
       staticMergedCandidate,
       staticImageResult.candidate,
@@ -1665,16 +1652,23 @@ export async function fetchCompanyPage(rawUrl: string): Promise<FetchedCompanyPa
     ]);
     const staticWarning = buildImageOcrWarning(staticImageResult);
 
-    if (isStrongCandidate(staticBest)) {
+    const wantedNeedsExpansion = Boolean(wantedStatic?.collapsed);
+    if (isStrongCandidate(staticBest) && !wantedNeedsExpansion) {
       return toFetchedCompanyPage(staticBest, resolvedUrl, resolved.hostname, staticWarning);
     }
 
     const browserResult = await extractCandidateWithBrowser(resolved);
-    const best = pickBestCandidate([browserResult.candidate, staticBest]);
-    const warning = buildImageOcrWarning(staticImageResult, browserResult.imageOcr);
+    const best = wantedNeedsExpansion && browserResult.candidate && !browserResult.incomplete
+      ? browserResult.candidate
+      : pickBestCandidate([browserResult.candidate, staticBest]);
+    const imageWarning = buildImageOcrWarning(staticImageResult, browserResult.imageOcr);
+    const expansionWarning = wantedNeedsExpansion && (!browserResult.candidate || browserResult.incomplete)
+      ? "원티드 상세 정보를 펼치지 못해 추가 내용이 누락됐을 수 있습니다. 원본과 비교하거나 전체 공고를 붙여넣어 주세요."
+      : undefined;
+    const warning = [imageWarning, expansionWarning].filter(Boolean).join(" ") || undefined;
 
     if (!isUsableCandidate(best)) {
-      if (warning) {
+      if (imageWarning) {
         throw new HttpError(422, IMAGE_OCR_ERROR_MESSAGE, IMAGE_OCR_ERROR_DETAILS);
       }
 
