@@ -1,0 +1,84 @@
+.resume-studio .tailoring-review {
+  --review-line: #dee2eb;
+  --review-muted: #626b7e;
+  min-width: 0;
+  margin-top: 24px;
+  border: 1px solid var(--review-line);
+  border-radius: 14px;
+  background: #fff;
+  color: #202536;
+  overflow: clip;
+}
+.tailoring-review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 25px 26px 21px;
+}
+.resume-studio .tailoring-review h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.4; letter-spacing: -.035em; text-wrap: balance; }
+.resume-studio .tailoring-review-header p { margin: 0; color: var(--review-muted); font-size: 13px; line-height: 1.7; }
+.tailoring-review-header > div { min-width: 0; }
+.tailoring-review-header > button { flex-shrink: 0; }
+.tailoring-requirements { margin: 0 26px 22px; border: 1px solid var(--review-line); border-radius: 8px; background: #f8f9fc; }
+.tailoring-review summary { cursor: pointer; font-size: 12px; font-weight: 600; line-height: 1.6; touch-action: manipulation; }
+.tailoring-requirements > summary { padding: 13px 16px; }
+.tailoring-requirements > summary > span { margin-left: 6px; color: #6554c0; font-variant-numeric: tabular-nums; }
+.resume-studio .tailoring-requirements > p { margin: 0; padding: 0 16px 15px; color: var(--review-muted); font-size: 12px; line-height: 1.7; }
+.tailoring-requirement { padding: 16px; border-top: 1px solid var(--review-line); }
+.tailoring-requirement > strong { display: block; margin: 7px 0 5px; font-size: 13px; overflow-wrap: anywhere; }
+.resume-studio .tailoring-requirement p, .resume-studio .tailoring-row-evidence p { margin: 5px 0; font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tailoring-match-label { display: inline-block; padding: 3px 7px; border-radius: 4px; background: #efedf8; color: #5947a5; font-size: 11px; font-weight: 600; }
+.tailoring-match-label[data-match="gap"] { background: #fff0d9; color: #855519; }
+.tailoring-match-label[data-match="direct"] { background: #e8f3ed; color: #32664b; }
+.tailoring-selection-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 16px 26px; border-top: 1px solid var(--review-line); border-bottom: 1px solid var(--review-line); }
+.resume-studio .tailoring-selection-toolbar > p { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tailoring-selection-toolbar > p strong { color: #5947a5; }
+.tailoring-selection-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.resume-studio .tailoring-selection-actions > button { min-height: 32px; padding: 5px 9px; font-size: 11px; }
+.tailoring-unchanged-toggle { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--review-muted); font-size: 12px; cursor: pointer; }
+.resume-studio .tailoring-review input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; margin: 0; padding: 0; accent-color: #6554c0; cursor: pointer; }
+.resume-studio .tailoring-review input[type="checkbox"]:disabled { cursor: not-allowed; }
+.tailoring-change { border-bottom: 1px solid var(--review-line); }
+.tailoring-change:last-child { border-bottom: 0; }
+.tailoring-change-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 19px 26px 14px; }
+.tailoring-change-header > label { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 14px; line-height: 1.5; font-weight: 650; cursor: pointer; min-width: 0; }
+.tailoring-change-header > label > input { margin-top: 2px !important; }
+.tailoring-change-header > label > span { overflow-wrap: anywhere; }
+.tailoring-change-state { flex-shrink: 0; color: var(--review-muted); font-size: 11px; }
+.tailoring-change[data-selected="true"] .tailoring-change-header { background: #f5f2fd; }
+.tailoring-change[data-selected="true"] .tailoring-change-state { color: #5947a5; font-weight: 600; }
+.tailoring-compare-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin: 0 26px; border: 1px solid var(--review-line); border-radius: 7px; overflow: clip; }
+.tailoring-compare-columns > div { min-width: 0; padding: 15px 17px 18px; }
+.tailoring-compare-columns > div + div { border-left: 1px solid var(--review-line); background: #faf9fe; }
+.resume-studio .tailoring-compare-columns h3 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 10px; margin: 0 0 12px; color: #41485c; font-size: 12px; line-height: 1.6; font-weight: 650; }
+.tailoring-compare-columns h3 > span { color: var(--review-muted); font-size: 10px; font-weight: 400; }
+.resume-studio .tailoring-compare-columns p { margin: 0; max-width: 75ch; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.9; }
+.tailoring-row-evidence { padding: 13px 26px 20px; color: var(--review-muted); }
+.tailoring-row-evidence > summary:hover, .tailoring-requirements > summary:hover { color: #5341a8; }
+.tailoring-review blockquote { margin: 12px 0 0; padding: 10px 14px; border-left: 2px solid #c8bde9; background: #f8f9fc; }
+.tailoring-review blockquote > strong { font-size: 11px; color: #4f5770; }
+.tailoring-row-requirement { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--review-line); }
+.tailoring-row-requirement > strong { color: #41485c; font-size: 12px; overflow-wrap: anywhere; }
+.resume-studio .tailoring-row-note { margin: 10px 26px 0; color: #6554a0; font-size: 12px; line-height: 1.7; }
+.resume-studio .tailoring-row-notice { margin: 0 26px 10px; color: #855519; font-size: 12px; line-height: 1.8; }
+.resume-studio .tailoring-review-notice { margin: 0; padding: 15px 26px; border-top: 1px solid #ead6ac; background: #fff8e9; color: #795321; font-size: 13px; line-height: 1.8; }
+.resume-studio .tailoring-review-empty { margin: 0; padding: 32px 26px; color: var(--review-muted); text-align: center; font-size: 13px; line-height: 1.8; }
+.tailoring-review-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 20px 26px; border-top: 1px solid var(--review-line); background: #fafbfc; }
+.resume-studio .tailoring-review-footer p { margin: 0 0 4px; font-size: 12px; }
+.tailoring-review-footer span { color: var(--review-muted); font-size: 11px; }
+.tailoring-review :is(button, summary, input):focus-visible { outline: 3px solid #8b78dd; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .tailoring-review-header { padding: 20px 16px; flex-wrap: wrap; }
+  .tailoring-requirements { margin-inline: 16px; }
+  .tailoring-selection-toolbar { padding: 14px 16px; }
+  .tailoring-unchanged-toggle { flex-basis: 100%; margin-left: 0; }
+  .tailoring-change-header { padding: 17px 16px 12px; }
+  .tailoring-compare-columns { grid-template-columns: minmax(0, 1fr); margin-inline: 16px; }
+  .tailoring-compare-columns > div + div { border-left: 0; border-top: 1px solid var(--review-line); }
+  .tailoring-row-evidence { padding-inline: 16px; }
+  .resume-studio .tailoring-row-note, .resume-studio .tailoring-row-notice { margin-inline: 16px; }
+  .tailoring-review-footer { padding: 18px 16px; align-items: stretch; }
+  .tailoring-review-footer > button { width: 100%; }
+  .resume-studio .tailoring-review-notice { padding-inline: 16px; }
+}
