@@ -40,6 +40,7 @@
 .workspace-app .review-document .comment-anchor:hover { background: #e8dff7; border: 0; transform: none; }
 .workspace-app .review-document .comment-mark[data-active=true], .review-document .comment-draft-mark { background: #e5dcfa; border-bottom-color: #7960bb; }
 .comment-mark::after { display: inline-block; width: 4px; height: 4px; margin-left: 2px; border-radius: 50%; background: #aa852c; vertical-align: super; content: ""; }
+.comment-mark[data-comment-count]:not([data-comment-count="1"])::after { content: attr(data-comment-count); width: auto; height: auto; min-width: 14px; padding: 0 3px; border-radius: 4px; background: #f2e7c3; color: #725919; font: 600 10px/1.5 system-ui, sans-serif; text-align: center; }
 .review-comment[data-active=true] { border-color: #8b78dd; box-shadow: 0 0 0 1px #8b78dd; }
 .workspace-app .annotation-region-marker { position: absolute; min-height: 0; margin: 0; padding: 0; border: 2px solid #aa852c; border-radius: 0; background: #fff0ad30; cursor: pointer; }
 .annotation-layout.is-list-open .studio-comments { max-height: calc(100svh - 40px); overflow: auto; }

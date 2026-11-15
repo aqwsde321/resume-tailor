@@ -76,6 +76,9 @@ test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다�
   await page.goto("/workspace/resume");
   await selectDocumentText(page, 0, 3);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("region", { name: "추출 문서", exact: true }).press("Escape");
+  await expect(page.getByRole("button", { name: "댓글 쓰기", exact: true })).toHaveCount(0);
+  await selectDocumentText(page, 0, 3);
   await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toBeFocused();
   const box = await page.getByRole("dialog", { name: "수정 댓글 작성" }).boundingBox();
@@ -85,6 +88,7 @@ test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다�
   await page.getByLabel("수정 요청", { exact: true }).press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".review-document mark")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "댓글 쓰기", exact: true })).toHaveCount(0);
   expect(stored().master!.document.annotations).toHaveLength(0);
   await selectDocumentText(page, 0, 3);
   await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
@@ -100,6 +104,17 @@ test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다�
   await expect(page.locator(".comment-mark")).toHaveAttribute("data-active", "true");
   await page.getByRole("button", { name: "댓글 목록 닫기", exact: true }).click();
   await expect(page.locator(".comment-mark")).toHaveAttribute("data-active", "false");
+});
+
+test("겹치는 댓글은 개수를 표시하고 편집 중인 댓글을 문서에서 강조한다", async ({ page }) => {
+  const document = newTextDocument("resume", "댓글 확인", "동일한 문장");
+  document.annotations = ["첫 번째 정정", "두 번째 정정"].map((instruction) => ({ id: crypto.randomUUID(), instruction, anchor: { type: "text", start: 0, end: 3, quote: "동일한" }, status: "pending", createdAt: new Date().toISOString() }));
+  await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
+  await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "댓글 2개 보기: 동일한", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "댓글 내용", exact: true }).nth(1).focus();
+  await expect(page.locator(".review-comment[data-active=true] textarea")).toHaveValue("두 번째 정정");
 });
 
 test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용할 수 있다", async ({ page }) => {
@@ -182,10 +197,12 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
   await page.getByRole("button", { name: "검토한 공고 정리", exact: true }).click();
   await page.getByRole("button", { name: "이 공고로 확정", exact: true }).click();
+  await page.getByRole("button", { name: "내보내기", exact: true }).click();
   await expect(page.getByRole("button", { name: "PDF 생성·다운로드", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
   await page.getByRole("button", { name: "현재 편집본으로 맞춤 제안 받기", exact: true }).click();
-  await page.getByRole("button", { name: "모든 표현 선택", exact: true }).click();
-  await page.getByRole("button", { name: "선택한 표현 적용", exact: true }).click();
+  await page.getByRole("button", { name: "변경 전체 선택", exact: true }).click();
+  await page.getByRole("button", { name: /선택한 \d+개 변경 반영/ }).click();
   await expect.poll(() => stored().works[0]?.resume?.summary).toBe("맞춤 소개");
   expect(model).toBe("test-model");
 });

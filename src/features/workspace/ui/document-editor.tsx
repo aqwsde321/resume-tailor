@@ -7,8 +7,8 @@ import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { StudioIcon } from "./studio-icon";
 
-export function DocumentEditor({ document, settings, onChange, variant = "default" }: {
-  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio";
+export function DocumentEditor({ document, settings, onChange, variant = "default", active = true }: {
+  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio"; active?: boolean;
 }) {
   const studio = variant === "studio";
   const formId = useId();
@@ -36,12 +36,13 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     setError(""); setComposerOpen(true); setPlacement(null);
   }
   function closeComposer() {
+    window.getSelection()?.removeAllRanges();
     setComposerOpen(false); setInstruction(""); setPlacement(null); setAnchor({ type: "document" });
     if (triggerRef.current?.isConnected) triggerRef.current.focus(); else readRef.current?.focus();
   }
   function showComment(id: string) { setActiveComment(id); setListOpen(true); setPlacement(null); }
-  useEffect(() => { if (composerOpen) composerRef.current?.focus(); }, [composerOpen]);
-  useEffect(() => { if (listOpen && activeComment) commentRefs.current[activeComment]?.scrollIntoView({ block: "nearest" }); }, [listOpen, activeComment]);
+  useEffect(() => { if (active && composerOpen) composerRef.current?.focus(); }, [composerOpen, active]);
+  useEffect(() => { if (active && listOpen && activeComment) commentRefs.current[activeComment]?.scrollIntoView({ block: "nearest" }); }, [listOpen, activeComment, active]);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const readRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -72,7 +73,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
   }
   const region = anchor.type === "region" && anchor.page === pageNumber ? anchor : null;
   useEffect(() => {
-    if (!hasPlacement && !composerOpen) return;
+    if (!active || (!hasPlacement && !composerOpen)) return;
     const reposition = () => {
       let rect = sourceRef.current?.getBoundingClientRect() ?? rangeRef.current?.getBoundingClientRect();
       if (anchor.type === "text" && readRef.current) {
@@ -93,15 +94,20 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
       const target = event.target;
       if (!composerOpen && target instanceof Element && !target.closest(".annotation-selection-button") && !readRef.current?.contains(target)) setPlacement(null);
     };
+    const dismissSelection = () => { if (!composerOpen && window.getSelection()?.isCollapsed) setPlacement(null); };
+    const escape = (event: KeyboardEvent) => { if (!composerOpen && event.key === "Escape") { window.getSelection()?.removeAllRanges(); setPlacement(null); } };
+    reposition();
     window.addEventListener("scroll", reposition, true); window.addEventListener("resize", reposition);
     globalThis.document.addEventListener("pointerdown", dismiss);
-    return () => { window.removeEventListener("scroll", reposition, true); window.removeEventListener("resize", reposition); globalThis.document.removeEventListener("pointerdown", dismiss); };
-  }, [hasPlacement, composerOpen, place, anchor]);
+    globalThis.document.addEventListener("selectionchange", dismissSelection);
+    window.addEventListener("keydown", escape);
+    return () => { window.removeEventListener("scroll", reposition, true); window.removeEventListener("resize", reposition); globalThis.document.removeEventListener("pointerdown", dismiss); globalThis.document.removeEventListener("selectionchange", dismissSelection); window.removeEventListener("keydown", escape); };
+  }, [hasPlacement, composerOpen, place, anchor, active]);
   const highlights = pending.flatMap((comment) => comment.anchor.type === "text" && document.text.slice(comment.anchor.start, comment.anchor.end) === comment.anchor.quote ? [{ ...comment.anchor, id: comment.id, instruction: comment.instruction }] : []);
   const draft = composerOpen && anchor.type === "text" && document.text.slice(anchor.start, anchor.end) === anchor.quote ? [anchor] : [];
   const boundaries = [...new Set([0, document.text.length, ...[...highlights, ...draft].flatMap((item) => [item.start, item.end])])].sort((a, b) => a - b);
   function selectText() {
-    if (composerOpen) return;
+    if (!active || composerOpen) return;
     const selection = window.getSelection(); if (!selection?.rangeCount || selection.isCollapsed || !readRef.current) { setPlacement(null); return; }
     const range = selection.getRangeAt(0); if (!readRef.current.contains(range.commonAncestorContainer)) return;
     const prefix = range.cloneRange(); prefix.selectNodeContents(readRef.current); prefix.setEnd(range.startContainer, range.startOffset);
@@ -146,7 +152,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
         {!editing && <div ref={readRef} className="review-document" role="region" tabIndex={0} aria-label="추출 문서" onMouseUp={selectText} onKeyUp={selectText}>{boundaries.slice(0, -1).map((start, index) => {
           const end = boundaries[index + 1]; const comments = highlights.filter((item) => item.start <= start && item.end >= end);
           const drafting = draft.some((item) => item.start <= start && item.end >= end);
-          return comments.length ? <mark className="comment-mark" key={start} data-active={comments.some((item) => item.id === activeComment)} title={comments.map((item) => item.instruction).join("\n")}><button className="comment-anchor" aria-label={`댓글 보기: ${document.text.slice(start, end)}`} onClick={(event) => { if (event.detail === 0 || window.getSelection()?.isCollapsed) showComment(comments[0].id); }}>{document.text.slice(start, end)}</button></mark> : drafting ? <mark className="comment-draft-mark" key={start}>{document.text.slice(start, end)}</mark> : <span key={start}>{document.text.slice(start, end)}</span>;
+          return comments.length ? <mark className="comment-mark" key={start} data-comment-count={comments.length} data-active={comments.some((item) => item.id === activeComment)} title={comments.map((item) => item.instruction).join("\n")}><button className="comment-anchor" aria-label={`${comments.length > 1 ? `댓글 ${comments.length}개 보기` : "댓글 보기"}: ${document.text.slice(start, end)}`} onClick={(event) => { if (event.detail === 0 || window.getSelection()?.isCollapsed) showComment(comments[0].id); }}>{document.text.slice(start, end)}</button></mark> : drafting ? <mark className="comment-draft-mark" key={start}>{document.text.slice(start, end)}</mark> : <span key={start}>{document.text.slice(start, end)}</span>;
         })}</div>}
         {editing && <label>추출 문서<textarea ref={textRef} name="review-document" className="review-text" value={document.text} disabled={busy} onMouseUp={(event) => { if (event.currentTarget.selectionStart !== event.currentTarget.selectionEnd) { rangeRef.current = null; sourceRef.current = event.currentTarget; place({ left: event.clientX, bottom: event.clientY }); } }} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
         if (beforeEdit.current !== document.text) update({ history: [...document.history, { text: beforeEdit.current, annotationIds: [], createdAt: new Date().toISOString() }] });
@@ -159,7 +165,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
         {studio && <div className="studio-comments-heading"><h3><StudioIcon name="comment" size={18} />수정 댓글</h3><span>{pending.length}</span></div>}
         <button type="button" onClick={() => { setListOpen(false); setActiveComment(null); }}>댓글 목록 닫기</button>
         {studio && pending.length === 0 && <div className="studio-comment-empty"><StudioIcon name="comment" size={25} /><strong>수정할 부분을 선택해 보세요</strong><p>문장이나 단락을 드래그하고<br />바꾸고 싶은 내용을 남겨 주세요.</p></div>}
-        {pending.map((comment) => <article className="review-comment" ref={(element) => { commentRefs.current[comment.id] = element; }} data-active={comment.id === activeComment} key={comment.id}>
+        {pending.map((comment) => <article className="review-comment" onFocusCapture={() => setActiveComment(comment.id)} ref={(element) => { commentRefs.current[comment.id] = element; }} data-active={comment.id === activeComment} key={comment.id}>
           <button onClick={() => { setActiveComment(comment.id); setAnchor(comment.anchor); if (comment.anchor.type === "region") setPageNumber(comment.anchor.page); if (comment.anchor.type === "text") { readRef.current?.scrollIntoView({ block: "center" }); textRef.current?.focus(); textRef.current?.setSelectionRange(comment.anchor.start, comment.anchor.end); } }}>{comment.anchor.type === "text" ? comment.anchor.quote : comment.anchor.type === "region" ? `${comment.anchor.page}페이지 영역` : "문서 전체"}</button>
           <label>댓글 내용<textarea name={`comment-${comment.id}`} value={comment.instruction} disabled={busy} maxLength={4000} onChange={(event) => update({ annotations: document.annotations.map((item) => item.id === comment.id ? { ...item, instruction: event.target.value } : item), proposal: null })} /></label>
           <button disabled={busy} onClick={() => update({ annotations: document.annotations.filter((item) => item.id !== comment.id), proposal: null })}>댓글 삭제</button>
@@ -199,8 +205,8 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
       const last = document.history[document.history.length - 1];
       if (last) update({ text: last.text, proposal: null, history: document.history.slice(0, -1), annotations: document.annotations.map((comment) => last.annotationIds.includes(comment.id) ? { ...comment, status: "pending" } : comment) });
     }}>이전 수정 되돌리기</button>
-    {placement && !composerOpen && createPortal(<button className="annotation-selection-button" style={placement} onMouseDown={(event) => event.preventDefault()} onClick={(event) => openComposer(event.currentTarget)}><StudioIcon name="comment" size={16} />댓글 쓰기</button>, globalThis.document.body)}
-    {composerOpen && createPortal(<section className="annotation-composer" style={composerPlacement} role="dialog" aria-modal="false" aria-labelledby={`${formId}-composer-title`} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeComposer(); } }}>
+    {active && placement && !composerOpen && createPortal(<button className="annotation-selection-button" style={placement} onMouseDown={(event) => event.preventDefault()} onClick={(event) => openComposer(event.currentTarget)}><StudioIcon name="comment" size={16} />댓글 쓰기</button>, globalThis.document.body)}
+    {active && composerOpen && createPortal(<section className="annotation-composer" style={composerPlacement} role="dialog" aria-modal="false" aria-labelledby={`${formId}-composer-title`} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeComposer(); } }}>
       <h3 id={`${formId}-composer-title`}>수정 댓글 작성</h3>
       <p className="annotation-composer-quote">{anchor.type === "text" ? anchor.quote : anchor.type === "region" ? `원본 ${anchor.page}페이지 선택 영역` : "문서 전체"}</p>
       <form onSubmit={(event) => {
