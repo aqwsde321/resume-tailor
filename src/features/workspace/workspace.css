@@ -461,3 +461,12 @@
 .resume-markdown hr { margin: 24px 0; border: 0; border-top: 1px solid #c8cddd; }
 
 .resume-markdown-edit-hint { display: block; margin: 8px 0; color: #626b7e; font-size: 13px; }
+
+.resume-enrichment-tools { margin-bottom: 20px; }
+.resume-enrichment-tools > p, .studio-saved-resume > header p { color: #626b7e; font-size: 13px; line-height: 1.8; }
+.studio-saved-resume > header h2 { margin: 0 0 8px; font-size: 22px; }
+.studio-saved-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0; }
+.studio-saved-actions button, .studio-saved-actions a { margin: 0; }
+.studio-saved-resume > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }
+.studio-paper-toolbar > button { margin: 0 12px 0 auto; font-size: 12px; }
+@media(max-width: 680px) { .studio-paper-toolbar { flex-wrap: wrap; gap: 8px; } .studio-saved-resume > .resume-document-preview { padding: 20px 16px; } }

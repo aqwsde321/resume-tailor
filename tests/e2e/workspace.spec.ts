@@ -1,9 +1,15 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createEmptyWorkspace, type Workspace } from "../../src/entities/workspace/model/workspace";
 import { newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
+import { createResultDraft } from "../../src/entities/workspace/model/resume-result-draft";
 import { ResumeSchema } from "../../src/shared/lib/schemas";
 const resume = ResumeSchema.parse({ name: "예시 개발자", summary: "원본 소개", desiredPosition: "백엔드 개발자", techStack: ["Java"] });
 async function mockStorage(page: Page, initial = createEmptyWorkspace()) {
+  // 문서 도구 동작은 저장본이 아닌 명시적인 이력서 편집 초안에서 검증한다.
+  if (initial.master?.resume) {
+    const document = initial.master.document;
+    initial = { ...initial, master: { ...initial.master, resultDraft: { ...createResultDraft(initial.master.resume, document.text, [], true, document.text), document: { ...document, source: { ...document.source, type: "markdown" } } } } };
+  }
   let stored = initial;
   await page.route("**/api/workspace", async (route) => {
     if (route.request().method() === "PUT") {
@@ -28,46 +34,41 @@ async function selectDocumentText(page: Page, start: number, end: number) {
     const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
   }, { start, end });
 }
-test("추출 문서에 댓글을 모아 반영한 뒤 공통 이력서로 확정하고 다시 불러온다", async ({ page }) => {
+test("자료는 직접 확인하고 댓글은 이력서 편집에서 반영한 뒤 저장한다", async ({ page }) => {
   const stored = await mockStorage(page);
   await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("resume", "새 이력서", "J a v a 개발자"), warnings: [] } } }));
+  await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: { ...resume, summary: "Java 개발자" } } }));
   await page.route("**/api/workspace/review", (route) => {
-    const body = route.request().postDataJSON();
-    expect(body.document.annotations[0].anchor).toMatchObject({ type: "text", quote: "J a v a" });
-    return route.fulfill({ json: { ok: true, data: { sourceText: body.document.text, unresolved: [], changes: [{ id: "document", start: 0, end: body.document.text.length, before: body.document.text, after: "Java 개발자", reason: "문자 병합", commentIds: body.document.annotations.map((comment: { id: string }) => comment.id) }] } } });
+    const { document } = route.request().postDataJSON();
+    const start = document.text.indexOf("Java 개발자");
+    return route.fulfill({ json: { ok: true, data: { sourceText: document.text, unresolved: [], changes: [{ id: "wording", start, end: start + "Java 개발자".length, before: "Java 개발자", after: "Java 백엔드 개발자", reason: "표현 정리", commentIds: document.annotations.map((item: { id: string }) => item.id) }] } } });
   });
-  await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: resume } }));
   await page.goto("/workspace/resume");
   await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
   await page.getByLabel("원문", { exact: true }).fill("J a v a 개발자");
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
-  await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toHaveCount(0);
-  await page.getByRole("region", { name: "추출 문서", exact: true }).evaluate((element) => {
-    const node = element.firstChild!.firstChild!;
-    const range = element.ownerDocument.createRange(); range.setStart(node, 0); range.setEnd(node, 7);
-    const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
-    element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-  });
-  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
-  await page.getByLabel("수정 요청", { exact: true }).fill("Java로 합쳐줘");
-  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
-  await expect(page.locator(".review-document mark")).toHaveText("J a v a");
-  await expect(page.getByRole("textbox", { name: "수정 요청", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toHaveCount(0);
-  await selectDocumentText(page, 8, 11);
-  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
-  await page.getByLabel("수정 요청", { exact: true }).fill("직무 표현도 확인해줘");
-  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
-  await page.getByRole("button", { name: "댓글 2개", exact: true }).click();
-  await page.getByRole("button", { name: "수정 요청 2개 반영", exact: true }).click();
-  await page.getByRole("button", { name: "선택한 변경 적용", exact: true }).click();
-  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("Java 개발자");
+  await expect(page.getByRole("button", { name: "댓글 0개", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "직접 편집", exact: true }).click();
+  await page.locator("textarea[name=review-document]").fill("Java 개발자");
+  await page.getByRole("button", { name: "읽기", exact: true }).click();
   await page.getByRole("button", { name: "검토한 내용으로 이력서 정리", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "이력서 편집", exact: true })).toBeVisible();
+  const text = await page.getByRole("region", { name: "추출 문서", exact: true }).textContent();
+  const start = text!.indexOf("Java 개발자");
+  await selectDocumentText(page, start, start + "Java 개발자".length);
+  await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
+  await page.getByLabel("수정 요청", { exact: true }).fill("백엔드 역할로 표현해 줘");
+  await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
+  await page.getByRole("button", { name: "댓글 1개", exact: true }).click();
+  await page.getByRole("button", { name: "수정 요청 1개 반영", exact: true }).click();
+  await page.getByRole("button", { name: "선택한 변경 적용", exact: true }).click();
+  await page.getByRole("button", { name: "수정한 결과 다시 정리", exact: true }).click();
   await page.getByRole("button", { name: "공통 이력서 확인으로", exact: true }).click();
   await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
   await expect.poll(() => stored().master?.resume?.name).toBe("예시 개발자");
   await page.reload();
-  await expect(page.getByText("확정 이력서 · 버전 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "저장된 공통 이력서", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveCount(0);
 });
 
 test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다시 열기를 지원한다", async ({ page }) => {
@@ -90,12 +91,12 @@ test("모바일 댓글 작성은 선택 후에만 열리고 취소·등록·다�
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".review-document mark")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "댓글 쓰기", exact: true })).toHaveCount(0);
-  expect(stored().master!.document.annotations).toHaveLength(0);
+  expect(stored().master!.resultDraft!.document.annotations).toHaveLength(0);
   await selectDocumentText(page, 0, 3);
   await page.getByRole("button", { name: "댓글 쓰기", exact: true }).click();
   await page.getByLabel("수정 요청", { exact: true }).fill("등록할 수정 요청");
   await page.getByRole("button", { name: "댓글 추가", exact: true }).click();
-  await expect.poll(() => stored().master!.document.annotations.length).toBe(1);
+  await expect.poll(() => stored().master!.resultDraft!.document.annotations.length).toBe(1);
   await page.reload();
   await expect(page.locator(".review-document .comment-mark")).toHaveText("선택할");
   await expect(page.getByRole("complementary", { name: "수정 댓글", exact: true })).toHaveCount(0);
@@ -139,13 +140,10 @@ test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText(longText);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  const documentBox = await page.getByRole("region", { name: "추출 문서", exact: true }).boundingBox();
-  await page.getByRole("button", { name: "댓글 0개", exact: true }).click();
-  const comments = await page.getByRole("complementary", { name: "수정 댓글", exact: true }).boundingBox();
-  expect(comments!.y).toBeGreaterThanOrEqual(documentBox!.y + documentBox!.height);
+  await expect(page.getByRole("button", { name: "댓글 0개", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "직접 편집", exact: true }).click();
   await page.getByRole("textbox", { name: "추출 문서", exact: true }).fill("직접 수정한 이력서");
-  await page.getByRole("button", { name: "읽기·댓글", exact: true }).click();
+  await page.getByRole("button", { name: "읽기", exact: true }).click();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("직접 수정한 이력서");
 });
 
@@ -161,6 +159,7 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: result })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "경험 보완하기", exact: true }).click();
   for (let index = 0; index < 2; index++) {
     await page.getByRole("button", { name: "새 질문 받기", exact: true }).click();
     await page.getByRole("textbox", { name: "내 답변", exact: true }).fill(`실제로 수행한 경험 ${index + 1}`);
@@ -170,9 +169,10 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
   await page.getByRole("combobox", { name: "반영할 위치", exact: true }).first().selectOption("project:0");
   for (const checkbox of await page.getByRole("checkbox", { name: "이 경험 반영", exact: true }).all()) await checkbox.check();
   await page.getByRole("button", { name: "선택한 경험을 모아서 반영", exact: true }).click();
-  await expect.poll(() => stored().master?.resume?.projects.length).toBe(2);
-  expect(stored().master?.resume?.projects[0].description).toContain("API 구현");
-  expect(stored().master?.resume?.projects[0].description).toContain("추가 사실 1");
+  await expect.poll(() => stored().master?.resultDraft?.resume.projects.length).toBe(2);
+  expect(stored().master?.resultDraft?.resume.projects[0].description).toContain("API 구현");
+  expect(stored().master?.resultDraft?.resume.projects[0].description).toContain("추가 사실 1");
+  expect(stored().master?.resume?.projects).toHaveLength(1);
   expect(stored().master?.document.source.originalText).toBe("원본 자료");
 });
 

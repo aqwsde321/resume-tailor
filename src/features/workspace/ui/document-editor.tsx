@@ -11,10 +11,11 @@ import { StudioIcon } from "./studio-icon";
 import { ResumeDocumentPreview } from "./resume-document-preview";
 import { OriginalSourceToolbar } from "./original-source-toolbar";
 
-export function DocumentEditor({ document, settings, onChange, variant = "default", active = true, heading = "원문 검토", description = "추출한 내용이 맞는지 확인해 주세요. 수정할 문장을 드래그하면 댓글을 남길 수 있어요.", presentation = "text", hideHeading = false }: {
-  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio"; active?: boolean; heading?: string; description?: string; presentation?: "text" | "resume"; hideHeading?: boolean;
+export function DocumentEditor({ document, settings, onChange, variant = "default", active = true, heading = "원문 검토", description = "추출한 내용이 맞는지 확인해 주세요. 수정할 문장을 드래그하면 댓글을 남길 수 있어요.", presentation = "text", hideHeading = false, allowComments = true, originalSource }: {
+  document: ReviewDocument; settings: Workspace["settings"]; onChange: (document: ReviewDocument) => void; variant?: "default" | "studio"; active?: boolean; heading?: string; description?: string; presentation?: "text" | "resume"; hideHeading?: boolean; allowComments?: boolean; originalSource?: ReviewDocument["source"];
 }) {
   const studio = variant === "studio";
+  const source = originalSource ?? document.source;
   const formId = useId();
   const [listOpen, setListOpen] = useState(false);
   const [comparing, setComparing] = useState(false);
@@ -73,7 +74,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     onChange({ ...document, ...patch, updatedAt: new Date().toISOString() });
   };
   const pending = document.annotations.filter((comment) => comment.status === "pending");
-  const page = document.source.pages.find((item) => item.page === pageNumber);
+  const page = source.pages.find((item) => item.page === pageNumber);
   function point(event: PointerEvent<HTMLDivElement>) {
     const box = event.currentTarget.getBoundingClientRect();
     return { x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)), y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)) };
@@ -122,7 +123,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     });
   };
   function selectText() {
-    if (!active || composerOpen) return;
+    if (!active || composerOpen || !allowComments) return;
     const selection = window.getSelection(); if (!selection?.rangeCount || selection.isCollapsed || !readRef.current) { setPlacement(null); return; }
     const range = selection.getRangeAt(0); if (!readRef.current.contains(range.commonAncestorContainer)) return;
     const prefix = range.cloneRange(); prefix.selectNodeContents(readRef.current); prefix.setEnd(range.startContainer, range.startOffset);
@@ -138,15 +139,15 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     {!hideHeading && <header className={studio ? "studio-document-heading" : undefined}><div><h2>{heading}</h2><p>{description}</p></div></header>}
     <div className="review-desk-toolbar">
       <div className="review-mode-switch" role="group" aria-label="원본 비교 방식"><button type="button" aria-pressed={!comparing} onClick={() => { setComparing(false); setMobilePane("review"); }}>검토 내용</button><button type="button" aria-pressed={comparing} onClick={() => setComparing(true)}>원본과 비교</button></div>
-      <div className="review-desk-actions"><button aria-expanded={listOpen} aria-controls={`${formId}-list`} onClick={() => { if (listOpen) setActiveComment(null); setListOpen(!listOpen); }}><StudioIcon name="comment" size={16} />댓글 {pending.length}개</button><details className="review-more"><summary>더보기</summary><div><button disabled={busy} onClick={(event) => { setAnchor({ type: "document" }); rangeRef.current = null; sourceRef.current = event.currentTarget; place(event.currentTarget.getBoundingClientRect()); openComposer(event.currentTarget); event.currentTarget.closest("details")?.removeAttribute("open"); }}>문서 전체에 댓글</button><button disabled={busy || anchor.type === "document"} onClick={(event) => openComposer(event.currentTarget)}>선택 영역에 댓글 추가</button></div></details></div>
+      {(allowComments || pending.length > 0) && <div className="review-desk-actions"><button aria-expanded={listOpen} aria-controls={`${formId}-list`} onClick={() => { if (listOpen) setActiveComment(null); setListOpen(!listOpen); }}><StudioIcon name="comment" size={16} />댓글 {pending.length}개</button>{allowComments && <details className="review-more"><summary>더보기</summary><div><button disabled={busy} onClick={(event) => { setAnchor({ type: "document" }); rangeRef.current = null; sourceRef.current = event.currentTarget; place(event.currentTarget.getBoundingClientRect()); openComposer(event.currentTarget); event.currentTarget.closest("details")?.removeAttribute("open"); }}>문서 전체에 댓글</button><button disabled={busy || anchor.type === "document"} onClick={(event) => openComposer(event.currentTarget)}>선택 영역에 댓글 추가</button></div></details>}</div>}
     </div>
     {comparing && <div className="review-mobile-tabs" role="group" aria-label="비교할 문서 선택"><button aria-pressed={mobilePane === "original"} onClick={() => setMobilePane("original")}>원본 보기</button><button aria-pressed={mobilePane === "review"} onClick={() => setMobilePane("review")}>검토 내용 보기</button></div>}
     {document.warnings?.map((warning, index) => <p role="status" key={index}>{warning}</p>)}
     <div data-mobile-pane={mobilePane} className={`annotation-layout ${comparing ? "is-comparing" : ""} ${listOpen ? "is-list-open" : ""} ${studio ? "studio-review-columns" : "review-columns"}`}>
     {comparing && <section className="review-original-panel" role="region" aria-label="보관된 원본">
-      <header className="review-original-heading"><strong>{document.source.type === "pdf" ? "원본 PDF" : document.source.type === "image" ? "원본 이미지" : "보관된 원본"}</strong><span className="review-original-links"><details className="review-source-info"><summary aria-label="원본 보관 안내">ⓘ</summary><p>{document.source.type === "url" ? "URL에서 가져온 당시 원문입니다." : "처음 등록한 자료입니다. 검토 내용을 수정해도 유지됩니다."}</p></details>{document.source.url && <a href={document.source.url} target="_blank" rel="noreferrer">원본 URL 열기</a>}{document.source.attachmentId && <a href={`/api/workspace/attachment/${document.source.attachmentId}`} target="_blank" rel="noreferrer">새 창으로 열기</a>}</span></header>
-      <OriginalSourceToolbar pages={document.source.pages} pageNumber={pageNumber} zoom={zoom} hasImage={Boolean(page?.imageId)} onPageChange={setPageNumber} onZoomChange={setZoom} onPageComment={(trigger) => { setAnchor({ type: "region", page: pageNumber, x: 0, y: 0, width: 1, height: 1 }); rangeRef.current = null; sourceRef.current = trigger; place(trigger.getBoundingClientRect()); openComposer(trigger); }} />
-      {page?.imageId ? <div className="review-source-scroll"><div className="source-region" style={{ width: `${zoom}%`, maxWidth: "none" }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = point(event); }} onPointerMove={(event) => {
+      <header className="review-original-heading"><strong>{source.type === "pdf" ? "원본 PDF" : source.type === "image" ? "원본 이미지" : "보관된 원본"}</strong><span className="review-original-links"><details className="review-source-info"><summary aria-label="원본 보관 안내">ⓘ</summary><p>{source.type === "url" ? "URL에서 가져온 당시 원문입니다." : "처음 등록한 자료입니다. 검토 내용을 수정해도 유지됩니다."}</p></details>{source.url && <a href={source.url} target="_blank" rel="noreferrer">원본 URL 열기</a>}{source.attachmentId && <a href={`/api/workspace/attachment/${source.attachmentId}`} target="_blank" rel="noreferrer">새 창으로 열기</a>}</span></header>
+      <OriginalSourceToolbar allowPageComments={allowComments} pages={source.pages} pageNumber={pageNumber} zoom={zoom} hasImage={Boolean(page?.imageId)} onPageChange={setPageNumber} onZoomChange={setZoom} onPageComment={(trigger) => { setAnchor({ type: "region", page: pageNumber, x: 0, y: 0, width: 1, height: 1 }); rangeRef.current = null; sourceRef.current = trigger; place(trigger.getBoundingClientRect()); openComposer(trigger); }} />
+      {page?.imageId ? <div className="review-source-scroll"><div className="source-region" style={{ width: `${zoom}%`, maxWidth: "none" }} onPointerDown={(event) => { if (!allowComments) return; event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = point(event); }} onPointerMove={(event) => {
         const start = dragStart.current; if (!start) return; const end = point(event);
         if (Math.abs(end.x - start.x) > 0.005 && Math.abs(end.y - start.y) > 0.005) setAnchor({ type: "region", page: pageNumber, x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) });
       }} onPointerUp={(event) => {
@@ -156,21 +157,25 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
       }}>
         {/* 원본 페이지의 실제 비율을 유지하며 로컬 보관 이미지를 표시한다. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/workspace/attachment/${page.imageId}`} alt={`원본 ${pageNumber}페이지. 드래그로 영역을 선택할 수 있습니다.`} draggable={false} />
+        <img src={`/api/workspace/attachment/${page.imageId}`} alt={`원본 ${pageNumber}페이지.${allowComments ? " 드래그로 영역을 선택할 수 있습니다." : ""}`} draggable={false} />
         {region && <span className="region-selection" style={{ left: `${region.x * 100}%`, top: `${region.y * 100}%`, width: `${region.width * 100}%`, height: `${region.height * 100}%` }} />}
         {pending.filter((comment) => comment.anchor.type === "region" && comment.anchor.page === pageNumber).map((comment) => {
           if (comment.anchor.type !== "region") return null;
           return <button className="annotation-region-marker" key={comment.id} type="button" aria-label={`원본 영역 댓글 보기: ${comment.instruction}`} style={{ left: `${comment.anchor.x * 100}%`, top: `${comment.anchor.y * 100}%`, width: `${comment.anchor.width * 100}%`, height: `${comment.anchor.height * 100}%` }} onClick={(event) => { event.stopPropagation(); showComment(comment.id); }} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => event.stopPropagation()} />;
         })}
-      </div></div> : <pre className="source-original">{page?.text || document.source.originalText}</pre>}
+      </div></div> : <pre className="source-original">{page?.text || source.originalText}</pre>}
     </section>}
       <div className={studio ? "studio-document-column" : undefined}>
-        <div className={studio ? "studio-paper-toolbar" : undefined}>{studio && <span className="studio-paper-filename" title={document.title}>{document.title}</span>}<div className={studio ? "studio-view-switch" : undefined} role="group" aria-label="문서 보기 방식"><button aria-pressed={!editing} onClick={() => setEditing(false)}>읽기·댓글</button><button aria-pressed={editing} onClick={() => setEditing(true)}>직접 편집</button></div></div>
-        {comparing && <div className="review-edit-hint">검토 내용 · 문장을 선택해 수정 댓글을 남기세요.</div>}
+        <div className={studio ? "studio-paper-toolbar" : undefined}>{studio && <span className="studio-paper-filename" title={document.title}>{document.title}</span>}<button title={document.history.length ? "직전 문서 수정과 해당 댓글 반영을 되돌립니다." : "되돌릴 수정이 없습니다."} disabled={!document.history.length || busy} onClick={() => {
+      const last = document.history[document.history.length - 1];
+      if (last) update({ text: last.text, proposal: null, history: document.history.slice(0, -1), annotations: document.annotations.map((comment) => last.annotationIds.includes(comment.id) ? { ...comment, status: "pending" } : comment) });
+    }}>수정 되돌리기</button><div className={studio ? "studio-view-switch" : undefined} role="group" aria-label="문서 보기 방식"><button aria-pressed={!editing} onClick={() => setEditing(false)}>{allowComments ? "읽기·댓글" : "읽기"}</button><button aria-pressed={editing} onClick={() => setEditing(true)}>직접 편집</button></div></div>
+        {comparing && <div className="review-edit-hint">{allowComments ? "검토 내용 · 문장을 선택해 수정 댓글을 남기세요." : "추출 내용 · 원본과 비교해 누락과 깨진 글자를 직접 고치세요."}</div>}
         {!editing && <div ref={readRef} className={`review-document ${presentation === "resume" ? "review-resume-preview" : ""}`} role="region" tabIndex={0} aria-label="추출 문서" onMouseUp={selectText} onKeyUp={selectText}>{presentation === "resume" ? <ResumeDocumentPreview text={document.text} renderRange={renderBetween} /> : renderBetween(0, document.text.length)}</div>}
-        {editing && <label>추출 문서{presentation === "resume" && <span className="resume-markdown-edit-hint">Markdown: ## 큰 목차 · ### 개별 항목 · - 목록 · **강조**</span>}<textarea ref={textRef} name="review-document" className="review-text" value={document.text} disabled={busy} onMouseUp={(event) => { if (event.currentTarget.selectionStart !== event.currentTarget.selectionEnd) { rangeRef.current = null; sourceRef.current = event.currentTarget; place({ left: event.clientX, bottom: event.clientY }); } }} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
+        {editing && <label>추출 문서{presentation === "resume" && <span className="resume-markdown-edit-hint">Markdown: ## 큰 목차 · ### 개별 항목 · - 목록 · **강조**</span>}<textarea ref={textRef} name="review-document" className="review-text" value={document.text} disabled={busy} onMouseUp={(event) => { if (allowComments && event.currentTarget.selectionStart !== event.currentTarget.selectionEnd) { rangeRef.current = null; sourceRef.current = event.currentTarget; place({ left: event.clientX, bottom: event.clientY }); } }} onFocus={() => { beforeEdit.current = document.text; }} onBlur={() => {
         if (beforeEdit.current !== document.text) update({ history: [...document.history, { text: beforeEdit.current, annotationIds: [], createdAt: new Date().toISOString() }] });
       }} onSelect={(event) => {
+        if (!allowComments) return;
         const { selectionStart: start, selectionEnd: end } = event.currentTarget;
         if (start !== end) setAnchor({ type: "text", start, end, quote: document.text.slice(start, end) });
       }} onChange={(event) => { update({ text: event.target.value, proposal: null }); setAnchor({ type: "document" }); }} /></label>}
@@ -188,7 +193,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
         <button className="primary" disabled={!pending.length || busy} onClick={async () => {
           setBusy(true); setError("");
           try {
-            const proposal = await workspaceRequest<NonNullable<ReviewDocument["proposal"]>>("/api/workspace/review", jsonRequest({ document, agent: toAgentRunOptions(settings) }));
+            const proposal = await workspaceRequest<NonNullable<ReviewDocument["proposal"]>>("/api/workspace/review", jsonRequest({ document: { ...document, source }, agent: toAgentRunOptions(settings) }));
             update({ proposal }); setSelected(proposal.changes.map((change) => change.id));
           } catch (error) { setError(error instanceof Error ? error.message : "수정 요청을 반영하지 못했습니다."); }
           finally { setBusy(false); }
@@ -214,11 +219,8 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
         } catch (error) { setError((error as Error).message); }
       }} /></div></footer>
     </section>}
-    <button disabled={!document.history.length || busy} onClick={() => {
-      const last = document.history[document.history.length - 1];
-      if (last) update({ text: last.text, proposal: null, history: document.history.slice(0, -1), annotations: document.annotations.map((comment) => last.annotationIds.includes(comment.id) ? { ...comment, status: "pending" } : comment) });
-    }}>이전 수정 되돌리기</button>
-    {active && placement && !composerOpen && createPortal(<button className="annotation-selection-button" style={placement} onMouseDown={(event) => event.preventDefault()} onClick={(event) => openComposer(event.currentTarget)}><StudioIcon name="comment" size={16} />댓글 쓰기</button>, globalThis.document.body)}
+
+    {allowComments && active && placement && !composerOpen && createPortal(<button className="annotation-selection-button" style={placement} onMouseDown={(event) => event.preventDefault()} onClick={(event) => openComposer(event.currentTarget)}><StudioIcon name="comment" size={16} />댓글 쓰기</button>, globalThis.document.body)}
     {active && composerOpen && createPortal(<section className="annotation-composer" style={composerPlacement} role="dialog" aria-modal="false" aria-labelledby={`${formId}-composer-title`} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeComposer(); } }}>
       <h3 id={`${formId}-composer-title`}>수정 댓글 작성</h3>
       <p className="annotation-composer-quote">{anchor.type === "text" ? anchor.quote : anchor.type === "region" ? `원본 ${anchor.page}페이지 선택 영역` : "문서 전체"}</p>

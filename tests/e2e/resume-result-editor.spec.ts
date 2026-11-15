@@ -30,7 +30,7 @@ test("완성본에서 핵심 기술에 댓글로 수정 요청하고 최종 확�
   const stored = await setup(page);
   const documentRegion = page.getByRole("region", { name: "추출 문서", exact: true });
   await expect(documentRegion.getByRole("article", { name: "정리된 이력서", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "정리 결과 검토", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "이력서 편집", exact: true })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "정리 결과 수정", exact: true })).toHaveCount(0);
   expect(await documentRegion.textContent()).toBe(stored().master!.resultDraft!.document.text);
   await page.route("**/api/workspace/review", (route) => {
@@ -52,7 +52,7 @@ test("완성본에서 핵심 기술에 댓글로 수정 요청하고 최종 확�
   await expect.poll(() => stored().master?.resultDraft?.resume.techStack).toEqual(["Spring", "Redis"]);
   const reviewedText = await documentRegion.textContent();
   await page.getByRole("button", { name: "공통 이력서 확인으로", exact: true }).click();
-  await expect(page.locator("[aria-current=step]")).toHaveText(/공통 이력서 확인/);
+  await expect(page.locator("[aria-current=step]")).toHaveText(/공통 이력서 저장/);
   await expect(page.getByRole("button", { name: "기술 편집", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "읽기·댓글", exact: true })).toHaveCount(0);
   expect(await page.getByRole("article", { name: "정리된 이력서", exact: true }).first().textContent()).toBe(reviewedText);
@@ -114,6 +114,6 @@ test("Markdown 목차 위계를 직접 바꿔도 댓글 위치와 저장한 위�
   await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
   await expect.poll(() => stored().master?.reviewMarkdown).toBe(markdown);
   await page.reload();
-  await page.locator("summary").filter({ hasText: "확정 이력서" }).click();
+  await expect(page.getByRole("heading", { name: "저장된 공통 이력서", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "서비스", level: 4, exact: true })).toBeVisible();
 });

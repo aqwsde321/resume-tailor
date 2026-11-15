@@ -4,7 +4,7 @@
 
 ## 사용 흐름
 
-- **내 이력서** (`/workspace/resume`): PDF·스캔 PDF·이미지·URL·텍스트·Markdown 등록 → 추출 문서에 드래그 댓글 또는 직접 수정 → 댓글 일괄 반영·변경 수락 → 공통 이력서 확정
+- **내 이력서** (`/workspace/resume`): PDF·스캔 PDF·이미지·URL·텍스트·Markdown 등록 → 추출 자료 직접 확인 → Markdown 이력서 편집·드래그 댓글·선택형 경험 보완 → 공통 이력서 저장
 - **회사별 이력서** (`/workspace/companies`): 공고별 작업 생성 → 공고 원문 검토·확정 → 맞춤 표현별 선택 적용 → 회사별 편집·버전 보관 → PDF/Markdown 다운로드
 - **설정** (`/workspace/settings`): 기본 모델 또는 모델 ID 직접 지정, 생각 깊이, 원본 파일을 포함한 백업·복원, 이전 브라우저 자료 가져오기
 

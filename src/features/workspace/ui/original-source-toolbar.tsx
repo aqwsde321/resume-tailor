@@ -8,7 +8,8 @@ import type { ReviewDocument } from "@/entities/workspace/model/workspace";
 
 const zoomLevels = [75, 100, 125, 150, 200];
 
-export function OriginalSourceToolbar({ pages, pageNumber, zoom, hasImage, onPageChange, onZoomChange, onPageComment }: {
+export function OriginalSourceToolbar({ pages, pageNumber, zoom, hasImage, onPageChange, onZoomChange, onPageComment, allowPageComments = true }: {
+  allowPageComments?: boolean;
   pages: ReviewDocument["source"]["pages"];
   pageNumber: number;
   zoom: string;
@@ -31,6 +32,6 @@ export function OriginalSourceToolbar({ pages, pageNumber, zoom, hasImage, onPag
       <Selector label="원본 확대" isLabelHidden size="sm" variant="secondary" value={zoom} width={88} options={zoomLevels.map((value) => ({ value: String(value), label: value === 100 ? "맞춤" : `${value}%` }))} onChange={onZoomChange} />
       <IconButton label="원본 확대하기" tooltip="확대" icon={<span aria-hidden="true">+</span>} size="sm" variant="ghost" isDisabled={zoomIndex >= zoomLevels.length - 1} onClick={() => onZoomChange(String(zoomLevels[zoomIndex + 1]))} />
     </div>}
-    {pages.length > 0 && <div className="astryx-source-menu"><DropdownMenu renderTrigger={(props) => <IconButton {...props} label="원본 추가 도구" tooltip="원본 추가 도구" icon={<span aria-hidden="true">⋯</span>} size="sm" variant="ghost" />} items={[{ label: "현재 페이지에 댓글", onClick: () => { const trigger = toolbarRef.current?.querySelector<HTMLButtonElement>('button[aria-label="원본 추가 도구"]'); if (trigger) onPageComment(trigger); } }]} /></div>}
+    {allowPageComments && pages.length > 0 && <div className="astryx-source-menu"><DropdownMenu renderTrigger={(props) => <IconButton {...props} label="원본 추가 도구" tooltip="원본 추가 도구" icon={<span aria-hidden="true">⋯</span>} size="sm" variant="ghost" />} items={[{ label: "현재 페이지에 댓글", onClick: () => { const trigger = toolbarRef.current?.querySelector<HTMLButtonElement>('button[aria-label="원본 추가 도구"]'); if (trigger) onPageComment(trigger); } }]} /></div>}
   </div>;
 }
