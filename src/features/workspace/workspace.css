@@ -99,12 +99,6 @@
 .studio-sidebar nav a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 11px 14px; border-radius: 8px; color: #596174; text-decoration: none; font-weight: 500; }
 .studio-sidebar nav a:hover { background: #f0f0f7; color: var(--text); }
 .studio-sidebar nav a[aria-current] { background: #edeaf8; color: #5543ab; font-weight: 650; }
-.studio-sidebar-note { margin: auto 10px 0; padding-top: 20px; border-top: 1px solid var(--line); color: #7a709b; }
-.studio-sidebar-note p { margin: 10px 0 8px; color: #54516a; font-size: 12px; line-height: 1.8; }
-.studio-sidebar-note small { display: block; color: var(--muted); font-size: 11px; line-height: 1.7; }
-.studio-topbar { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 36px; border-bottom: 1px solid var(--line); background: #fff; color: var(--muted); font-size: 12px; }
-.studio-topbar strong { color: var(--text); font-weight: 500; }
-.studio-crumb-divider { margin-inline: 14px; color: #b6bbca; }
 .studio-save { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .studio-save i { width: 6px; height: 6px; border-radius: 50%; background: #378167; }
 .studio-save i[data-error=true] { background: #b74545; }
@@ -280,8 +274,6 @@
   .studio-sidebar nav { display: flex; gap: 6px; margin-top: 18px; }
   .studio-sidebar nav a { justify-content: center; flex: 1; gap: 6px; min-width: 0; min-height: 39px; padding: 8px; font-size: 12px; white-space: nowrap; }
   .studio-sidebar nav svg { width: 17px; height: 17px; }
-  .studio-sidebar-note { display: none; }
-  .studio-topbar { min-height: 48px; padding: 0 18px; }
   .studio-main { padding: 25px 16px 40px; }
   .studio-page-heading { flex-direction: column; gap: 10px; margin-bottom: 20px; }
   .studio-page-heading h1 { font-size: 25px; }
@@ -506,3 +498,23 @@
 .resume-studio button.studio-secondary-action:hover:not(:disabled):not([aria-disabled="true"]) { background: #f2f0fa; border-color: #bdb4e0; }
 .resume-studio button.primary[aria-disabled="true"] { cursor: not-allowed; opacity: .5; }
 .resume-studio button.primary:hover[aria-disabled="true"] { background: var(--primary); border-color: var(--primary); }
+
+/* Compact navigation keeps the document as the main workspace. */
+.resume-studio { grid-template-columns: 184px minmax(0, 1fr); grid-template-rows: 1fr; }
+.studio-sidebar { grid-row: 1; padding: 24px 12px; }
+.studio-main { grid-row: 1; }
+.studio-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.studio-brand { font-size: 15px; gap: 8px; }
+.studio-brand-mark { width: 30px; height: 34px; }
+.studio-sidebar nav { margin-top: 28px; }
+.studio-sidebar nav a { padding-inline: 10px; gap: 10px; }
+.resume-studio .studio-menu-toggle { display: none; }
+.studio-save { font-size: 12px; color: var(--muted); }
+.studio-saved-document-header .studio-save { margin-left: auto; }
+@media(max-width: 680px) {
+  .studio-sidebar { padding: 12px 16px; }
+  .resume-studio .studio-menu-toggle { display: inline-flex; }
+  .studio-sidebar nav { margin-top: 12px; }
+  .studio-sidebar[data-menu-open=false] nav { display: none; }
+  .studio-saved-document-header { flex-wrap: wrap; }
+}

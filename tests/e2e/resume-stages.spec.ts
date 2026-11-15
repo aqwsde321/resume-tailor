@@ -104,3 +104,20 @@ test("저장 화면은 완료 상태와 문서 상단 수정 버튼을 표시하
   await header.getByRole("button", { name: "이력서 수정하기", exact: true }).click();
   await expect(page.getByRole("heading", { name: "이력서 편집", exact: true })).toBeVisible();
 });
+
+test("중복 상단바 없이 문서에 자동 저장 상태를 표시하고 좁은 화면 메뉴를 접는다", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 900 });
+  await storage(page, publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "원본", "원문"), resume));
+  await expect(page.locator(".studio-topbar")).toHaveCount(0);
+  await expect(page.locator(".studio-saved-document-header").getByRole("status")).toHaveText("자동 저장됨");
+  const menu = page.getByRole("button", { name: "메뉴", exact: true });
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("navigation", { name: "주 메뉴" })).toBeHidden();
+  await menu.click();
+  await expect(menu).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("link", { name: "회사별 이력서", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/companies$/);
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await page.setViewportSize({ width: 1254, height: 976 });
+  await expect(page.getByRole("navigation", { name: "주 메뉴" })).toBeVisible();
+});

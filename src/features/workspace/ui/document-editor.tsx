@@ -9,6 +9,7 @@ import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { StudioIcon } from "./studio-icon";
 import { ResumeDocumentPreview } from "./resume-document-preview";
+import { WorkspaceSaveStatus } from "./workspace-save-status";
 import { OriginalSourceToolbar } from "./original-source-toolbar";
 
 const narrowMedia = "(max-width: 1180px)";
@@ -187,7 +188,7 @@ export function DocumentEditor({ document, settings, onChange, variant = "defaul
     <div className={`annotation-layout ${comparing ? "is-comparing" : ""} ${listOpen ? "is-list-open" : ""} ${studio ? "studio-review-columns" : "review-columns"}`}>
     {comparing && !narrow && originalPanel}
       <div className={studio ? "studio-document-column" : undefined}>
-        <div className={studio ? "studio-paper-toolbar" : undefined}>{studio && <span className="studio-paper-filename" title={document.title}>{document.title}</span>}<button title={document.history.length ? "직전 문서 수정과 해당 댓글 반영을 되돌립니다." : "되돌릴 수정이 없습니다."} disabled={!document.history.length || busy} onClick={() => {
+        <div className={studio ? "studio-paper-toolbar" : undefined}>{studio && <span className="studio-paper-filename" title={document.title}>{document.title}</span>}{studio && active && <WorkspaceSaveStatus />}<button title={document.history.length ? "직전 문서 수정과 해당 댓글 반영을 되돌립니다." : "되돌릴 수정이 없습니다."} disabled={!document.history.length || busy} onClick={() => {
       const last = document.history[document.history.length - 1];
       if (last) update({ text: last.text, proposal: null, history: document.history.slice(0, -1), annotations: document.annotations.map((comment) => last.annotationIds.includes(comment.id) ? { ...comment, status: "pending" } : comment) });
     }}>수정 되돌리기</button><div className={studio ? "studio-view-switch" : undefined} role="group" aria-label="문서 보기 방식"><button aria-pressed={!editing} onClick={() => setEditing(false)}>{allowComments ? "읽기·댓글" : "읽기"}</button><button aria-pressed={editing} onClick={() => setEditing(true)}>직접 편집</button></div></div>
