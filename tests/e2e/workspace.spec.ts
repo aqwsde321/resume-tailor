@@ -254,3 +254,18 @@ test("PDF 원본 비교는 페이지 이동과 확대를 제공한다", async ({
   await page.getByRole("combobox", { name: "원본 확대", exact: true }).selectOption("150");
   await expect(page.locator(".source-region")).toHaveAttribute("style", /150%/);
 });
+
+test("긴 원문 비교는 양쪽 패널 높이를 맞추고 내부에서 스크롤한다", async ({ page }) => {
+  const document = newTextDocument("resume", "긴 자료", "비교할 내용입니다.\n\n".repeat(200));
+  await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/workspace/resume");
+  await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
+  const original = await page.locator(".review-original-panel").boundingBox();
+  const review = await page.locator(".studio-document-column").boundingBox();
+  expect(Math.abs(original!.height - review!.height)).toBeLessThan(2);
+  expect(review!.height).toBeLessThanOrEqual(760);
+  for (const selector of [".source-original", ".review-document"]) {
+    expect(await page.locator(selector).evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
+  }
+});
