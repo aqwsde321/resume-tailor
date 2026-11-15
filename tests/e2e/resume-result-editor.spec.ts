@@ -58,7 +58,7 @@ test("완성본에서 핵심 기술에 댓글로 수정 요청하고 최종 확�
   expect(await page.getByRole("article", { name: "정리된 이력서", exact: true }).first().textContent()).toBe(reviewedText);
   await expect.poll(() => stored().master?.resultDraft?.stage).toBe("confirm");
   await page.reload();
-  await expect(page.getByRole("button", { name: "결과 검토로 돌아가기", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이전: 이력서 편집", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "공통 이력서로 저장", exact: true }).click();
   await expect.poll(() => stored().master?.resume?.techStack).toEqual(["Spring", "Redis"]);
   expect(stored().master?.document.text).toBe("보존할 원문");

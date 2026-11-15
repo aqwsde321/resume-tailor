@@ -7,8 +7,8 @@ import { postSseJson } from "@/shared/lib/stream-client";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 type Session = z.infer<typeof EnrichmentSchema>;
 export type ApprovedDraft = { sessionId: string; id: string; draft: DiscoveredExperienceDraft; target?: string };
-export function EnrichmentPanel({ resume, company, sessions, settings, onChange, onApply }: {
-  resume: Resume; company?: Company; sessions: Session[]; settings: Workspace["settings"];
+export function EnrichmentPanel({ resume, company, sessions, settings, onChange, onApply, scope = company ? "job" : "common" }: {
+  scope?: "common" | "job"; resume: Resume; company?: Company; sessions: Session[]; settings: Workspace["settings"];
   onChange: (sessions: Session[]) => void; onApply: (drafts: ApprovedDraft[]) => void;
 }) {
   const [topic, setTopic] = useState("이력서에서 역할·행동·결과가 부족한 경험과 최근에 빠뜨린 경험을 확인해 줘.");
@@ -29,8 +29,8 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="card"><h2>AI와 부족한 내용 보완하기</h2>
-    <p>질문에 답하면 실제 경험을 초안으로 모아 둡니다. 확인하고 선택한 내용만 이력서에 반영합니다.</p>
+  return <section className="card"><h2>{scope === "job" ? "공고와 연결할 경험 보완" : "공통 경험 보완"}</h2>
+    <p>{scope === "job" ? "이 공고에 필요한 경험을 질문으로 확인합니다. 선택한 내용은 이 회사의 이력서에만 반영되며 공통 이력서는 바뀌지 않습니다." : "회사에 관계없이 활용할 실제 경험을 질문으로 정리합니다. 선택한 내용은 공통 이력서 편집 초안에 반영합니다."}</p>
     <label>보완할 내용<textarea value={topic} onChange={(event) => setTopic(event.target.value)} maxLength={300} rows={2} /></label>
     <button disabled={busy || !topic.trim()} onClick={() => void ask(true)}>{busy ? "답변을 정리하는 중…" : "새 질문 받기"}</button>
     {sessions.map((session) => <details key={session.id} open={session.id === current?.id}><summary>{session.topic}</summary>

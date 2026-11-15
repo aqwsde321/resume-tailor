@@ -322,7 +322,7 @@
 @media(max-width: 680px) { .review-replace-dialog { padding: 18px; } .review-replace-dialog > header { align-items: flex-start; } }
 
 .review-desk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 16px; padding: 12px 16px; border: 1px solid #dee2eb; border-radius: 10px; background: white; }
-.review-mode-switch, .review-desk-actions, .review-mobile-tabs { display: flex; align-items: center; gap: 6px; }
+.review-mode-switch, .review-desk-actions { display: flex; align-items: center; gap: 6px; }
 .review-desk-actions > button { display: inline-flex; align-items: center; gap: 7px; }
 .review-mode-switch { padding: 3px; background: #f2f3f7; border-radius: 7px; }
 .resume-studio .review-mode-switch button { border: 0; background: transparent; margin: 0; color: #626b7e; }
@@ -343,13 +343,9 @@
 .review-original-panel .source-original { max-height: 75svh; margin: 8px 0 0; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 2; font-family: inherit; }
 .review-source-scroll { max-height: 75svh; overflow: auto; }
 .annotation-layout.is-comparing .studio-comments { grid-column: 1 / -1; position: static; }
-.review-mobile-tabs { display: none; }
-.review-desk-toolbar :is(button,summary):focus-visible, .review-mobile-tabs button:focus-visible { outline: 3px solid #9d8dde; outline-offset: 3px; }
+.review-desk-toolbar :is(button,summary):focus-visible { outline: 3px solid #9d8dde; outline-offset: 3px; }
 @media(max-width: 980px) {
   .annotation-layout.is-comparing { grid-template-columns: minmax(0, 1fr); }
-  .review-mobile-tabs { display: flex; margin: 0 0 14px; }
-  .review-mobile-tabs button[aria-pressed=true] { border-color: #6554c0; color: #5341a8; background: #f0ecfa; }
-  .is-comparing[data-mobile-pane=review] > .review-original-panel, .is-comparing[data-mobile-pane=original] > .studio-document-column { display: none; }
 }
 @media(max-width: 680px) { .review-desk-toolbar { flex-wrap: wrap; padding: 10px; gap: 10px; } .review-desk-actions { margin-left: auto; } .review-original-panel { padding: 14px; } }
 
@@ -361,7 +357,6 @@
 .annotation-layout .studio-document-column > label { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 .resume-studio .annotation-layout .review-text { flex: 1; min-height: 0; resize: none; }
 @media(max-width: 980px) {
-  .annotation-layout.is-comparing[data-mobile-pane=review] > .review-original-panel, .annotation-layout.is-comparing[data-mobile-pane=original] > .studio-document-column { display: none; }
 }
 
 /* Compact PDF viewer chrome leaves the document itself in focus. */
@@ -377,9 +372,6 @@
 .review-original-panel :is(button,select,a,summary):focus-visible { outline: 3px solid #9d8dde; outline-offset: 2px; }
 @media(max-width: 1180px) {
   .annotation-layout.is-comparing { grid-template-columns: minmax(0, 1fr); }
-  .review-mobile-tabs { display: flex; margin: 0 0 14px; }
-  .review-mobile-tabs button[aria-pressed=true] { border-color: #6554c0; color: #5341a8; background: #f0ecfa; }
-  .annotation-layout.is-comparing[data-mobile-pane=review] > .review-original-panel, .annotation-layout.is-comparing[data-mobile-pane=original] > .studio-document-column { display: none; }
 }
 .review-source-info { position: relative; }
 .review-source-info > summary { list-style: none; cursor: pointer; padding: 4px; font-size: 17px; color: #697287; }
@@ -470,3 +462,23 @@
 .studio-saved-resume > .resume-document-preview { padding: 28px; border: 1px solid #dee2eb; border-radius: 10px; }
 .studio-paper-toolbar > button { margin: 0 12px 0 auto; font-size: 12px; }
 @media(max-width: 680px) { .studio-paper-toolbar { flex-wrap: wrap; gap: 8px; } .studio-saved-resume > .resume-document-preview { padding: 20px 16px; } }
+
+.studio-progress li > button { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 8px 4px; border: 0; background: transparent; color: inherit; font: inherit; border-radius: 4px; }
+.studio-progress li > button[aria-disabled=true] { color: #858c9c; cursor: not-allowed; }
+.studio-progress li > button:focus-visible { outline: 3px solid #9d8dde; outline-offset: 3px; }
+.resume-navigation-message { margin: -12px 0 20px; padding: 12px 16px; border-left: 3px solid #7960bb; background: #f2effb; font-size: 14px; line-height: 1.7; }
+.studio-review-actions, .result-editor-footer, .studio-saved-actions { position: sticky; bottom: 12px; z-index: 25; background: #fff; box-shadow: 0 4px 20px #20253612; }
+.studio-review-actions, .studio-saved-actions { padding: 16px; border: 1px solid #dee2eb; border-radius: 10px; }
+.review-open-original { display: none; }
+.review-original-dialog { width: min(860px, calc(100vw - 24px)); height: min(900px, calc(100svh - 24px)); max-width: none; max-height: calc(100svh - 24px); padding: 0; border: 1px solid #dee2eb; border-radius: 12px; background: white; color: #343b4b; }
+.review-original-dialog[open] { display: flex; flex-direction: column; }
+.review-original-dialog::backdrop { background: #20253666; }
+.review-original-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-shrink: 0; padding: 12px 16px; border-bottom: 1px solid #dee2eb; }
+.review-original-dialog > header button { margin: 0; }
+.review-original-dialog > .review-original-panel { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 0; border: 0; border-radius: 0; }
+.review-original-dialog .review-source-scroll, .review-original-dialog .source-original { flex: 1; min-height: 0; max-height: none; overflow: auto; }
+.review-original-dialog .source-original { padding: 20px; }
+.company-enrichment { margin: 20px 0; }
+.company-enrichment > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+@media(max-width: 1180px) { .review-wide-modes { display: none; } .review-open-original { display: inline-flex; } }
+@media(max-width: 680px) { .result-editor-footer { bottom: 8px; padding: 12px; gap: 10px; } .result-editor-footer p { font-size: 12px; } .result-editor-footer { flex-direction: row; flex-wrap: wrap; } .result-editor-footer > p { flex-basis: 100%; order: -1; } .result-editor-footer > button:last-child { margin-left: auto; } }

@@ -159,7 +159,7 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: result })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await page.goto("/workspace/resume");
-  await page.getByRole("button", { name: "경험 보완하기", exact: true }).click();
+  await page.getByRole("button", { name: "공통 경험 보완", exact: true }).click();
   for (let index = 0; index < 2; index++) {
     await page.getByRole("button", { name: "새 질문 받기", exact: true }).click();
     await page.getByRole("textbox", { name: "내 답변", exact: true }).fill(`실제로 수행한 경험 ${index + 1}`);
@@ -237,10 +237,13 @@ test("원본 비교는 최초 원문과 편집본을 구분하고 댓글 보조 
   await expect(page.getByRole("dialog", { name: "수정 댓글 작성", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "취소", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "원본 보기", exact: true }).click();
-  await expect(page.getByRole("region", { name: "보관된 원본", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "검토 내용 보기", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "원본 자료", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원본 닫기", exact: true }).click();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원본 열기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "보관된 원본", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "원본 열기", exact: true })).toBeFocused();
   expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -276,13 +279,13 @@ test("긴 원문 비교는 양쪽 패널 높이를 맞추고 내부에서 스크
   await mockStorage(page, publishMasterResume(createEmptyWorkspace(), document, resume));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/workspace/resume");
-  expect((await page.locator(".studio-document-column").boundingBox())!.height).toBeLessThanOrEqual(760);
+  expect((await page.locator(".studio-document-column:visible").boundingBox())!.height).toBeLessThanOrEqual(760);
   await page.getByRole("button", { name: "원본과 비교", exact: true }).click();
   const original = await page.locator(".review-original-panel").boundingBox();
-  const review = await page.locator(".studio-document-column").boundingBox();
+  const review = await page.locator(".studio-document-column:visible").boundingBox();
   expect(Math.abs(original!.height - review!.height)).toBeLessThan(2);
   expect(review!.height).toBeLessThanOrEqual(760);
   for (const selector of [".source-original", ".review-document"]) {
-    expect(await page.locator(selector).evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
+    expect(await page.locator(`${selector}:visible`).evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
   }
 });

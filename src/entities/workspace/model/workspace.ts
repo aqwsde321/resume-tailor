@@ -63,6 +63,7 @@ export const MasterResumeSchema = z.object({
   resultDraft: ResumeResultDraftSchema.nullable().optional(),
   reviewMarkdown: z.string().max(500000).optional(),
   sourceNeedsReview: z.boolean().optional(),
+  viewStep: z.enum(["source", "edit", "save", "saved"]).optional(),
   skillCatalog: z.array(z.string().max(120)).optional(),
   enrichment: z.array(EnrichmentSchema),
   updatedAt: Timestamp,

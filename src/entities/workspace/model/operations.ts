@@ -7,7 +7,7 @@ export function publishMasterResume(workspace: Workspace, document: ReviewDocume
   return { ...workspace, master: {
     id: workspace.master?.id ?? crypto.randomUUID(),
     version: (workspace.master?.resume ? workspace.master.version : 0) + 1,
-    document, sourceNeedsReview: false, resume: ResumeSchema.parse(resume), reviewMarkdown: workspace.master?.resultDraft?.document.source.type === "markdown" && workspace.master.resultDraft.document.text === workspace.master.resultDraft.structuredText ? workspace.master.resultDraft.document.text : undefined, resultDraft: null, skillCatalog: [...new Set([...(workspace.master?.resultDraft?.skillCatalog ?? workspace.master?.skillCatalog ?? []), ...resume.techStack])], enrichment: workspace.master?.enrichment ?? [], updatedAt: now,
+    document, viewStep: "saved", sourceNeedsReview: false, resume: ResumeSchema.parse(resume), reviewMarkdown: workspace.master?.resultDraft?.document.source.type === "markdown" && workspace.master.resultDraft.document.text === workspace.master.resultDraft.structuredText ? workspace.master.resultDraft.document.text : undefined, resultDraft: null, skillCatalog: [...new Set([...(workspace.master?.resultDraft?.skillCatalog ?? workspace.master?.skillCatalog ?? []), ...resume.techStack])], enrichment: workspace.master?.enrichment ?? [], updatedAt: now,
   } };
 }
 export function createCompanyWork(master: NonNullable<Workspace["master"]>, document: ReviewDocument): CompanyWork {

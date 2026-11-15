@@ -21,7 +21,7 @@ test("저장된 이력서에서 원문 편집이 다시 나타나지 않고 명�
   await page.getByRole("button", { name: "이력서 수정하기", exact: true }).click();
   await expect(page.locator("[aria-current=step]")).toHaveText(/이력서 편집/);
   await expect(page.getByRole("button", { name: "새 질문 받기", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "경험 보완하기", exact: true }).click();
+  await page.getByRole("button", { name: "공통 경험 보완", exact: true }).click();
   await expect(page.getByRole("button", { name: "새 질문 받기", exact: true })).toBeVisible();
   await expect(page.locator(".studio-paper-toolbar").getByRole("button", { name: "수정 되돌리기", exact: true })).toBeDisabled();
 });
@@ -78,7 +78,7 @@ test("저장본의 자료를 교체하면 자료 확인 상태를 새로고침 �
   expect(stored().master?.resume?.summary).toBe("기존 소개");
   await page.route("**/api/resume", (route) => route.fulfill({ json: { ok: true, data: resume } }));
   await page.getByRole("button", { name: "검토한 내용으로 이력서 정리", exact: true }).click();
-  await page.getByRole("button", { name: "편집 취소", exact: true }).click();
+  await page.getByRole("button", { name: "이전: 자료 확인", exact: true }).click();
   await expect(page.locator("[aria-current=step]")).toHaveText(/자료 확인/);
   expect(stored().master?.resume?.summary).toBe("기존 소개");
 });
