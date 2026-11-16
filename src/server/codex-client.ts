@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { Codex, type ThreadItem } from "@openai/codex-sdk";
 
-import { formatReasoningEffortValue } from "@/shared/lib/agent-settings";
 import { runClaudeJson } from "./claude-client";
 import { buildPrompt } from "@/server/codex-prompt";
 import { HttpError } from "@/server/http";
@@ -269,7 +268,7 @@ export async function runSkillJsonStream<T>(params: {
       emitLog(params.onLog, {
         level: "info",
         phase: "config",
-        message: `실행 설정 확인 · 생각 깊이 ${formatReasoningEffortValue(params.modelReasoningEffort ?? "medium")}`
+        message: `실행 설정 확인 · Reasoning effort ${params.modelReasoningEffort ?? "medium"}`
       });
 
       const { events } = await thread.runStreamed(prompt, {

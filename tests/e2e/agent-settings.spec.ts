@@ -9,12 +9,14 @@ test("실행 도구와 모델은 선택 상자로 고르고 저장·새로고침
     await route.fulfill({ json: { ok: true, data: stored } });
   });
   await page.goto("/workspace/settings");
+  await expect(page.getByRole("combobox", { name: "Reasoning effort", exact: true })).toContainText("medium");
   await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
   await page.getByRole("option", { name: "test-model", exact: true }).click();
   await expect.poll(() => stored.settings.model).toBe("test-model");
   await page.getByRole("combobox", { name: "AI 실행 도구", exact: true }).click();
   await page.getByRole("option", { name: "Claude Code", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "모델 선택", exact: true })).toContainText("Claude Code 기본 모델");
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("medium");
   await page.getByRole("combobox", { name: "모델 선택", exact: true }).click();
   await page.getByRole("option", { name: "Sonnet", exact: true }).click();
   await expect.poll(() => stored.settings).toMatchObject({ provider: "claude", model: "sonnet" });

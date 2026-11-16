@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Selector } from "@astryxdesign/core/Selector";
 import type { AgentSettings } from "@/shared/lib/types";
 import { DEFAULT_AGENT_MODELS, type AgentModelCatalog } from "@/shared/lib/agent-models";
-import { MODEL_REASONING_EFFORT_VALUES, MODEL_REASONING_EFFORT_LABELS, isModelReasoningEffort } from "@/shared/lib/agent-settings";
+import { MODEL_REASONING_EFFORT_VALUES, isModelReasoningEffort } from "@/shared/lib/agent-settings";
 import { workspaceRequest } from "../api";
 import { StudioIcon } from "./studio-icon";
 const DEFAULT_MODEL = "__default__";
@@ -31,7 +31,7 @@ export function AgentSettingsPanel({ settings, onChange }: { settings: AgentSett
         onChange({ provider: value, model: "", modelReasoningEffort: "medium" });
       }} />
       <Selector label="모델 선택" value={settings.model || DEFAULT_MODEL} isDisabled={loading} options={models.map((model) => ({ ...model, value: model.value || DEFAULT_MODEL }))} onChange={(value) => onChange({ ...settings, model: value === DEFAULT_MODEL ? "" : value })} />
-      <Selector label="생각 깊이" value={provider === "claude" && settings.modelReasoningEffort === "minimal" ? "low" : settings.modelReasoningEffort || "medium"} options={efforts.map((value) => ({ value, label: MODEL_REASONING_EFFORT_LABELS[value] }))} onChange={(value) => { if (isModelReasoningEffort(value)) onChange({ ...settings, modelReasoningEffort: value }); }} />
+      <Selector label={provider === "claude" ? "Effort" : "Reasoning effort"} value={provider === "claude" && settings.modelReasoningEffort === "minimal" ? "low" : settings.modelReasoningEffort || "medium"} options={efforts.map((value) => ({ value, label: value }))} onChange={(value) => { if (isModelReasoningEffort(value)) onChange({ ...settings, modelReasoningEffort: value }); }} />
     </div>
     {loading && <p role="status">모델 목록을 불러오는 중입니다.</p>}
     {error && <p role="status">{error}</p>}
