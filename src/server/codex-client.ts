@@ -29,7 +29,16 @@ let codex: Codex | null = null;
 function getCodexClient(): Codex {
   if (!codex) {
     codex = new Codex({
-      codexPathOverride: process.env.CODEX_CLI_PATH ?? "codex"
+      codexPathOverride: process.env.CODEX_CLI_PATH ?? "codex",
+      config: {
+        default_permissions: "resume-tailor",
+        permissions: {
+          "resume-tailor": {
+            filesystem: { ":root": "deny", ":minimal": "read" },
+            network: { enabled: false }
+          }
+        }
+      }
     });
   }
   return codex;
@@ -37,7 +46,7 @@ function getCodexClient(): Codex {
 
 type CodexThread = ReturnType<Codex["startThread"]>;
 
-// 비공개 원문을 받은 에이전트가 저장소를 읽거나 검색·네트워크·쓰기를 하지 못하게 빈 임시 폴더에서 실행한다.
+// 명령의 파일 접근은 최소 시스템 경로로 제한한다. 일반 read-only는 외부 파일 읽기를 허용하므로 사용하지 않는다.
 async function withIsolatedThread<T>(options: AgentRunOptions | undefined, job: (thread: CodexThread) => Promise<T>): Promise<T> {
   if (options?.model && options.modelReasoningEffort) {
     const catalog = await getAgentModelCatalog();
@@ -55,7 +64,6 @@ async function withIsolatedThread<T>(options: AgentRunOptions | undefined, job: 
       workingDirectory,
       skipGitRepoCheck: true,
       approvalPolicy: "never",
-      sandboxMode: "read-only",
       networkAccessEnabled: false,
       webSearchMode: "disabled"
     }));

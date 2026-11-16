@@ -11,12 +11,14 @@ const claude = vi.hoisted(() => vi.fn());
 vi.mock("@/server/claude-client", () => ({ runClaudeJson: claude }));
 
 const sdk = vi.hoisted(() => ({
+  options: undefined as unknown,
   run: vi.fn(),
   runStreamed: vi.fn(),
   startThread: vi.fn()
 }));
 vi.mock("@openai/codex-sdk", () => ({
   Codex: class {
+    constructor(options: unknown) { sdk.options = options; }
     startThread = sdk.startThread;
   }
 }));
@@ -96,11 +98,15 @@ describe("Codex 실행 격리", () => {
       const params = { skillName: "company-to-json" as const, inputText: "가상 입력", outputSchema: {} };
       await (streaming ? runSkillJsonStream(params) : runSkillJson(params));
       expect(sdk.startThread).toHaveBeenLastCalledWith(expect.objectContaining({
-        sandboxMode: "read-only",
         networkAccessEnabled: false,
         webSearchMode: "disabled",
         approvalPolicy: "never"
       }));
+      expect(sdk.startThread.mock.calls.at(-1)![0]).not.toHaveProperty("sandboxMode");
+      expect(sdk.options).toEqual(expect.objectContaining({ config: expect.objectContaining({
+        default_permissions: "resume-tailor",
+        permissions: { "resume-tailor": { filesystem: { ":root": "deny", ":minimal": "read" }, network: { enabled: false } } }
+      }) }));
       expect(directoryDuringRun.startsWith(path.join(os.tmpdir(), "resume-tailor-codex-"))).toBe(true);
       expect(directoryDuringRun.startsWith(process.cwd())).toBe(false);
       expect(existsSync(directoryDuringRun)).toBe(false);
