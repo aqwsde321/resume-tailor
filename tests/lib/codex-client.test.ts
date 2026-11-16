@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSkillJson, runSkillJsonStream } from "@/server/codex-client";
 
+vi.mock("@/server/agent-model-catalog", () => ({ getAgentModelCatalog: async () => ({ codex: [{ value: "gpt-6.1-terra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"] }] }) }));
 const claude = vi.hoisted(() => vi.fn());
 vi.mock("@/server/claude-client", () => ({ runClaudeJson: claude }));
 
@@ -62,4 +63,17 @@ describe("AI 제공자 분기", () => {
       expect(claude).toHaveBeenLastCalledWith(expect.objectContaining({ model: "sonnet", outputSchema: params.outputSchema }));
     });
   }
+});
+
+describe("모델별 Codex effort 전달", () => {
+  for (const effort of ["max", "ultra"] as const) it(`${effort}를 SDK에서 CLI 설정으로 전달한다`, async () => {
+    sdk.startThread.mockReturnValue({ run: sdk.run }); sdk.run.mockResolvedValue({ finalResponse: '{"ok":true}' });
+    await runSkillJson({ skillName: "company-to-json", inputText: "가상 입력", outputSchema: {}, model: "gpt-6.1-terra", modelReasoningEffort: effort });
+    expect(sdk.startThread).toHaveBeenLastCalledWith(expect.objectContaining({ modelReasoningEffort: effort }));
+  });
+  it("지원하지 않는 minimal은 실행 전에 차단한다", async () => {
+    sdk.startThread.mockClear();
+    await expect(runSkillJson({ skillName: "company-to-json", inputText: "가상 입력", outputSchema: {}, model: "gpt-6.1-terra", modelReasoningEffort: "minimal" })).rejects.toMatchObject({ status: 400 });
+    expect(sdk.startThread).not.toHaveBeenCalled();
+  });
 });

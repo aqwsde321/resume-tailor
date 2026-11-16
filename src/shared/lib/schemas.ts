@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const StringArraySchema = z.array(z.string()).default([]);
-export const ModelReasoningEffortSchema = z.enum(["minimal", "low", "medium", "high", "xhigh"]);
+export const ModelReasoningEffortSchema = z.enum(["minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
 export const IntroToneSchema = z.enum(["balanced", "confident", "collaborative", "problemSolving"]);
 export const AgentRunOptionsSchema = z
   .object({

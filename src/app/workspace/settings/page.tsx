@@ -11,7 +11,7 @@ export default function SettingsPage() {
   const [restore, setRestore] = useState<File | null>(null); const [confirmed, setConfirmed] = useState(false);
   if (!workspace) return null;
   return <div className="studio-settings"><header className="studio-page-heading"><div><h1>설정</h1><p>AI 실행 방식과 소중한 작업 자료를 관리하세요.</p></div><WorkspaceSaveStatus /></header>
-    <AgentSettingsPanel settings={workspace.settings} onChange={(settings) => update((previous) => ({ ...previous, settings: { ...settings, modelReasoningEffort: settings.modelReasoningEffort || "medium" } }))} />
+    <AgentSettingsPanel settings={workspace.settings} onChange={(settings) => update((previous) => ({ ...previous, settings }))} />
     <section className="card settings-storage-panel" aria-labelledby="storage-settings-title">
       <header className="settings-section-heading"><span className="settings-section-icon"><StudioIcon name="document" size={20} /></span><div><h2 id="storage-settings-title">전체 작업 백업</h2><p>평소 작업은 이 컴퓨터에 자동 저장됩니다. 백업 파일은 자료 복구나 컴퓨터 이동에 사용합니다.</p></div></header>
       <div className="settings-storage-grid">

@@ -15,7 +15,7 @@ export type TaskKind =
   | "experienceDiscovery"
   | "resumeTailoring";
 export type LogLevel = "info" | "success" | "error";
-export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+export type ModelReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 export type IntroTone = "balanced" | "confident" | "collaborative" | "problemSolving";
 
 export type AgentProvider = "codex" | "claude";

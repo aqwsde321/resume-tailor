@@ -5,7 +5,9 @@ export const MODEL_REASONING_EFFORT_VALUES = [
   "low",
   "medium",
   "high",
-  "xhigh"
+  "xhigh",
+  "max",
+  "ultra"
 ] as const satisfies readonly ModelReasoningEffort[];
 
 export const MODEL_REASONING_EFFORT_LABELS: Record<ModelReasoningEffort, string> = {
@@ -13,7 +15,9 @@ export const MODEL_REASONING_EFFORT_LABELS: Record<ModelReasoningEffort, string>
   low: "낮게",
   medium: "보통",
   high: "높게",
-  xhigh: "깊게"
+  xhigh: "깊게",
+  max: "max",
+  ultra: "ultra"
 };
 
 export function isModelReasoningEffort(value: unknown): value is ModelReasoningEffort {
@@ -33,7 +37,7 @@ export function normalizeAgentSettings(raw: unknown): AgentSettings {
   return {
     ...(value.provider === "claude" ? { provider: "claude" as const } : {}),
     model: typeof value.model === "string" ? value.model.trim().slice(0, 120) : "",
-    modelReasoningEffort: isModelReasoningEffort(value.modelReasoningEffort)
+    modelReasoningEffort: value.modelReasoningEffort === "" ? "" : isModelReasoningEffort(value.modelReasoningEffort)
       ? value.modelReasoningEffort
       : "medium"
   };
@@ -43,10 +47,10 @@ export function toAgentRunOptions(settings: AgentSettings): AgentRunOptions {
   return {
     ...(settings.provider === "claude" ? { provider: "claude" as const } : {}),
     ...(settings.model.trim() ? { model: settings.model.trim() } : {}),
-    modelReasoningEffort: settings.modelReasoningEffort || "medium"
+    ...(settings.modelReasoningEffort ? { modelReasoningEffort: settings.modelReasoningEffort } : {})
   };
 }
 
 export function formatReasoningEffortValue(value: AgentSettings["modelReasoningEffort"]): string {
-  return MODEL_REASONING_EFFORT_LABELS[value || "medium"];
+  return value ? MODEL_REASONING_EFFORT_LABELS[value] : "모델 기본값";
 }

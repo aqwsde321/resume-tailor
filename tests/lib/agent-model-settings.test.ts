@@ -18,3 +18,7 @@ describe("AI 제공자 설정", () => {
     expect(toAgentRunOptions(settings)).toEqual({ provider: "claude", model: "sonnet", modelReasoningEffort: "high" });
   });
 });
+
+it("모델 기본값을 선택하면 effort를 강제로 전달하지 않는다", () => {
+  expect(toAgentRunOptions(normalizeAgentSettings({ model: "gpt-6.1-terra", modelReasoningEffort: "" }))).toEqual({ model: "gpt-6.1-terra" });
+});

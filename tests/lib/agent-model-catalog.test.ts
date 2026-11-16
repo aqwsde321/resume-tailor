@@ -17,3 +17,10 @@ describe("모델 선택 목록", () => {
     expect(result.codexSource).toBe("default");
   });
 });
+
+it("모델별 지원 effort와 기본값을 그대로 제공한다", async () => {
+  readFile.mockResolvedValue(JSON.stringify({ models: [{ slug: "gpt-6.1-terra", display_name: "GPT-6.1 Terra", visibility: "list", default_reasoning_level: "low", supported_reasoning_levels: ["low", "medium", "high", "xhigh", "max", "ultra"].map((effort) => ({ effort })) }, { slug: "small-model", visibility: "list", default_reasoning_level: "medium", supported_reasoning_levels: [{ effort: "medium" }, { effort: "high" }] }] }));
+  const result = await getAgentModelCatalog();
+  expect(result.codex[1]).toMatchObject({ defaultReasoningEffort: "low", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"] });
+  expect(result.codex[2]).toMatchObject({ reasoningEfforts: ["medium", "high"] });
+});

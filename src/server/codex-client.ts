@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { Codex, type ThreadItem } from "@openai/codex-sdk";
+import { Codex, type ThreadItem, type ThreadOptions } from "@openai/codex-sdk";
 
+import { getAgentModelCatalog } from "./agent-model-catalog";
 import { runClaudeJson } from "./claude-client";
 import { buildPrompt } from "@/server/codex-prompt";
 import { HttpError } from "@/server/http";
@@ -31,11 +32,17 @@ function getCodexClient(): Codex {
   return codex;
 }
 
-function startThread(options?: AgentRunOptions) {
+async function startThread(options?: AgentRunOptions) {
+  if (options?.model && options.modelReasoningEffort) {
+    const catalog = await getAgentModelCatalog();
+    const levels = catalog.codex.find((model) => model.value === options.model)?.reasoningEfforts;
+    if (levels && !levels.includes(options.modelReasoningEffort)) throw new HttpError(400, "선택한 모델이 지원하지 않는 Reasoning effort입니다.", "모델 기본값이나 지원되는 단계를 선택해 주세요.");
+  }
   return getCodexClient().startThread({
     ...(options?.model ? { model: options.model } : {}),
+    // SDK typings predate max/ultra; its runtime forwards this validated enum as CLI config.
     ...(options?.modelReasoningEffort
-      ? { modelReasoningEffort: options.modelReasoningEffort }
+      ? { modelReasoningEffort: options.modelReasoningEffort as ThreadOptions["modelReasoningEffort"] }
       : {}),
     workingDirectory: process.cwd(),
     skipGitRepoCheck: true,
@@ -210,7 +217,7 @@ export async function runSkillJson<T>(params: {
       if (params.provider === "claude") {
         return runClaudeJson<T>({ prompt, outputSchema: params.outputSchema, model: params.model, modelReasoningEffort: params.modelReasoningEffort });
       }
-      const thread = startThread({
+      const thread = await startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort
       });
@@ -255,7 +262,7 @@ export async function runSkillJsonStream<T>(params: {
         emitLog(params.onLog, { level: "success", phase: "turn", message: "Claude Code 분석을 완료했습니다." });
         return result;
       }
-      const thread = startThread({
+      const thread = await startThread({
         model: params.model,
         modelReasoningEffort: params.modelReasoningEffort
       });
@@ -268,7 +275,7 @@ export async function runSkillJsonStream<T>(params: {
       emitLog(params.onLog, {
         level: "info",
         phase: "config",
-        message: `실행 설정 확인 · Reasoning effort ${params.modelReasoningEffort ?? "medium"}`
+        message: `실행 설정 확인 · Reasoning effort ${params.modelReasoningEffort ?? "모델 기본값"}`
       });
 
       const { events } = await thread.runStreamed(prompt, {

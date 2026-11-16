@@ -12,6 +12,7 @@ interface ClaudeOptions extends AgentRunOptions {
 }
 const MAX_OUTPUT_BYTES = 2_000_000;
 export async function runClaudeJson<T>({ prompt, outputSchema, model, modelReasoningEffort, signal }: ClaudeOptions): Promise<T> {
+  if (modelReasoningEffort === "ultra") throw new HttpError(400, "Claude Code는 ultra effort를 지원하지 않습니다.");
   if (signal?.aborted) throw new HttpError(499, "Claude Code 실행을 중단했습니다.");
   // An isolated directory prevents project context from being added to private input.
   const cwd = await mkdtemp(join(tmpdir(), "resume-tailor-claude-"));

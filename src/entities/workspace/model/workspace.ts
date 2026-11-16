@@ -93,7 +93,7 @@ export const WorkspaceSchema = z.object({
   revision: z.number().int().nonnegative(),
   master: MasterResumeSchema.nullable(),
   works: z.array(CompanyWorkSchema),
-  settings: z.object({ provider: z.enum(["codex", "claude"]).optional(), model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema }).strict(),
+  settings: z.object({ provider: z.enum(["codex", "claude"]).optional(), model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema.or(z.literal("")) }).strict(),
   // 일회성 가져오기 UI를 제거한 후에도 기존 저장본·백업과의 호환성을 유지한다.
   legacyBackup: z.record(z.string(), z.unknown()).nullable(),
 }).strict().transform((workspace) => workspace.master?.resultDraft ? { ...workspace, master: { ...workspace.master, resultDraft: upgradeResultDraftMarkdown(workspace.master.resultDraft) } } : workspace);
@@ -102,5 +102,5 @@ export type ReviewDocument = z.infer<typeof ReviewDocumentSchema>;
 export type Annotation = z.infer<typeof AnnotationSchema>;
 export type CompanyWork = z.infer<typeof CompanyWorkSchema>;
 export function createEmptyWorkspace(): Workspace {
-  return { formatVersion: 1, revision: 0, master: null, works: [], settings: { model: "", modelReasoningEffort: "medium" }, legacyBackup: null };
+  return { formatVersion: 1, revision: 0, master: null, works: [], settings: { model: "", modelReasoningEffort: "" }, legacyBackup: null };
 }

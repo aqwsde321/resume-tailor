@@ -1,4 +1,10 @@
-export interface AgentModelOption { value: string; label: string }
+import type { ModelReasoningEffort } from "./types";
+export interface AgentModelOption {
+  value: string;
+  label: string;
+  reasoningEfforts?: ModelReasoningEffort[];
+  defaultReasoningEffort?: ModelReasoningEffort;
+}
 export interface AgentModelCatalog {
   codex: AgentModelOption[];
   claude: AgentModelOption[];
