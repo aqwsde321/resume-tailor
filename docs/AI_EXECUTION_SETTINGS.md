@@ -23,7 +23,9 @@ Claude의 명시적 단계는 기존 CLI 대응 범위를 유지하고 ‘모델
 
 ## 실행 환경
 
-Codex는 기존 `@openai/codex-sdk` 경로를 사용한다. `CODEX_CLI_PATH`로 실행 파일을 지정할 수 있다.
+Codex는 기존 `@openai/codex-sdk` 경로를 사용한다. `CODEX_CLI_PATH`로 실행 파일을 지정할 수 있다. 실행마다 저장소 밖의 빈 임시 폴더를 작업 폴더로 쓰고, 읽기 전용 샌드박스·네트워크 차단·웹 검색 비활성화를 지정한 뒤 폴더를 삭제한다. 사용자 `config.toml`의 검색 설정은 이 실행에 적용하지 않는다.
+
+두 제공자 모두 입력 원문을 이스케이프하지 않고, 입력 해시로 만든 고유 표식 줄 사이에 둔다. 원문 안의 가짜 종료 표식은 데이터로 남는다.
 
 Claude Code는 설치된 `claude` CLI를 사용한다. `CLAUDE_CLI_PATH`로 실행 파일을 지정할 수 있다. Claude Code 인증이 필요한 환경에서는 터미널의 `claude auth login`으로 로그인한다. 웹 화면에서 API 키나 토큰을 입력받거나 Git에 저장하지 않는다. Docker 이미지는 Claude CLI를 자동 설치하지 않으므로 해당 실행 환경에 별도로 준비해야 한다.
 

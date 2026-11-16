@@ -1,3 +1,8 @@
+---
+name: prepare-interview
+description: 저장된 이력서와 채용공고를 근거로 면접 예상 질문과 답변 개요를 만든다
+---
+
 # 면접 준비 자료 만들기
 
 ## 목표

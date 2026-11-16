@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     const generated = await runSkillJson<unknown>({
       skillName: "company-to-json",
-      inputText: `input/company.txt 내용:\n${body.text}`,
+      inputText: `[채용공고 원문]\n${body.text}`,
       outputSchema: companyOutputSchema,
       ...body.agent
     });

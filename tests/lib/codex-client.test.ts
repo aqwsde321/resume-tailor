@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSkillJson, runSkillJsonStream } from "@/server/codex-client";
+import { extractPromptInput } from "@/server/codex-prompt";
 
 vi.mock("@/server/agent-model-catalog", () => ({ getAgentModelCatalog: async () => ({ codex: [{ value: "gpt-6.1-terra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"] }] }) }));
 const claude = vi.hoisted(() => vi.fn());
@@ -41,7 +45,7 @@ describe("Codex prompt execution", () => {
       expect(result).toEqual({ ok: true });
       const call = (streaming ? sdk.runStreamed : sdk.run).mock.calls.at(-1)!;
       const prompt = call[0] as string;
-      expect(JSON.parse(prompt.split("[입력 데이터 JSON]\n")[1]!).inputText).toBe(params.inputText);
+      expect(extractPromptInput(prompt)).toBe(params.inputText);
       expect(call[1].outputSchema).toBe(params.outputSchema);
       const metadata = JSON.parse(log.mock.calls.at(-1)![1] as string);
       expect(metadata).toMatchObject({ skill: params.skillName, model: "test-model", modelReasoningEffort: "low" });
@@ -75,5 +79,38 @@ describe("모델별 Codex effort 전달", () => {
     sdk.startThread.mockClear();
     await expect(runSkillJson({ skillName: "company-to-json", inputText: "가상 입력", outputSchema: {}, model: "gpt-6.1-terra", modelReasoningEffort: "minimal" })).rejects.toMatchObject({ status: 400 });
     expect(sdk.startThread).not.toHaveBeenCalled();
+  });
+});
+
+describe("Codex 실행 격리", () => {
+  for (const streaming of [false, true]) {
+    it(`${streaming ? "stream" : "sync"} 경로는 저장소 밖 임시 폴더에서 검색·네트워크·쓰기 없이 실행하고 폴더를 정리한다`, async () => {
+      let directoryDuringRun = "";
+      const capture = () => { directoryDuringRun = sdk.startThread.mock.calls.at(-1)![0].workingDirectory; expect(existsSync(directoryDuringRun)).toBe(true); };
+      sdk.startThread.mockReturnValue({ run: sdk.run, runStreamed: sdk.runStreamed });
+      sdk.run.mockImplementation(async () => { capture(); return { finalResponse: '{"ok":true}' }; });
+      sdk.runStreamed.mockImplementation(async () => {
+        capture();
+        return { events: (async function* () { yield { type: "item.completed", item: { type: "agent_message", text: '{"ok":true}' } }; })() };
+      });
+      const params = { skillName: "company-to-json" as const, inputText: "가상 입력", outputSchema: {} };
+      await (streaming ? runSkillJsonStream(params) : runSkillJson(params));
+      expect(sdk.startThread).toHaveBeenLastCalledWith(expect.objectContaining({
+        sandboxMode: "read-only",
+        networkAccessEnabled: false,
+        webSearchMode: "disabled",
+        approvalPolicy: "never"
+      }));
+      expect(directoryDuringRun.startsWith(path.join(os.tmpdir(), "resume-tailor-codex-"))).toBe(true);
+      expect(directoryDuringRun.startsWith(process.cwd())).toBe(false);
+      expect(existsSync(directoryDuringRun)).toBe(false);
+    });
+  }
+
+  it("실행이 실패해도 임시 폴더를 정리한다", async () => {
+    sdk.startThread.mockReturnValue({ run: sdk.run });
+    sdk.run.mockRejectedValue(new Error("boom"));
+    await expect(runSkillJson({ skillName: "company-to-json", inputText: "가상 입력", outputSchema: {} })).rejects.toMatchObject({ status: 502 });
+    expect(existsSync(sdk.startThread.mock.calls.at(-1)![0].workingDirectory)).toBe(false);
   });
 });

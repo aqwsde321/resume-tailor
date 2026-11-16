@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       try {
         const generated = await runSkillJsonStream<unknown>({
           skillName: "resume-to-json",
-          inputText: `input/resume.txt 내용:\n${body.text}`,
+          inputText: `[이력서 원문]\n${body.text}`,
           outputSchema: resumeOutputSchema,
           signal: request.signal,
           ...body.agent,

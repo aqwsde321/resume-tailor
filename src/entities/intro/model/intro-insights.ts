@@ -1048,10 +1048,10 @@ export function buildIntroSkillInput(
   const guidance = buildIntroGuidance(resume, company);
 
   return [
-    "output/resume.json 내용:",
+    "[이력서 JSON]",
     JSON.stringify(resume, null, 2),
     "",
-    "output/company.json 내용:",
+    "[채용공고 JSON]",
     JSON.stringify(company, null, 2),
     "",
     "[분석 힌트]",
@@ -1080,7 +1080,7 @@ export function buildIntroSkillInput(
     "- shortIntro와 longIntro에는 필수 요건 requirementMatches 상위 항목을 최소 1개 이상 자연스럽게 반영합니다.",
     "- preferredMatches에 직접 근거가 있으면 shortIntro 또는 longIntro 후반에 우대 조건을 1개 이상 반영합니다.",
     "- 각 연결은 '공고 요건 -> 내 경험/성과/강점 -> 입사 후 기여' 흐름이 드러나게 작성합니다.",
-    "- 자기소개 문장은 resume.json의 프로젝트, 성과, 강점, 경력 설명을 재료로 삼고 요약 문장만 반복하지 않습니다.",
+    "- 자기소개 문장은 이력서 JSON의 프로젝트, 성과, 강점, 경력 설명을 재료로 삼고 요약 문장만 반복하지 않습니다.",
     "- fitReasons의 첫 항목은 가능하면 [핵심 요건]의 최우선 필수 요건을 기준으로 작성합니다.",
     "- fitReasons에는 requirementMatches 또는 preferredMatches에 있는 근거를 우선 사용합니다.",
     "- matchedSkills에는 분석 힌트의 matchedSkills 범위를 넘지 않습니다.",

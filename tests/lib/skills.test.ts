@@ -32,3 +32,24 @@ describe("skill source", () => {
     await expect(readSkillSource("generate-intro")).rejects.toThrow("SKILL.md");
   });
 });
+
+describe("저장소 스킬 문서", () => {
+  const names = ["company-to-json", "discover-experience", "generate-intro", "prepare-interview", "resume-to-json", "review-document", "tailor-resume", "write-follow-up"] as const;
+
+  it("실행되지 않는 파일 입출력·트리거 안내를 담지 않는다", async () => {
+    vi.stubEnv("CODEX_SKILLS_DIR", "");
+    for (const name of names) {
+      const { markdown } = await readSkillSource(name);
+      expect(markdown, name).not.toMatch(/input\/|output\/|\.txt|## 트리거|## 전제 조건|## 폴더 구조|## 사용법|## 에러 처리/);
+      expect(markdown, name).toMatch(/^---\nname: /);
+    }
+  });
+
+  it("이력서 정리 예시는 실제 출력 스키마의 필드를 모두 보여준다", async () => {
+    vi.stubEnv("CODEX_SKILLS_DIR", "");
+    const { markdown } = await readSkillSource("resume-to-json");
+    const { resumeOutputSchema } = await import("@/shared/lib/schemas");
+    for (const field of resumeOutputSchema.required) expect(markdown).toContain(`"${field}"`);
+    for (const field of resumeOutputSchema.properties.projects.items.required) expect(markdown).toContain(`"${field}"`);
+  });
+});

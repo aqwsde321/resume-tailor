@@ -1,33 +1,16 @@
 ---
 name: company-to-json
-description: 채용공고 텍스트를 구조화된 company.json으로 변환하는 스킬
+description: 채용공고 텍스트를 구조화된 공고 JSON으로 변환하는 스킬
 ---
 
 # company-to-json
 
 ## 목적
-`input/company.txt`를 읽어 구조화된 `output/company.json`으로 변환한다.
-지원 회사가 바뀔 때마다 단독 실행한다.
-
----
-
-## 트리거
-- `company-to-json`
-- `채용공고 분석해줘`
-- `company json으로 변환해줘`
-
----
-
-## 전제 조건
-- `input/company.txt` 파일이 존재해야 한다
-- 없으면 사용자에게 안내하고 중단한다
+입력의 `[채용공고 원문]`을 아래 스키마의 JSON으로 구조화한다.
 
 ---
 
 ## 실행
-
-`input/company.txt`를 읽고 아래 스키마에 맞는 JSON을 생성해
-`output/company.json`으로 저장한다.
 
 **규칙:**
 - 원문에 없는 회사명, 기술, 필수·우대 구분을 추정하지 않는다. 확인되지 않는 문자열은 빈 문자열, 목록은 빈 배열로 둔다.
@@ -57,38 +40,6 @@ description: 채용공고 텍스트를 구조화된 company.json으로 변환하
 ```
 
 ---
-
-## 에러 처리
-
-| 상황 | 처리 |
-|------|------|
-| `input/company.txt` 없음 | 파일 경로 안내 후 중단 |
-| JSON 파싱 실패 | 1회 재시도, 실패 시 raw 출력 후 수동 수정 요청 |
-
----
-
-## 폴더 구조
-
-```
-company-to-json/
-├── SKILL.md
-├── input/
-│   └── company.txt    ← 사용자 작성 (지원할 때마다 교체)
-└── output/
-    └── company.json   ← 생성 결과
-```
-
----
-
-## 사용법
-
-```
-company-to-json
-```
-
-> 완료 후 `output/company.json`을 열어 내용 확인·수정 가능.
-> 특히 requirements, preferredSkills 필드를 꼼꼼히 검토할 것.
-> 수정한 JSON은 `generate-intro` Skill의 입력으로 그대로 사용된다.
 
 ## 경계 사례
 
