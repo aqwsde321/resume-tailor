@@ -1,5 +1,5 @@
 export const PDF_TEMPLATE_IDS = ["classic", "compact", "modern", "typographic"] as const;
-export const PDF_PREVIEW_RENDER_VERSION = "2026-03-16-typographic-header-v4";
+export const PDF_PREVIEW_RENDER_VERSION = "2026-11-17-pretendard-pagination-v5";
 
 export type PdfTemplateId = (typeof PDF_TEMPLATE_IDS)[number];
 

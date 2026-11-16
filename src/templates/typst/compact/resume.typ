@@ -11,8 +11,16 @@
 #let ink = rgb(theme.inkHex)
 #let text_muted = rgb(theme.mutedHex)
 
+// 여러 쪽일 때만 쪽 번호를 표시한다.
+#set page(footer: context {
+  let total = counter(page).final().first()
+  if total > 1 {
+    align(center, text(size: 7.5pt, fill: text_muted)[#counter(page).get().first() / #total])
+  }
+})
+
 #set text(
-  font: ("Helvetica Neue", "Apple SD Gothic Neo", "Arial Unicode MS"),
+  font: "Pretendard",
   size: 8.95pt,
   lang: "ko",
   fill: ink,
@@ -25,7 +33,7 @@
 
 #show link: set text(fill: accent)
 
-#let body_copy(content) = text(size: 8.65pt, fill: text_muted)[#content]
+#let body_copy(content) = text(size: 8.65pt, fill: ink)[#content]
 #let meta_copy(content) = text(size: 7.9pt, fill: text_muted)[#content]
 
 #let inline_join(contents, separator: [#text(fill: text_muted)[ • ]]) = [
@@ -53,7 +61,7 @@
       columns: (7pt, 1fr),
       column-gutter: 3pt,
       [#text(size: 8pt, fill: accent)[•]],
-      [#text(size: 8.35pt, fill: text_muted)[#item]],
+      [#text(size: 8.35pt, fill: ink)[#item]],
     )
     #v(gap)
   ]
@@ -65,20 +73,20 @@
 
 #let rail_section(title, content) = [
   #v(0.75em)
-  #rail_heading(title)
+  #block(sticky: true, rail_heading(title))
   #v(0.08em)
-  #line(length: 100%, stroke: (paint: divider, thickness: 0.7pt))
+  #block(sticky: true, line(length: 100%, stroke: (paint: divider, thickness: 0.7pt)))
   #v(0.12em)
   #content
 ]
 
 #let experience_entry(item) = [
-  #grid(
+  #block(sticky: true, grid(
     columns: (2.7fr, 1fr),
     column-gutter: 8pt,
     [#text(size: 9pt, weight: "bold")[#item.role]],
     [#align(right)[#text(size: 7.8pt, fill: text_muted)[#item.period]]],
-  )
+  ))
   #if item.company != "" [
     #v(0.04em)
     #text(size: 7.95pt, weight: "bold", fill: accent)[#item.company]
@@ -90,7 +98,7 @@
 ]
 
 #let project_entry(project) = [
-  #grid(
+  #block(sticky: true, grid(
     columns: (2.2fr, 1fr),
     column-gutter: 8pt,
     [
@@ -105,7 +113,7 @@
         #align(right)[#text(size: 7.7pt)[#link(project.link)[#project.linkLabel]]]
       ]
     ],
-  )
+  ))
   #if project.meta != "" [
     #v(0.05em)
     #meta_copy(project.meta)

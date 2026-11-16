@@ -19,6 +19,8 @@ import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 const execFileAsync = promisify(execFile);
 const TEMPLATE_ROOT = path.join(process.cwd(), "src", "templates", "typst");
+// 실행 환경의 시스템 폰트와 무관하게 같은 한글 폰트로 조판한다.
+const FONT_ROOT = path.join(TEMPLATE_ROOT, "fonts");
 const PDF_WORKDIR_PREFIX = "resume-tailor-pdf";
 const SVG_WORKDIR_PREFIX = "resume-tailor-svg-preview";
 
@@ -101,7 +103,7 @@ export async function buildResumePdf(
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {
-      await execFileAsync("typst", ["compile", templateOutputPath, pdfOutputPath], {
+      await execFileAsync("typst", ["compile", "--font-path", FONT_ROOT, templateOutputPath, pdfOutputPath], {
         cwd: workdir,
         maxBuffer: 10 * 1024 * 1024
       });
@@ -160,7 +162,7 @@ export async function buildResumeSvgPreview(
     try {
       await execFileAsync(
         "typst",
-        ["compile", "--format", "svg", templateOutputPath, svgOutputPattern],
+        ["compile", "--font-path", FONT_ROOT, "--format", "svg", templateOutputPath, svgOutputPattern],
         {
           cwd: workdir,
           maxBuffer: 10 * 1024 * 1024

@@ -28,3 +28,6 @@ output/playwright/
 
 # Model prompt evaluation outputs
 output/prompt-evals/
+
+# Generated verification artifacts
+/output/

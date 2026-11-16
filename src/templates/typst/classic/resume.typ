@@ -10,8 +10,16 @@
 #let divider = rgb(theme.dividerHex)
 #let ink = rgb(theme.inkHex)
 
+// 여러 쪽일 때만 쪽 번호를 표시한다.
+#set page(footer: context {
+  let total = counter(page).final().first()
+  if total > 1 {
+    align(center, text(size: 7.5pt, fill: text_muted)[#counter(page).get().first() / #total])
+  }
+})
+
 #set text(
-  font: ("Helvetica Neue", "Apple SD Gothic Neo", "Arial Unicode MS"),
+  font: "Pretendard",
   size: 9.45pt,
   lang: "ko",
   fill: ink,
@@ -24,17 +32,17 @@
 
 #show link: set text(fill: accent)
 
-#let body_copy(content) = text(size: 9.05pt, fill: text_muted)[#content]
+#let body_copy(content) = text(size: 9.05pt, fill: ink)[#content]
 #let meta_copy(content) = text(size: 8.35pt, fill: text_muted)[#content]
 
 #let section_title(title) = [
   #v(0.95em)
-  #grid(
+  #block(sticky: true, grid(
     columns: (auto, 1fr),
     column-gutter: 6pt,
     align(center)[#text(size: 14pt, weight: "bold", fill: accent)[#title]],
     align(bottom)[#line(length: 100%, stroke: (paint: divider, thickness: 0.8pt))],
-  )
+  ))
   #v(0.28em)
 ]
 
@@ -70,21 +78,21 @@
       columns: (8pt, 1fr),
       column-gutter: 3pt,
       [#text(size: 8.5pt, fill: accent)[•]],
-      [#text(size: 8.95pt, fill: text_muted)[#item]],
+      [#text(size: 8.95pt, fill: ink)[#item]],
     )
     #v(gap)
   ]
 ]
 
-#let entry_header(title, right_text) = grid(
+#let entry_header(title, right_text) = block(sticky: true, grid(
   columns: (3fr, 1.25fr),
   column-gutter: 8pt,
   [#text(size: 10.15pt, weight: "bold")[#title]],
   [#align(right)[#text(size: 8.55pt, fill: text_muted)[#right_text]]],
-)
+))
 
 #let project_entry(project) = [
-  #grid(
+  #block(sticky: true, grid(
     columns: (2.6fr, 1.4fr),
     column-gutter: 8pt,
     [
@@ -99,7 +107,7 @@
         #align(right)[#text(size: 8.4pt)[#link(project.link)[#project.linkLabel]]]
       ]
     ],
-  )
+  ))
   #if project.meta != "" [
     #v(0.08em)
     #meta_copy(project.meta)

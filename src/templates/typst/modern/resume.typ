@@ -12,8 +12,16 @@
 #let text_muted = rgb(theme.mutedHex)
 #let on_accent = rgb(theme.onAccentHex)
 
+// 여러 쪽일 때만 쪽 번호를 표시한다.
+#set page(footer: context {
+  let total = counter(page).final().first()
+  if total > 1 {
+    align(center, text(size: 7.5pt, fill: text_muted)[#counter(page).get().first() / #total])
+  }
+})
+
 #set text(
-  font: ("Helvetica Neue", "Apple SD Gothic Neo", "Arial Unicode MS"),
+  font: "Pretendard",
   size: 9.15pt,
   lang: "ko",
   fill: ink,
@@ -26,7 +34,7 @@
 
 #show link: set text(fill: accent)
 
-#let body_copy(content) = text(size: 8.85pt, fill: text_muted)[#content]
+#let body_copy(content) = text(size: 8.85pt, fill: ink)[#content]
 #let meta_copy(content) = text(size: 8.15pt, fill: text_muted)[#content]
 
 #let inline_join(contents, separator: [#text(fill: text_muted)[ • ]]) = [
@@ -50,7 +58,7 @@
 
 #let section_title(title) = [
   #v(0.9em)
-  #grid(
+  #block(sticky: true, grid(
     columns: (auto, 1fr),
     column-gutter: 8pt,
     [
@@ -63,7 +71,7 @@
       ]
     ],
     [#line(length: 100%, stroke: (paint: divider, thickness: 0.9pt))],
-  )
+  ))
   #v(0.18em)
 ]
 
@@ -73,7 +81,7 @@
       columns: (8pt, 1fr),
       column-gutter: 4pt,
       [#text(size: 8.3pt, fill: accent)[▪]],
-      [#text(size: 8.8pt, fill: text_muted)[#item]],
+      [#text(size: 8.8pt, fill: ink)[#item]],
     )
     #v(gap)
   ]
@@ -82,12 +90,12 @@
 #let callout_title(title) = text(size: 8.25pt, weight: "bold", fill: accent)[#title]
 
 #let experience_entry(item) = [
-  #grid(
+  #block(sticky: true, grid(
     columns: (2.7fr, 1.2fr),
     column-gutter: 10pt,
     [#text(size: 10.05pt, weight: "bold")[#item.role]],
     [#align(right)[#text(size: 8.2pt, fill: text_muted)[#item.period]]],
-  )
+  ))
   #if item.company != "" [
     #v(0.05em)
     #text(size: 8.45pt, weight: "bold", fill: accent)[#item.company]
@@ -99,7 +107,7 @@
 ]
 
 #let project_entry(project) = [
-  #grid(
+  #block(sticky: true, grid(
     columns: (2.35fr, 1fr),
     column-gutter: 9pt,
     [
@@ -114,7 +122,7 @@
         #align(right)[#text(size: 8pt)[#link(project.link)[#project.linkLabel]]]
       ]
     ],
-  )
+  ))
   #if project.meta != "" [
     #v(0.05em)
     #meta_copy(project.meta)
@@ -250,14 +258,6 @@
 ]
 
 #section_title([Skills])
-#if data.education.len() > 0 [
-  #section_title([Education])
-  #bullet_list(data.education)
-]
-#if data.qualifications.len() > 0 [
-  #section_title([Qualifications])
-  #bullet_list(data.qualifications)
-]
 
 #for group in data.techGroups [
   #if group.items.len() > 0 [
@@ -275,4 +275,13 @@
     ]
     #v(0.14em)
   ]
+]
+
+#if data.education.len() > 0 [
+  #section_title([Education])
+  #bullet_list(data.education)
+]
+#if data.qualifications.len() > 0 [
+  #section_title([Qualifications])
+  #bullet_list(data.qualifications)
 ]
