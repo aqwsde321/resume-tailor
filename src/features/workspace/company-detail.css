@@ -122,3 +122,4 @@
   .company-detail .company-detail-stage-footer > button:last-child { margin-left: auto; }
   .company-export-options { grid-template-columns: 1fr; gap: 16px; }
 }
+.company-source-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; flex-shrink: 0; }

@@ -12,7 +12,8 @@ import { AiTaskStatus } from "@/features/workspace/ui/ai-task-status";
 import { useAiTask } from "@/features/workspace/hooks/use-ai-task";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { newTextDocument, refreshCompanySource, resumeToMarkdown } from "@/entities/workspace/model/operations";
-import type { CompanyWork } from "@/entities/workspace/model/workspace";
+import { refreshCompanyJobDocument } from "@/entities/workspace/model/company-source-refresh";
+import type { CompanyWork, ReviewDocument } from "@/entities/workspace/model/workspace";
 import { ResumeSchema, CompanySchema, IntroSchema } from "@/shared/lib/schemas";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { postSseJson } from "@/shared/lib/stream-client";
@@ -36,6 +37,8 @@ export default function CompanyWorkPage() {
   const { id } = useParams<{ id: string }>();
   const { workspace, update } = useWorkspace();
   const aiTask = useAiTask();
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [candidate, setCandidate] = useState<{ company: Company; sourceText: string } | null>(null);
   const [editedCandidate, setEditedCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
@@ -51,7 +54,7 @@ export default function CompanyWorkPage() {
       versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] };
   });
   const agent = toAgentRunOptions(workspace.settings);
-  const busy = aiTask.busy;
+  const busy = aiTask.busy || refreshing;
   const companyCurrent = Boolean(work.company && work.companySourceText === work.document.text);
   const stage = selectedStage ?? (companyCurrent ? "edit" : "review");
   const pendingComments = work.document.annotations.filter((item) => item.status === "pending").length;
@@ -87,7 +90,21 @@ export default function CompanyWorkPage() {
     {work.company && !companyCurrent && <div className="company-detail-notice" role="status"><div><strong>공고 원문이 바뀌었습니다.</strong><p>맞춤 제안을 받기 전에 검토한 공고를 다시 확정해 주세요.</p></div>{stage !== "review" && <button type="button" onClick={() => goTo("review")}>공고 다시 검토</button>}</div>}
 
     <section id="company-stage-review" className="company-detail-panel" aria-label="공고 검토 단계" hidden={stage !== "review"}>
-      <div className="company-detail-section-heading"><div><h2>공고 원문 검토·수정</h2><p>추출한 내용을 확인하세요. 잘못된 부분은 선택해 댓글로 요청할 수 있습니다.</p></div>{companyCurrent && <span className="company-detail-confirmed">확정된 공고</span>}</div>
+      <div className="company-detail-section-heading"><div><h2>공고 원문 검토·수정</h2><p>추출한 내용을 확인하세요. 잘못된 부분은 선택해 댓글로 요청할 수 있습니다.</p></div><div className="company-source-actions">{companyCurrent && <span className="company-detail-confirmed">확정된 공고</span>}{work.document.source.type === "url" && work.document.source.url && <button type="button" disabled={busy} onClick={async () => {
+        const snapshot = JSON.stringify(work.document);
+        setRefreshing(true); setRefreshError("");
+        try {
+          const form = new FormData(); form.set("kind", "job"); form.set("url", work.document.source.url!);
+          const result = await workspaceRequest<{ document: ReviewDocument }>("/api/workspace/source", { method: "POST", body: form });
+          change((current) => {
+            if (JSON.stringify(current.document) !== snapshot) throw new Error("불러오는 동안 공고가 수정됐습니다. 현재 내용은 유지되며 다시 불러오기를 요청할 수 있습니다.");
+            return refreshCompanyJobDocument(current, result.document);
+          });
+          setCandidate(null);
+        } catch (error) { setRefreshError((error as Error).message); }
+        finally { setRefreshing(false); }
+      }}>{refreshing ? "공고 불러오는 중…" : "공고 다시 불러오기"}</button>}</div></div>
+      {refreshError && <p role="alert">{refreshError}</p>}
       <DocumentEditor variant="studio" hideHeading active={stage === "review"} document={work.document} settings={workspace.settings} onChange={(document) => { change((current) => ({ ...current, document })); setCandidate(null); }} />
       <div className="company-detail-action-row"><p>{pendingComments > 0 ? `수정 댓글 ${pendingComments}개를 먼저 반영해 주세요.` : work.document.proposal ? "문서 변경 제안을 먼저 확인해 주세요." : "검토한 원문에서 업무와 지원 요건을 정리합니다."}</p><button className="primary" disabled={busy || !canOrganize} onClick={() => {
         const sourceText = work.document.text;

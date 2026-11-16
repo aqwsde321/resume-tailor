@@ -148,3 +148,27 @@ test("회사별 Markdown 문장에서 댓글을 달고 단계 왕복 후에도 �
   await page.reload();
   await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
 });
+
+test("URL 공고 다시 불러오기는 회사 이력서와 댓글을 보존하고 재확정을 안내한다", async ({ page }) => {
+  const { work, stored } = await companyWithDeferredAi(page);
+  work.document.source = { ...work.document.source, type: "url", url: "https://www.wanted.co.kr/wd/123456" };
+  work.resumeDocument = newTextDocument("resume", "편집본", "기존 회사별 이력서");
+  work.resumeDocument.annotations = [{ id: crypto.randomUUID(), instruction: "기존 수정 요청", anchor: { type: "document" }, status: "pending", createdAt: new Date().toISOString() }];
+  const next = newTextDocument("job", "전체 공고", "Java 개발자 채용\n우대사항\nSQL 경험\n혜택 및 복지\n교육비\n채용 전형\n면접");
+  next.source = { ...next.source, type: "url", url: work.document.source.url };
+  await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: next, warnings: [] } } }));
+  const before = JSON.stringify(work.resume);
+  await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByRole("button", { name: "공고 검토", exact: true }).click();
+  await page.getByRole("button", { name: "공고 다시 불러오기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toContainText("우대사항");
+  await expect(page.getByText("공고 원문이 바뀌었습니다.", { exact: true })).toBeVisible();
+  await expect.poll(() => stored().works[0].document.text).toBe(next.text);
+  expect(JSON.stringify(stored().works[0].resume)).toBe(before);
+  expect(stored().works[0].resumeDocument?.annotations).toEqual(work.resumeDocument.annotations);
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
+  await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
+  await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
+});
