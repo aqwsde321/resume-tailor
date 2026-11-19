@@ -7,6 +7,12 @@ import { runSkillJson, runSkillJsonStream } from "@/server/codex-client";
 import { extractPromptInput } from "@/server/codex-prompt";
 
 vi.mock("@/server/agent-model-catalog", () => ({ getAgentModelCatalog: async () => ({ codex: [{ value: "gpt-6.1-terra", reasoningEfforts: ["low", "medium", "high", "xhigh", "max", "ultra"] }] }) }));
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...await importOriginal<typeof import("node:fs/promises")>(),
+  realpath: async () => "/opt/homebrew/Caskroom/codex/0.162.1/bin/codex",
+  access: async () => {}
+}));
+
 const claude = vi.hoisted(() => vi.fn());
 vi.mock("@/server/claude-client", () => ({ runClaudeJson: claude }));
 
@@ -103,9 +109,9 @@ describe("Codex 실행 격리", () => {
         approvalPolicy: "never"
       }));
       expect(sdk.startThread.mock.calls.at(-1)![0]).not.toHaveProperty("sandboxMode");
-      expect(sdk.options).toEqual(expect.objectContaining({ config: expect.objectContaining({
+      expect(sdk.options).toEqual(expect.objectContaining({ codexPathOverride: "/opt/homebrew/Caskroom/codex/0.162.1/bin/codex", config: expect.objectContaining({
         default_permissions: "resume-tailor",
-        permissions: { "resume-tailor": { filesystem: { ":root": "deny", ":minimal": "read" }, network: { enabled: false } } }
+        permissions: { "resume-tailor": { filesystem: { ":root": "deny", ":minimal": "read", "/opt/homebrew/Caskroom/codex": "read" }, network: { enabled: false } } }
       }) }));
       expect(directoryDuringRun.startsWith(path.join(os.tmpdir(), "resume-tailor-codex-"))).toBe(true);
       expect(directoryDuringRun.startsWith(process.cwd())).toBe(false);

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { Codex, type ThreadItem, type ThreadOptions } from "@openai/codex-sdk";
 
 import { getAgentModelCatalog } from "./agent-model-catalog";
@@ -26,15 +27,45 @@ const SKILL_LABEL: Record<SkillName, string> = {
 
 let codex: Codex | null = null;
 
-function getCodexClient(): Codex {
+async function resolveCodexBinary(command: string): Promise<string> {
+  const candidates = command.includes("/")
+    ? [resolve(command)]
+    : (process.env.PATH ?? "").split(delimiter).filter(Boolean).map((directory) => resolve(directory, command));
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate, constants.X_OK);
+      const binary = await realpath(candidate);
+      // npm prepends its optional Codex launcher to PATH. The sandbox helper
+      // needs the native CLI, not the package's JavaScript launcher.
+      if (command === "codex" && binary.endsWith("/@openai/codex/bin/codex.js")) continue;
+      return binary;
+    } catch {
+      // Continue searching PATH for an executable.
+    }
+  }
+
+  throw new HttpError(502, "Codex 실행 파일을 찾을 수 없습니다.", "CODEX_CLI_PATH 또는 PATH를 확인해 주세요.");
+}
+
+async function getCodexClient(): Promise<Codex> {
   if (!codex) {
+    const codexPath = await resolveCodexBinary(process.env.CODEX_CLI_PATH ?? "codex");
+    // The SDK splits config keys on dots, so use the dedicated Homebrew
+    // package directory for versioned Caskroom paths.
+    const caskDirectory = codexPath.match(/^(.*\/Caskroom\/codex)\/[^/]+\/bin\/codex$/)?.[1];
+    const helperPath = caskDirectory ?? codexPath;
     codex = new Codex({
-      codexPathOverride: process.env.CODEX_CLI_PATH ?? "codex",
+      codexPathOverride: codexPath,
       config: {
         default_permissions: "resume-tailor",
         permissions: {
           "resume-tailor": {
-            filesystem: { ":root": "deny", ":minimal": "read" },
+            filesystem: {
+              ":root": "deny",
+              ":minimal": "read",
+              ...(!helperPath.includes(".") ? { [helperPath]: "read" } : {})
+            },
             network: { enabled: false }
           }
         }
@@ -55,7 +86,7 @@ async function withIsolatedThread<T>(options: AgentRunOptions | undefined, job: 
   }
   const workingDirectory = await mkdtemp(join(tmpdir(), "resume-tailor-codex-"));
   try {
-    return await job(getCodexClient().startThread({
+    return await job((await getCodexClient()).startThread({
       ...(options?.model ? { model: options.model } : {}),
       // SDK typings predate max/ultra; its runtime forwards this validated enum as CLI config.
       ...(options?.modelReasoningEffort
