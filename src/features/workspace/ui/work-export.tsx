@@ -3,18 +3,18 @@ import { useState } from "react";
 import { Selector } from "@astryxdesign/core/Selector";
 import type { CompanyWork } from "@/entities/workspace/model/workspace";
 import { resumeToMarkdown } from "@/entities/workspace/model/operations";
-import { PDF_TEMPLATE_OPTIONS } from "@/entities/pdf/model/templates";
+import { PDF_TEMPLATE_OPTIONS, type PdfTemplateId } from "@/entities/pdf/model/templates";
 import { PDF_THEME_OPTIONS } from "@/entities/pdf/model/themes";
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function WorkExport({ work, onSaved }: { work: CompanyWork; onSaved: (id: string, name: string) => void }) {
-  const [templateId, setTemplate] = useState("classic"); const [themeId, setTheme] = useState("cobalt");
+export function WorkExport({ work, onSaved, onTemplateChange }: { work: CompanyWork; onTemplateChange: (templateId: PdfTemplateId) => void; onSaved: (id: string, name: string) => void }) {
+  const templateId = work.pdfTemplateId ?? "classic"; const [themeId, setTheme] = useState("cobalt");
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [pdfId, setPdfId] = useState("");
   if (!work.resume || !work.company) return null;
   const safeName = work.title.replace(/[\\/:*?"<>|]/g, "-").slice(0, 100);
   return <section className="card company-export-tools"><h2>파일 만들기</h2><p>제출할 내용이 준비되면 PDF 디자인을 선택하세요. 소개글은 선택 사항입니다.</p><div className="company-export-options">
-    <Selector label="PDF 템플릿" value={templateId} options={PDF_TEMPLATE_OPTIONS.map((option) => ({ value: option.id, label: option.label }))} onChange={setTemplate} />
+    <Selector label="PDF 템플릿" value={templateId} options={PDF_TEMPLATE_OPTIONS.map((option) => ({ value: option.id, label: option.label }))} onChange={(value) => { const option = PDF_TEMPLATE_OPTIONS.find(({ id }) => id === value); if (option) onTemplateChange(option.id); }} />
     <Selector label="PDF 색상" value={themeId} options={PDF_THEME_OPTIONS.filter((option) => option.id !== "custom").map((option) => ({ value: option.id, label: option.label }))} onChange={setTheme} />
     </div><div className="company-export-actions">
     <button className="primary" disabled={busy} onClick={async () => {

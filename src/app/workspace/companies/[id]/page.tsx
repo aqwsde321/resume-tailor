@@ -140,7 +140,7 @@ export default function CompanyWorkPage() {
         const introSnapshot = JSON.stringify(work.intro);
         void aiTask.run({ label: "소개글 작성", execute: (signal) => workspaceRequest<Intro>("/api/intro", { ...jsonRequest({ resume: work.resume, company: work.company, agent }), signal }), onSuccess: (intro) => change((current) => aiInputSnapshot(current) === inputSnapshot && JSON.stringify(current.intro) === introSnapshot ? { ...current, intro: IntroSchema.parse(intro) } : current) });
       }}>{work.intro ? "소개글 다시 만들기" : "소개글 만들기"}</button>{work.intro && <><label>소개글<textarea name="company-intro" rows={6} value={work.intro.longIntro} onChange={(event) => change((current) => ({ ...current, intro: { ...current.intro!, longIntro: event.target.value } }))} /></label><button onClick={() => change((current) => ({ ...current, intro: null }))}>소개글 제외</button></>}</div></details>
-      <WorkExport work={work} onSaved={(artifactId, name) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), { id: artifactId, name, createdAt: new Date().toISOString() }] }))} />
+      <WorkExport work={work} onTemplateChange={(pdfTemplateId) => change((current) => ({ ...current, pdfTemplateId }))} onSaved={(artifactId, name) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), { id: artifactId, name, createdAt: new Date().toISOString() }] }))} />
     </section>}
   </div>;
 }

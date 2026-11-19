@@ -1,3 +1,4 @@
+import { PDF_TEMPLATE_IDS } from "@/entities/pdf/model/templates";
 import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
 import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
@@ -77,6 +78,7 @@ export const CompanyWorkSchema = z.object({
   companySourceText: z.string().optional(),
   resumeDocument: ReviewDocumentSchema.nullable().optional(),
   tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
+  pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
   artifacts: z.array(z.object({ id: Id, name: z.string(), createdAt: Timestamp }).strict()).optional(),
   sourceResumeVersion: z.number().int().positive().nullable(),
   sourceResume: ResumeSchema.nullable(),
