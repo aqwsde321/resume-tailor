@@ -1,5 +1,5 @@
-export const PDF_TEMPLATE_IDS = ["classic", "compact", "modern", "typographic"] as const;
-export const PDF_PREVIEW_RENDER_VERSION = "2026-11-17-pretendard-pagination-v5";
+export const PDF_TEMPLATE_IDS = ["classic", "compact", "modern", "typographic", "minimal", "ledger"] as const;
+export const PDF_PREVIEW_RENDER_VERSION = "2026-11-17-pretendard-pagination-v7";
 
 export type PdfTemplateId = (typeof PDF_TEMPLATE_IDS)[number];
 
@@ -36,6 +36,18 @@ export const PDF_TEMPLATE_OPTIONS: PdfTemplateOption[] = [
     label: "Typographic",
     summary: "타이포 중심의 에디토리얼 타입",
     description: "세리프 중심 헤더와 본문/보조 컬럼 대비가 강조된 레이아웃입니다."
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    summary: "왼쪽 정렬의 간결한 단일 컬럼",
+    description: "얇은 구분선과 여백으로 경력 내용을 차분하게 보여줍니다."
+  },
+  {
+    id: "ledger",
+    label: "Ledger",
+    summary: "섹션 구분이 선명한 단일 컬럼",
+    description: "세로 강조선을 둔 헤더와 띠 형태의 제목으로 항목을 빠르게 찾을 수 있습니다."
   }
 ];
 

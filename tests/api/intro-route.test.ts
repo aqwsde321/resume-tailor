@@ -36,6 +36,22 @@ describe("POST /api/intro", () => {
     vi.clearAllMocks();
   });
 
+  it("PDF 요약은 별도 스킬로 생성하고 2~3문장만 반환한다", async () => {
+    const sentences = ["Node.js로 백엔드 서비스를 개발했습니다.", "API 구조를 개선했습니다."];
+    const request = () => new Request("http://localhost/api/intro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resume: resumePayload, company: companyPayload, purpose: "pdf-summary" })
+    });
+    vi.mocked(runSkillJson).mockResolvedValueOnce({ sentences });
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.longIntro).toBe(sentences.join(" "));
+    expect(runSkillJson).toHaveBeenCalledWith(expect.objectContaining({ skillName: "pdf-summary" }));
+    vi.mocked(runSkillJson).mockResolvedValueOnce({ sentences: sentences.slice(0, 1) });
+    expect((await POST(request())).status).toBe(502);
+  });
+
   it("유효한 요청이면 intro JSON을 반환한다", async () => {
     const mockedRunSkillJson = vi.mocked(runSkillJson);
     mockedRunSkillJson.mockResolvedValue({

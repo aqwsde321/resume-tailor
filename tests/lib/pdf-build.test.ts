@@ -15,7 +15,7 @@ const hasTools = ["typst", "pdffonts", "pdftotext", "pdfinfo"].every(
 );
 const describeWithTools = hasTools ? describe : describe.skip;
 
-function inspect(pdf: Uint8Array) {
+function inspect(pdf: Uint8Array, textArgs: string[] = []) {
   const directory = mkdtempSync(path.join(tmpdir(), "resume-tailor-pdf-build-"));
   try {
     const file = path.join(directory, "resume.pdf");
@@ -27,7 +27,7 @@ function inspect(pdf: Uint8Array) {
       pages,
       pageTexts: Array.from({ length: pages }, (_, index) => {
         const page = String(index + 1);
-        return spawnSync("pdftotext", ["-f", page, "-l", page, "-layout", file, "-"], { encoding: "utf8" }).stdout;
+        return spawnSync("pdftotext", ["-f", page, "-l", page, "-layout", ...textArgs, file, "-"], { encoding: "utf8" }).stdout;
       })
     };
   } finally {
@@ -57,7 +57,55 @@ const longResume = createPdfResumeFixture({
 });
 
 describeWithTools("PDF 빌드 결과", () => {
+  it("첫 페이지만 요청하면 전체 미리보기와 같은 첫 페이지를 반환한다", async () => {
+    const full = await buildResumeSvgPreview(longResume, introFixture, companyFixture);
+    const thumbnail = await buildResumeSvgPreview(longResume, introFixture, companyFixture, undefined, undefined, undefined, { firstPageOnly: true });
+    expect(full.pages.length).toBeGreaterThan(1);
+    expect(thumbnail.pages).toHaveLength(1);
+    expect(thumbnail.pages[0] === full.pages[0]).toBe(true);
+  });
+
+  it("Sidebar는 긴 역할 설명과 프로젝트 링크를 본문 열에 배치한다", async () => {
+    const headline = "Java와 Spring Boot로 주문 서비스와 운영 도구를 설계한 백엔드 개발자";
+    const project = "멀티 RDBMS 쿼리 결과와 실행 계획을 비교하는 웹 플랫폼";
+    const resume = createPdfResumeFixture({
+      headline,
+      contacts: [
+        { label: "이메일", value: "developer@example.com", url: "mailto:developer@example.com" },
+        { label: "개인 프로젝트", value: project, url: "https://example.com/project" }
+      ]
+    });
+    const pdf = await buildResumePdf(resume, introFixture, companyFixture, "compact");
+    const rail = inspect(pdf, ["-x", "0", "-W", "133", "-H", "842"]).pageTexts[0];
+    const main = inspect(pdf, ["-x", "143", "-W", "452", "-H", "842"]).pageTexts[0];
+
+    expect(rail).toContain(resume.name);
+    expect(rail).not.toContain("Spring Boot로");
+    expect(rail).not.toContain("RDBMS");
+    expect(main).toContain(headline);
+    expect(main).toContain(project);
+    expect(main).toContain("developer@example.com");
+  });
+
   for (const templateId of PDF_TEMPLATE_IDS) {
+    it(`${templateId}: 경력과 프로젝트의 줄바꿈과 목록을 PDF에 보존한다`, async () => {
+      const base = createPdfResumeFixture();
+      const resume = createPdfResumeFixture({
+        experience: [{ ...base.experience[0], description: "주문 API 설계\n운영 환경 개선\n\n- 배포 자동화\n- 조회 성능 개선" }],
+        projects: [{ ...base.projects[0], description: "관리자 기능 개발\n서버 로그 분석\n\n• 응답 속도 검증" }]
+      });
+      const { pageTexts } = inspect(await buildResumePdf(resume, introFixture, companyFixture, templateId));
+      const rows = pageTexts.join("\n").split("\n").map((line) => line.trim());
+      const rowContaining = (value: string) => rows.findIndex((row) => row.includes(value));
+
+      expect(rowContaining("주문 API 설계")).toBeGreaterThanOrEqual(0);
+      expect(rowContaining("운영 환경 개선")).toBeGreaterThan(rowContaining("주문 API 설계"));
+      expect(rowContaining("서버 로그 분석")).toBeGreaterThan(rowContaining("관리자 기능 개발"));
+      expect(rows.some((row) => /[•▪]\s+배포 자동화/.test(row))).toBe(true);
+      expect(rows.some((row) => /[•▪]\s+조회 성능 개선/.test(row))).toBe(true);
+      expect(rows.some((row) => /[•▪]\s+응답 속도 검증/.test(row))).toBe(true);
+    });
+
     it(`${templateId}: 한글은 저장소에 포함한 폰트로 내장한다`, async () => {
       const { fonts } = inspect(await buildResumePdf(createPdfResumeFixture(), introFixture, companyFixture, templateId));
       expect(fonts).toContain("Pretendard");

@@ -67,6 +67,17 @@
   ]
 ]
 
+#let description_copy(blocks) = [
+  #for (index, part) in blocks.enumerate() [
+    #if index > 0 { v(0.45em) }
+    #if part.kind == "list" {
+      bullet_list(part.lines)
+    } else {
+      body_copy(part.lines.map(line => [#line]).join(linebreak()))
+    }
+  ]
+]
+
 #let rail_heading(title) = [
   #text(size: 7.7pt, weight: "bold", fill: accent)[#title]
 ]
@@ -84,16 +95,18 @@
   #block(sticky: true, grid(
     columns: (2.7fr, 1fr),
     column-gutter: 8pt,
-    [#text(size: 9pt, weight: "bold")[#item.role]],
+    [
+      #text(size: 9pt, weight: "bold")[#item.role]
+      #if item.company != "" [
+        #linebreak()
+        #text(size: 7.95pt, weight: "bold", fill: accent)[#item.company]
+      ]
+    ],
     [#align(right)[#text(size: 7.8pt, fill: text_muted)[#item.period]]],
   ))
-  #if item.company != "" [
-    #v(0.04em)
-    #text(size: 7.95pt, weight: "bold", fill: accent)[#item.company]
-  ]
-  #if item.description != "" [
+  #if item.description.len() > 0 [
     #v(0.06em)
-    #body_copy(item.description)
+    #description_copy(item.description)
   ]
 ]
 
@@ -118,9 +131,9 @@
     #v(0.05em)
     #meta_copy(project.meta)
   ]
-  #if project.description != "" [
+  #if project.description.len() > 0 [
     #v(0.05em)
-    #body_copy(project.description)
+    #description_copy(project.description)
   ]
   #if project.highlights.len() > 0 [
     #v(0.08em)
@@ -145,7 +158,7 @@
 }
 
 #grid(
-  columns: (31mm, 1fr),
+  columns: (35mm, 1fr),
   column-gutter: 12pt,
   [
     #box(
@@ -166,19 +179,6 @@
         #v(0.01em)
         #block[#text(size: 8.15pt, fill: text_muted)[#data.careerDuration]]
       ]
-      #if data.headline != "" [
-        #v(0.08em)
-        #block[#text(size: 8.25pt, weight: "bold")[#data.headline]]
-      ]
-      #if data.targetCompany != "" or data.targetJobTitle != "" [
-        #v(0.22em)
-        #text(size: 7.75pt, fill: text_muted)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]
-      ]
-      #if data.contacts.len() > 0 [
-        #v(0.35em)
-        #text(size: 7.8pt)[#inline_join(data.contacts.map(linked_value))]
-      ]
-
       #v(0.55em)
       #line(length: 100%, stroke: (paint: divider, thickness: 0.8pt))
 
@@ -203,11 +203,24 @@
     ]
   ],
   [
+    #if data.headline != "" [
+      #v(0.08em)
+      #block[#text(size: 10.5pt, weight: "bold")[#data.headline]]
+    ]
+    #if data.targetCompany != "" or data.targetJobTitle != "" [
+      #v(0.22em)
+      #block[#text(size: 8pt, fill: text_muted)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]]
+    ]
+    #if data.primaryContacts.len() > 0 [
+      #v(0.35em)
+      #block[#text(size: 7.8pt)[#inline_join(data.primaryContacts.map(linked_value))]]
+    ]
+
     #for section in data.sections [
       #rail_section([#section.title], [
         #for paragraph in section.paragraphs [
-          #body_copy(paragraph)
-          #v(0.12em)
+          #body_copy(paragraph.split("\n").map(line => [#line]).join(linebreak()))
+          #v(0.45em)
         ]
       ])
     ]
@@ -232,6 +245,13 @@
         #for project in data.projects [
           #project_entry(project)
           #v(0.2em)
+        ]
+      ])
+    ]
+    #if data.contactLinks.len() > 0 [
+      #rail_section([Links], [
+        #for item in data.contactLinks [
+          #block(spacing: 0.65em)[#body_copy(linked_value(item))]
         ]
       ])
     ]

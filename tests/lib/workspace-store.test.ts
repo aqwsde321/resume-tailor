@@ -25,14 +25,15 @@ describe("local workspace persistence", () => {
     expect(JSON.parse(await readFile(path.join(directory, "workspace.json"), "utf8"))).toEqual(saved);
   });
 
-  it("회사별 PDF 템플릿을 보존하고 기존 작업도 읽는다", async () => {
+  it("회사별 PDF 템플릿과 색상을 보존하고 기존 작업도 읽는다", async () => {
     const { store, directory } = await setup();
     const initial = await store.read();
     const now = new Date().toISOString();
     const work = { id: crypto.randomUUID(), title: "테스트 공고", document: newTextDocument("job", "테스트 공고", "공고 본문"), company: null, sourceResumeVersion: null, sourceResume: null, resume: null, intro: null, enrichment: [], versions: [], createdAt: now, updatedAt: now };
-    const selected = { ...work, id: crypto.randomUUID(), pdfTemplateId: "modern" as const };
-    await store.save({ ...initial, works: [work, selected] }, initial.revision);
-    expect((await createWorkspaceStore(directory).read()).works).toEqual([work, selected]);
+    const legacy = { ...work, id: crypto.randomUUID(), pdfTemplateId: "modern" as const };
+    const selected = { ...legacy, id: crypto.randomUUID(), pdfThemeId: "forest" as const };
+    await store.save({ ...initial, works: [work, legacy, selected] }, initial.revision);
+    expect((await createWorkspaceStore(directory).read()).works).toEqual([work, legacy, selected]);
   });
 
   it("두 탭의 동시 저장에서 오래된 수정이 최신 내용을 덮어쓰지 않는다", async () => {

@@ -24,7 +24,7 @@ export interface PdfThemeOption {
   softHex: string;
 }
 
-export const DEFAULT_PDF_THEME_ID: PdfThemeId = "cobalt";
+export const DEFAULT_PDF_THEME_ID = "cobalt";
 
 export const PDF_THEME_OPTIONS: PdfThemeOption[] = [
   {

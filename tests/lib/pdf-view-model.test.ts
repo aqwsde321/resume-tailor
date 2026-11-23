@@ -61,6 +61,50 @@ const companyFixture: Company = {
 };
 
 describe("buildTypstResumeDocument", () => {
+  it("긴 소개글은 원문을 보존하면서 문단으로 나누고 웹 링크는 연락처와 분리한다", () => {
+    const sentences = ["Node.js로 API를 개발했습니다.", "서비스 구조를 개선했습니다.", "배포를 자동화했습니다.", "운영 로그를 분석했습니다.", "성능을 검증했습니다."];
+    const link = { label: "프로젝트", value: "API 도구", url: "https://example.com/api" };
+    const document = buildTypstResumeDocument(
+      { ...resumeFixture, contacts: [...resumeFixture.contacts, link] },
+      { ...introFixture, longIntro: sentences.join(" ") },
+      companyFixture
+    );
+    expect(document.sections[0]?.paragraphs).toEqual([
+      sentences.slice(0, 2).join(" "), sentences.slice(2, 4).join(" "), sentences[4]
+    ]);
+    expect(document.primaryContacts.map(({ label }) => label)).toEqual(["Email"]);
+    expect(document.contactLinks).toEqual([{ ...link, display: "프로젝트: API 도구" }]);
+  });
+
+  it("경력 설명의 문단과 프로젝트 목록을 분리하고 수동 줄바꿈을 유지한다", () => {
+    const resume = {
+      ...resumeFixture,
+      experience: [{
+        ...resumeFixture.experience[0],
+        description: "API 설계\r\n배포 운영\r\n  \r\n운영 지표 검토"
+      }],
+      projects: [{
+        ...resumeFixture.projects[0],
+        description: "기능 구현\n- 데이터 수집\n* 오류 분석\n\n1. 시스템 검증\n2. 결과 정리"
+      }]
+    };
+    const { experience, projects, sections } = buildTypstResumeDocument(
+      resume,
+      { ...introFixture, longIntro: "첫 줄\r\n둘째 줄\r\n\r\n다음 문단" },
+      companyFixture
+    );
+    expect(experience[0]?.description).toEqual([
+      { kind: "paragraph", lines: ["API 설계", "배포 운영"] },
+      { kind: "paragraph", lines: ["운영 지표 검토"] }
+    ]);
+    expect(projects[0]?.description).toEqual([
+      { kind: "paragraph", lines: ["기능 구현"] },
+      { kind: "list", lines: ["데이터 수집", "오류 분석"] },
+      { kind: "paragraph", lines: ["1. 시스템 검증", "2. 결과 정리"] }
+    ]);
+    expect(sections[0]?.paragraphs).toEqual(["첫 줄\n둘째 줄", "다음 문단"]);
+  });
+
   it("PDF fallback 규칙을 적용해 문서를 만든다", () => {
     const document = buildTypstResumeDocument(resumeFixture, introFixture, companyFixture);
 

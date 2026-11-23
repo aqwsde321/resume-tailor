@@ -70,7 +70,7 @@
         #text(size: 8.2pt, weight: "bold", fill: accent)[#title]
       ]
     ],
-    [#line(length: 100%, stroke: (paint: divider, thickness: 0.9pt))],
+    [#align(horizon)[#line(length: 100%, stroke: (paint: divider, thickness: 0.9pt))]],
   ))
   #v(0.18em)
 ]
@@ -87,22 +87,35 @@
   ]
 ]
 
+#let description_copy(blocks) = [
+  #for (index, part) in blocks.enumerate() [
+    #if index > 0 { v(0.45em) }
+    #if part.kind == "list" {
+      bullet_list(part.lines)
+    } else {
+      body_copy(part.lines.map(line => [#line]).join(linebreak()))
+    }
+  ]
+]
+
 #let callout_title(title) = text(size: 8.25pt, weight: "bold", fill: accent)[#title]
 
 #let experience_entry(item) = [
   #block(sticky: true, grid(
     columns: (2.7fr, 1.2fr),
     column-gutter: 10pt,
-    [#text(size: 10.05pt, weight: "bold")[#item.role]],
+    [
+      #text(size: 10.05pt, weight: "bold")[#item.role]
+      #if item.company != "" [
+        #linebreak()
+        #text(size: 8.45pt, weight: "bold", fill: accent)[#item.company]
+      ]
+    ],
     [#align(right)[#text(size: 8.2pt, fill: text_muted)[#item.period]]],
   ))
-  #if item.company != "" [
-    #v(0.05em)
-    #text(size: 8.45pt, weight: "bold", fill: accent)[#item.company]
-  ]
-  #if item.description != "" [
+  #if item.description.len() > 0 [
     #v(0.07em)
-    #body_copy(item.description)
+    #description_copy(item.description)
   ]
 ]
 
@@ -127,9 +140,9 @@
     #v(0.05em)
     #meta_copy(project.meta)
   ]
-  #if project.description != "" [
+  #if project.description.len() > 0 [
     #v(0.06em)
-    #body_copy(project.description)
+    #description_copy(project.description)
   ]
   #if project.highlights.len() > 0 [
     #v(0.08em)
@@ -185,24 +198,27 @@
           #text(size: 8.15pt, fill: on_accent)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]
           #v(0.08em)
         ]
-        #if data.contacts.len() > 0 [
-          #text(size: 8.15pt, fill: on_accent)[#inline_join(data.contacts.map(linked_value), separator: [#text(fill: on_accent)[ • ]])]
-        ]
       ]
     ],
   )
 ]
 
+#if data.primaryContacts.len() > 0 [
+  #v(0.4em)
+  #block[#text(size: 8.5pt)[#inline_join(data.primaryContacts.map(linked_value))]]
+]
+
 #for section in data.sections [
   #section_title([#section.title])
-  #box(
+  #block(
+    width: 100%,
     fill: soft,
     inset: 10pt,
     radius: 14pt,
   )[
     #for paragraph in section.paragraphs [
-      #body_copy(paragraph)
-      #v(0.12em)
+      #body_copy(paragraph.split("\n").map(line => [#line]).join(linebreak()))
+      #v(0.45em)
     ]
   ]
 ]
@@ -254,6 +270,13 @@
   #for project in data.projects [
     #project_entry(project)
     #v(0.22em)
+  ]
+]
+
+#if data.contactLinks.len() > 0 [
+  #section_title([Links])
+  #for item in data.contactLinks [
+    #block(spacing: 0.65em)[#body_copy(linked_value(item))]
   ]
 ]
 

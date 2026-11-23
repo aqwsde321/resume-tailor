@@ -10,7 +10,7 @@ import {
   DEFAULT_PDF_THEME_ID,
   PDF_THEME_IDS
 } from "@/entities/pdf/model/themes";
-import { apiErrorResponse, HttpError, parseJsonBody } from "@/server/http";
+import { apiErrorResponse, parseJsonBody } from "@/server/http";
 import { buildResumeSvgPreview } from "@/server/pdf/build";
 import { createPdfPreviewCacheKey, getCachedPdfPreview } from "@/server/pdf/preview-cache";
 import { CompanySchema, IntroSchema, ResumeSchema } from "@/shared/lib/schemas";
@@ -29,19 +29,12 @@ const RequestSchema = z
   })
   .strict();
 
-function hasIntroContent(value: z.infer<typeof IntroSchema>) {
-  return Boolean(value.oneLineIntro.trim() || value.shortIntro.trim() || value.longIntro.trim());
-}
-
 export async function POST(request: Request) {
   try {
     const body = await parseJsonBody(request, RequestSchema);
 
-    if (!hasIntroContent(body.intro)) {
-      throw new HttpError(400, "소개글이 있어야 Typst 미리보기를 만들 수 있어요.");
-    }
-
-    const cacheKey = createPdfPreviewCacheKey(body);
+    const firstPageOnly = new URL(request.url).searchParams.get("firstPageOnly") === "1";
+    const cacheKey = createPdfPreviewCacheKey({ ...body, firstPageOnly });
     const preview = await getCachedPdfPreview(cacheKey, () =>
       buildResumeSvgPreview(
         body.resume,
@@ -49,7 +42,8 @@ export async function POST(request: Request) {
         body.company,
         body.templateId,
         body.themeId,
-        body.customAccentHex
+        body.customAccentHex,
+        { firstPageOnly }
       )
     );
 

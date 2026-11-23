@@ -21,12 +21,30 @@ const RequestSchema = z.object({
   resume: ResumeSchema,
   company: CompanySchema,
   tone: IntroToneSchema.optional(),
+  purpose: z.literal("pdf-summary").optional(),
   agent: AgentRunOptionsSchema.optional()
 });
 
 export async function POST(request: Request) {
   try {
     const body = await parseJsonBody(request, RequestSchema);
+
+    if (body.purpose === "pdf-summary") {
+      const generated = await runSkillJson<unknown>({
+        skillName: "pdf-summary",
+        inputText: JSON.stringify({ resume: body.resume, company: body.company }),
+        outputSchema: {
+          type: "object",
+          properties: { sentences: { type: "array", items: { type: "string" } } },
+          required: ["sentences"],
+          additionalProperties: false
+        },
+        ...body.agent
+      });
+      const schema = z.object({ sentences: z.array(z.string().trim().min(1).max(120)).min(2).max(3) }).strict();
+      const { sentences } = parseTaskResult("PDF 상단 요약", schema, generated);
+      return NextResponse.json({ ok: true, data: IntroSchema.parse({ longIntro: sentences.join(" ") }) });
+    }
 
     const generated = await runSkillJson<unknown>({
       skillName: "generate-intro",

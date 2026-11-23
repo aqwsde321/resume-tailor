@@ -59,7 +59,8 @@ async function preparePdfPayloadAssets(workdir: string, payload: ReturnType<type
 }
 
 function resolveTemplatePath(templateId: PdfTemplateId) {
-  return path.join(TEMPLATE_ROOT, templateId, "resume.typ");
+  const layout = templateId === "minimal" || templateId === "ledger" ? "classic" : templateId;
+  return path.join(TEMPLATE_ROOT, layout, "resume.typ");
 }
 
 function isExecMissing(error: unknown) {
@@ -103,7 +104,7 @@ export async function buildResumePdf(
     await fs.writeFile(dataOutputPath, JSON.stringify(payload, null, 2), "utf8");
 
     try {
-      await execFileAsync("typst", ["compile", "--font-path", FONT_ROOT, templateOutputPath, pdfOutputPath], {
+      await execFileAsync("typst", ["compile", "--font-path", FONT_ROOT, "--input", `layout=${templateId}`, templateOutputPath, pdfOutputPath], {
         cwd: workdir,
         maxBuffer: 10 * 1024 * 1024
       });
@@ -144,7 +145,8 @@ export async function buildResumeSvgPreview(
   company: Company,
   templateId: PdfTemplateId = DEFAULT_PDF_TEMPLATE_ID,
   themeId: PdfThemeId = DEFAULT_PDF_THEME_ID,
-  customAccentHex?: string
+  customAccentHex?: string,
+  { firstPageOnly = false }: { firstPageOnly?: boolean } = {}
 ): Promise<ResumeSvgPreview> {
   const workdir = path.join(os.tmpdir(), SVG_WORKDIR_PREFIX, randomUUID());
   const templateOutputPath = path.join(workdir, "resume.typ");
@@ -162,7 +164,11 @@ export async function buildResumeSvgPreview(
     try {
       await execFileAsync(
         "typst",
-        ["compile", "--font-path", FONT_ROOT, "--format", "svg", templateOutputPath, svgOutputPattern],
+        [
+          "compile", "--font-path", FONT_ROOT, "--input", `layout=${templateId}`, "--format", "svg",
+          ...(firstPageOnly ? ["--pages", "1"] : []),
+          templateOutputPath, svgOutputPattern
+        ],
         {
           cwd: workdir,
           maxBuffer: 10 * 1024 * 1024

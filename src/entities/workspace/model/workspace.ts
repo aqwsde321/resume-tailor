@@ -1,3 +1,4 @@
+import { PDF_THEME_IDS } from "@/entities/pdf/model/themes";
 import { PDF_TEMPLATE_IDS } from "@/entities/pdf/model/templates";
 import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
@@ -79,6 +80,7 @@ export const CompanyWorkSchema = z.object({
   resumeDocument: ReviewDocumentSchema.nullable().optional(),
   tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
   pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
+  pdfThemeId: z.enum(PDF_THEME_IDS).exclude(["custom"]).optional(),
   artifacts: z.array(z.object({ id: Id, name: z.string(), createdAt: Timestamp }).strict()).optional(),
   sourceResumeVersion: z.number().int().positive().nullable(),
   sourceResume: ResumeSchema.nullable(),

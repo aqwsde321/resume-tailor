@@ -18,6 +18,7 @@ const SKILL_LABEL: Record<SkillName, string> = {
   "review-document": "문서 수정 요청 반영",
   "resume-to-json": "이력서 정리",
   "company-to-json": "공고 정리",
+  "pdf-summary": "PDF 상단 요약 만들기",
   "generate-intro": "소개글 만들기",
   "discover-experience": "경험 발굴",
   "prepare-interview": "면접 준비 자료",

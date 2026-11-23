@@ -11,11 +11,16 @@ interface PdfTextBlock {
   paragraphs: string[];
 }
 
+export interface PdfDescriptionBlock {
+  kind: "paragraph" | "list";
+  lines: string[];
+}
+
 interface PdfProjectView {
   name: string;
   subtitle: string;
   meta: string;
-  description: string;
+  description: PdfDescriptionBlock[];
   link: string;
   linkLabel: string;
   highlights: string[];
@@ -25,7 +30,7 @@ interface PdfExperienceView {
   company: string;
   role: string;
   period: string;
-  description: string;
+  description: PdfDescriptionBlock[];
 }
 
 interface PdfContactView {
@@ -64,6 +69,8 @@ export interface TypstResumeDocument {
   targetCompany: string;
   targetJobTitle: string;
   contacts: PdfContactView[];
+  primaryContacts: PdfContactView[];
+  contactLinks: PdfContactView[];
   sections: PdfTextBlock[];
   experience: PdfExperienceView[];
   achievements: string[];
@@ -177,14 +184,14 @@ function compactStrings(items: string[]) {
 }
 
 function splitParagraphs(value: string) {
-  const trimmed = value.trim();
+  const trimmed = value.replace(/\r\n?/g, "\n").trim();
   if (!trimmed) {
     return [];
   }
 
   return trimmed
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.replace(/\n+/g, " ").trim())
+    .split(/\n[^\S\n]*\n/)
+    .map((paragraph) => paragraph.trim())
     .filter(Boolean);
 }
 
@@ -284,10 +291,48 @@ function buildCareerDuration(resume: Resume) {
   return resume.careerYears > 0 ? `${resume.careerYears}년` : "";
 }
 
+const sentenceSegmenter = new Intl.Segmenter("ko", { granularity: "sentence" });
+
+function splitLongParagraph(paragraph: string) {
+  if (paragraph.includes("\n")) return [paragraph];
+  const sentences = Array.from(sentenceSegmenter.segment(paragraph), ({ segment }) => segment);
+  if (sentences.length <= 3) return [paragraph];
+
+  const paragraphs: string[] = [];
+  for (let index = 0; index < sentences.length; index += 2) {
+    paragraphs.push(sentences.slice(index, index + 2).join("").trim());
+  }
+  return paragraphs;
+}
+
+function buildDescriptionBlocks(value: string): PdfDescriptionBlock[] {
+  const blocks: PdfDescriptionBlock[] = [];
+
+  for (const paragraph of splitParagraphs(value)) {
+    let current: PdfDescriptionBlock | undefined;
+    for (const rawLine of paragraph.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      const bullet = line.match(/^[-*+•]\s+(.+)$/);
+      const kind = bullet ? "list" : "paragraph";
+      if (current?.kind !== kind) {
+        current = { kind, lines: [] };
+        blocks.push(current);
+      }
+      current.lines.push(bullet?.[1] ?? line);
+    }
+  }
+
+  return blocks.flatMap((block) => block.kind === "paragraph" && block.lines.length === 1
+    ? splitLongParagraph(block.lines[0]).map((paragraph) => ({ kind: "paragraph", lines: [paragraph] }))
+    : [block]);
+}
+
 function buildTextSections(resume: Resume, intro: Intro): PdfTextBlock[] {
   const sections: PdfTextBlock[] = [];
   const introSource = intro.longIntro.trim() || intro.shortIntro.trim() || intro.oneLineIntro.trim() || resume.summary.trim();
-  const tailoredIntroParagraphs = splitParagraphs(introSource);
+  const tailoredIntroParagraphs = splitParagraphs(introSource).flatMap(splitLongParagraph);
   if (tailoredIntroParagraphs.length > 0) {
     sections.push({
       id: "tailored-intro",
@@ -332,6 +377,16 @@ export function buildTypstResumeDocument(
   const profileImageDataUrl = resume.pdfProfileImageDataUrl?.trim() ?? "";
   const showProfileImage = (resume.pdfProfileImageVisible ?? true) && Boolean(profileImageDataUrl);
 
+  const contacts = resume.contacts
+    .map((contact) => ({
+      label: contact.label.trim(),
+      value: contact.value.trim(),
+      url: contact.url.trim(),
+      display: formatPdfContactDisplay(contact)
+    }))
+    .filter((contact) => contact.value);
+  const isWebLink = ({ url }: PdfContactView) => /^https?:\/\//i.test(url);
+
   return {
     name: resume.name.trim(),
     desiredPosition: resume.desiredPosition.trim(),
@@ -342,35 +397,30 @@ export function buildTypstResumeDocument(
     showProfileImage,
     targetCompany: company.companyName.trim(),
     targetJobTitle: company.jobTitle.trim(),
-    contacts: resume.contacts
-      .map((contact) => ({
-        label: contact.label.trim(),
-        value: contact.value.trim(),
-        url: contact.url.trim(),
-        display: formatPdfContactDisplay(contact)
-      }))
-      .filter((contact) => contact.value),
+    contacts,
+    primaryContacts: contacts.filter((contact) => !isWebLink(contact)),
+    contactLinks: contacts.filter(isWebLink),
     sections: buildTextSections(resume, intro),
     experience: resume.experience
       .map((item) => ({
         company: item.company.trim(),
         role: item.role.trim(),
         period: item.period.trim(),
-        description: item.description.trim()
+        description: buildDescriptionBlocks(item.description)
       }))
-      .filter((item) => item.company || item.role || item.period || item.description),
+      .filter((item) => item.company || item.role || item.period || item.description.length > 0),
     achievements: buildPdfHighlights(resume),
     projects: resume.projects
       .map((project) => ({
         name: project.name.trim(),
         subtitle: project.subtitle.trim(),
         meta: buildProjectMeta(project.techStack),
-        description: project.description.trim(),
+        description: buildDescriptionBlocks(project.description),
         link: project.link.trim(),
         linkLabel: project.linkLabel.trim() || project.link.trim(),
         highlights: compactStrings(project.highlights)
       }))
-      .filter((project) => project.name || project.description || project.meta || project.link),
+      .filter((project) => project.name || project.description.length > 0 || project.meta || project.link),
     theme: {
       id: theme.id,
       label: theme.label,

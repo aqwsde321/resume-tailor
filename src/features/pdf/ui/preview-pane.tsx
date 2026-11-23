@@ -14,7 +14,7 @@ import {
   resolvePdfTheme,
   type PdfThemeId
 } from "@/entities/pdf/model/themes";
-import { buildTypstResumeDocument } from "@/entities/pdf/model/view-model";
+import { buildTypstResumeDocument, type PdfDescriptionBlock } from "@/entities/pdf/model/view-model";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 
 import type { TypstPreviewState } from "./types";
@@ -31,6 +31,22 @@ interface PdfPreviewPaneProps {
   templateId: PdfTemplateId;
   themeId: PdfThemeId;
   typstPreview: TypstPreviewState;
+}
+
+function PdfDescription({ blocks }: { blocks: PdfDescriptionBlock[] }) {
+  if (blocks.length === 0) return null;
+
+  return (
+    <div className="pdf-paper-copy">
+      {blocks.map((block, index) => block.kind === "list" ? (
+        <ul key={index} className="pdf-paper-bullets">
+          {block.lines.map((line, lineIndex) => <li key={lineIndex}>{line}</li>)}
+        </ul>
+      ) : (
+        <p key={index}>{block.lines.join("\n")}</p>
+      ))}
+    </div>
+  );
 }
 
 export function PdfPreviewPane({
@@ -330,7 +346,7 @@ export function PdfPreviewPane({
                           <span>{item.period}</span>
                         </div>
                         {item.company && <p className="pdf-paper-entry-sub">{item.company}</p>}
-                        {item.description && <p>{item.description}</p>}
+                        <PdfDescription blocks={item.description} />
                       </article>
                     ))}
                   </div>
@@ -368,7 +384,7 @@ export function PdfPreviewPane({
                           <p className="pdf-paper-entry-sub">{project.subtitle}</p>
                         )}
                         {project.meta && <p className="pdf-paper-entry-meta">{project.meta}</p>}
-                        {project.description && <p>{project.description}</p>}
+                        <PdfDescription blocks={project.description} />
                         {project.highlights.length > 0 && (
                           <ul className="pdf-paper-bullets">
                             {project.highlights.map((highlight) => (

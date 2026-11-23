@@ -4,6 +4,7 @@ const paths = {
   settings: "M4 7h16M4 17h16M8 4v6M16 14v6",
   upload: "M12 16V3m-5 5 5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4",
   comment: "M21 11a8 8 0 0 1-8 8H7l-4 3V7a4 4 0 0 1 4-4h6a8 8 0 0 1 8 8ZM7 8h10M7 12h7",
+  expand: "M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5",
   check: "m5 12 4 4L19 6",
   arrow: "M4 12h16m-6-6 6 6-6 6",
   sparkle: "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z",

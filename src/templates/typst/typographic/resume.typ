@@ -64,7 +64,7 @@
       #text(size: 7.6pt, weight: "bold", fill: accent, tracking: 0.08em)[#title]
     ],
     [
-      #line(length: 100%, stroke: (paint: divider, thickness: 0.75pt))
+      #align(horizon)[#line(length: 100%, stroke: (paint: divider, thickness: 0.75pt))]
     ],
   ))
   #v(0.12em)
@@ -82,20 +82,33 @@
   ]
 ]
 
+#let description_copy(blocks) = [
+  #for (index, part) in blocks.enumerate() [
+    #if index > 0 { v(0.45em) }
+    #if part.kind == "list" {
+      bullet_list(part.lines)
+    } else {
+      body_copy(part.lines.map(line => [#line]).join(linebreak()))
+    }
+  ]
+]
+
 #let experience_entry(item) = [
   #block(sticky: true, grid(
     columns: (2.6fr, 1fr),
     column-gutter: 8pt,
-    [#text(size: 9.95pt, weight: "bold")[#item.role]],
+    [
+      #text(size: 9.95pt, weight: "bold")[#item.role]
+      #if item.company != "" [
+        #linebreak()
+        #text(size: 8.15pt, weight: "bold", fill: accent)[#item.company]
+      ]
+    ],
     [#align(right)[#text(size: 8pt, fill: text_muted)[#item.period]]],
   ))
-  #if item.company != "" [
-    #v(0.04em)
-    #text(size: 8.15pt, weight: "bold", fill: accent)[#item.company]
-  ]
-  #if item.description != "" [
+  #if item.description.len() > 0 [
     #v(0.06em)
-    #body_copy(item.description)
+    #description_copy(item.description)
   ]
 ]
 
@@ -120,9 +133,9 @@
     #v(0.05em)
     #meta_copy(project.meta)
   ]
-  #if project.description != "" [
+  #if project.description.len() > 0 [
     #v(0.06em)
-    #body_copy(project.description)
+    #description_copy(project.description)
   ]
   #if project.highlights.len() > 0 [
     #v(0.08em)
@@ -166,9 +179,9 @@
       #v(0.015em)
       #block[#text(size: 9.05pt, fill: ink)[#data.headline]]
     ]
-    #if data.contacts.len() > 0 [
+    #if data.primaryContacts.len() > 0 [
       #v(0.04em)
-      #block[#text(size: 8.4pt)[#inline_join(data.contacts.map(linked_value))]]
+      #block[#text(size: 8.4pt)[#inline_join(data.primaryContacts.map(linked_value))]]
     ]
   ],
   [
@@ -179,8 +192,8 @@
 #if data.sections.len() > 0 [
   #section_title([About Me])
   #for paragraph in data.sections.at(0).paragraphs [
-    #body_copy(paragraph)
-    #v(0.12em)
+    #body_copy(paragraph.split("\n").map(line => [#line]).join(linebreak()))
+    #v(0.45em)
   ]
 ]
 
@@ -236,3 +249,10 @@
     ]
   ],
 )
+
+#if data.contactLinks.len() > 0 [
+  #section_title([Links])
+  #for item in data.contactLinks [
+    #block(spacing: 0.65em)[#body_copy(linked_value(item))]
+  ]
+]

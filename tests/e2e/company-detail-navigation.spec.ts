@@ -21,7 +21,7 @@ test("회사별 단계 전환은 댓글 초안을 보존하고 변경된 공고�
   await page.getByRole("region", { name: "공고 검토 단계", exact: true }).getByText("더보기", { exact: true }).click();
   await page.getByRole("button", { name: "문서 전체에 댓글", exact: true }).click();
   await page.getByRole("textbox", { name: "수정 요청", exact: true }).fill("작성 중인 요청");
-  await page.getByRole("button", { name: "내보내기", exact: true }).click();
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "수정 댓글 작성" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "제출할 이력서 확인", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "공고 검토", exact: true }).click();
@@ -84,18 +84,29 @@ test("소개글 재작성 중 사용자가 고친 문장은 늦은 응답으로 
     await route.fulfill({ json: { ok: true, data: { ...work.intro, longIntro: "늦게 도착한 AI 소개글" } } });
   });
   await page.goto(`/workspace/companies/${work.id}`);
-  await page.getByRole("button", { name: "내보내기", exact: true }).click();
-  await page.getByText("소개글 · 선택 사항 · 작성됨", { exact: true }).click();
-  await page.getByRole("button", { name: "소개글 다시 만들기", exact: true }).click();
-  await page.getByRole("textbox", { name: "소개글", exact: true }).fill("지금 직접 고친 소개글");
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await page.getByText("PDF 상단 요약 · 선택 사항 · 작성됨", { exact: true }).click();
+  await page.getByRole("button", { name: "PDF 상단 요약 만들기", exact: true }).click();
+  await page.getByRole("textbox", { name: "PDF 상단 요약", exact: true }).fill("지금 직접 고친 소개글");
   release();
-  await expect(page.getByRole("button", { name: "소개글 다시 만들기", exact: true })).toBeEnabled();
-  await expect(page.getByRole("textbox", { name: "소개글", exact: true })).toHaveValue("지금 직접 고친 소개글");
+  await expect(page.getByRole("button", { name: "PDF 상단 요약 만들기", exact: true })).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: "PDF 상단 요약", exact: true })).toHaveValue("지금 직접 고친 소개글");
   await expect.poll(() => stored().works[0].intro?.longIntro).toBe("지금 직접 고친 소개글");
 });
 
 test("회사 편집은 한 문서에서 읽기와 댓글을 제공하고 내보내기는 내부 스크롤로 확인한다", async ({ page }) => {
-  const { work } = await companyWithDeferredAi(page);
+  const { work, stored } = await companyWithDeferredAi(page);
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120"/>';
+  await page.route("**/api/pdf/preview**", (route) => {
+    const isThumbnail = new URL(route.request().url()).searchParams.get("firstPageOnly") === "1";
+    return route.fulfill({ json: { ok: true, data: { pages: isThumbnail ? [svg] : [svg, svg] } } });
+  });
+  const attachmentId = crypto.randomUUID();
+  await page.route("**/api/workspace/export", (route) => route.fulfill({
+    contentType: "application/pdf",
+    headers: { "X-Workspace-Attachment-ID": attachmentId },
+    body: "%PDF-test"
+  }));
   await page.goto(`/workspace/companies/${work.id}`);
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toBeVisible();
   await expect(page.locator(".company-detail-current > .studio-resume-preview")).toHaveCount(0);
@@ -105,14 +116,42 @@ test("회사 편집은 한 문서에서 읽기와 댓글을 제공하고 내보�
   await page.getByRole("button", { name: "공고 검토", exact: true }).click();
   await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
   await expect(editor).toHaveValue("## 소개\n\n작성 중인 회사별 문장");
-  await page.getByRole("button", { name: "내보내기", exact: true }).click();
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
   await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toHaveCSS("overflow-y", "auto");
-  await expect(page.getByRole("button", { name: "PDF 생성·다운로드", exact: true })).toBeVisible();
-  const template = page.getByRole("combobox", { name: "PDF 템플릿", exact: true });
-  await template.click();
-  await page.getByRole("option", { name: "Modern", exact: true }).click();
-  await expect(template).toContainText("Modern");
+  await page.getByRole("button", { name: "다음: PDF 디자인 선택", exact: true }).click();
+  await expect(page.getByRole("button", { name: "PDF 디자인·다운로드", exact: true })).toHaveAttribute("aria-current", "step");
+  await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toBeHidden();
+  const download = page.getByRole("button", { name: "PDF 생성·다운로드", exact: true });
+  await expect(download).toBeDisabled();
+  await page.getByRole("button", { name: "Modern · Forest 상세보기", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "Modern · Forest", exact: true });
+  await expect(detail).toBeVisible();
+  await expect(detail.getByRole("img")).toHaveCount(2);
+  await expect(page.locator("html")).toHaveCSS("overflow-y", "hidden");
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");
+  await expect(download).toBeDisabled();
+  await page.getByRole("button", { name: "Modern · Forest 선택", exact: true }).click();
+  await expect(download).toBeEnabled();
+  await expect(page.getByText("선택한 디자인 · Modern · Forest", { exact: true })).toBeVisible();
+  await expect.poll(() => stored().works[0]).toMatchObject({ pdfTemplateId: "modern", pdfThemeId: "forest" });
+  await page.reload();
+  await page.getByRole("button", { name: "PDF 디자인·다운로드", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Modern · Forest 선택", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const request = page.waitForRequest((request) => request.url().endsWith("/api/workspace/export"));
+  const downloaded = page.waitForEvent("download");
+  await download.click();
+  expect((await request).postDataJSON()).toMatchObject({ templateId: "modern", themeId: "forest" });
+  const filename = `${work.title}.pdf`;
+  expect((await downloaded).suggestedFilename()).toBe(filename);
+  await expect.poll(() => stored().works[0].artifacts).toEqual([
+    expect.objectContaining({ id: attachmentId, name: filename })
+  ]);
+  await page.getByText("이전에 만든 PDF").click();
+  await expect(page.getByRole("link", { name: filename })).toHaveAttribute("href", `/api/workspace/attachment/${attachmentId}`);
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await expect(page.getByRole("region", { name: "확인할 이력서 본문", exact: true })).toBeVisible();
 });
 
 test("새 회사 공고 등록은 명시적으로 열고 닫아도 입력을 보존한다", async ({ page }) => {

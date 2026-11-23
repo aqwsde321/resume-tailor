@@ -200,7 +200,8 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await page.getByRole("button", { name: "내용 추출", exact: true }).click();
   await page.getByRole("button", { name: "검토한 공고 정리", exact: true }).click();
   await page.getByRole("button", { name: "이 공고로 확정", exact: true }).click();
-  await page.getByRole("button", { name: "내보내기", exact: true }).click();
+  await page.getByRole("button", { name: "PDF 디자인·다운로드", exact: true }).click();
+  await page.getByRole("button", { name: "Classic · Cobalt 선택", exact: true }).click();
   await expect(page.getByRole("button", { name: "PDF 생성·다운로드", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
   await page.getByRole("button", { name: "현재 편집본으로 맞춤 제안 받기", exact: true }).click();

@@ -3,6 +3,7 @@
   margin: (top: 1.35cm, bottom: 1.35cm, left: 1.55cm, right: 1.55cm),
 )
 
+#let layout = sys.inputs.at("layout", default: "classic")
 #let data = json("resume.json")
 #let theme = data.theme
 #let accent = rgb(theme.accentHex)
@@ -37,12 +38,23 @@
 
 #let section_title(title) = [
   #v(0.95em)
+  #if layout == "ledger" [
+    #block(sticky: true, width: 100%, fill: rgb(theme.softHex), inset: (x: 8pt, y: 4pt))[
+      #text(size: 11pt, weight: "bold", fill: accent)[#title]
+    ]
+  ] else if layout == "minimal" [
+    #block(sticky: true)[
+      #line(length: 100%, stroke: (paint: divider, thickness: 0.45pt))
+      #text(size: 11pt, weight: "bold", fill: accent)[#title]
+    ]
+  ] else [
   #block(sticky: true, grid(
     columns: (auto, 1fr),
     column-gutter: 6pt,
     align(center)[#text(size: 14pt, weight: "bold", fill: accent)[#title]],
     align(bottom)[#line(length: 100%, stroke: (paint: divider, thickness: 0.8pt))],
   ))
+  ]
   #v(0.28em)
 ]
 
@@ -67,8 +79,8 @@
 
 #let body_paragraphs(items) = [
   #for paragraph in items [
-    #body_copy(paragraph)
-    #v(0.16em)
+    #body_copy(paragraph.split("\n").map(line => [#line]).join(linebreak()))
+    #v(0.45em)
   ]
 ]
 
@@ -84,11 +96,28 @@
   ]
 ]
 
-#let entry_header(title, right_text) = block(sticky: true, grid(
+#let description_copy(blocks) = [
+  #for (index, part) in blocks.enumerate() [
+    #if index > 0 { v(0.45em) }
+    #if part.kind == "list" {
+      bullet_list(part.lines)
+    } else {
+      body_copy(part.lines.map(line => [#line]).join(linebreak()))
+    }
+  ]
+]
+
+#let experience_header(item) = block(sticky: true, grid(
   columns: (3fr, 1.25fr),
   column-gutter: 8pt,
-  [#text(size: 10.15pt, weight: "bold")[#title]],
-  [#align(right)[#text(size: 8.55pt, fill: text_muted)[#right_text]]],
+  [
+    #text(size: 10.15pt, weight: "bold")[#item.role]
+    #if item.company != "" [
+      #linebreak()
+      #text(size: 8.65pt, weight: "bold", fill: text_muted)[#item.company]
+    ]
+  ],
+  [#align(right)[#text(size: 8.55pt, fill: text_muted)[#item.period]]],
 ))
 
 #let project_entry(project) = [
@@ -112,9 +141,9 @@
     #v(0.08em)
     #meta_copy(project.meta)
   ]
-  #if project.description != "" [
+  #if project.description.len() > 0 [
     #v(0.08em)
-    #body_copy(project.description)
+    #description_copy(project.description)
   ]
   #if project.highlights.len() > 0 [
     #v(0.12em)
@@ -172,13 +201,13 @@
     #v(0.04em)
     #block[#text(size: 8.35pt, fill: text_muted)[#if data.targetCompany != "" [#data.targetCompany] #if data.targetCompany != "" and data.targetJobTitle != "" [ · ] #if data.targetJobTitle != "" [#data.targetJobTitle]]]
   ]
-  #if data.contacts.len() > 0 [
+  #if data.primaryContacts.len() > 0 [
     #v(0.04em)
-    #block[#text(size: 8.8pt)[#inline_join(data.contacts.map(linked_value))]]
+    #block[#text(size: 8.8pt)[#inline_join(data.primaryContacts.map(linked_value))]]
   ]
 ]
 
-#if has_profile_image [
+#let header = if has_profile_image [
   #grid(
     columns: (1fr, auto),
     column-gutter: 6pt,
@@ -190,7 +219,13 @@
     ],
   )
 ] else [
-  #align(center)[#header_copy]
+  #if layout == "classic" { align(center, header_copy) } else { header_copy }
+]
+
+#if layout == "ledger" [
+  #block(width: 100%, stroke: (left: 3pt + accent), inset: (left: 12pt, top: 6pt, bottom: 6pt))[#header]
+] else [
+  #header
 ]
 
 #for section in data.sections [
@@ -201,14 +236,10 @@
 #if data.experience.len() > 0 [
   #section_title([Experience])
   #for item in data.experience [
-    #entry_header(item.role, item.period)
-    #if item.company != "" [
-      #v(0.05em)
-      #text(size: 8.65pt, weight: "bold", fill: text_muted)[#item.company]
-    ]
-    #if item.description != "" [
+    #experience_header(item)
+    #if item.description.len() > 0 [
       #v(0.08em)
-      #body_copy(item.description)
+      #description_copy(item.description)
     ]
     #v(0.18em)
   ]
@@ -224,6 +255,13 @@
   #for project in data.projects [
     #project_entry(project)
     #v(0.28em)
+  ]
+]
+
+#if data.contactLinks.len() > 0 [
+  #section_title([Links])
+  #for item in data.contactLinks [
+    #block(spacing: 0.65em)[#body_copy(linked_value(item))]
   ]
 ]
 

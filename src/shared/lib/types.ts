@@ -3,6 +3,7 @@ export type SkillName =
   | "resume-to-json"
   | "company-to-json"
   | "generate-intro"
+  | "pdf-summary"
   | "discover-experience"
   | "prepare-interview"
   | "write-follow-up"

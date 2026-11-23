@@ -390,6 +390,10 @@ body.pdf-modal-open .sticky-shell.static-shell {
   line-height: 1.42;
 }
 
+.pdf-paper-copy p {
+  white-space: pre-line;
+}
+
 .pdf-paper-entry {
   display: grid;
   gap: 0.06cm;

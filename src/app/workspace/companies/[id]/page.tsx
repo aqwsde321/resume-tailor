@@ -23,14 +23,15 @@ import { applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-app
 import { WorkExport } from "@/features/workspace/ui/work-export";
 import "@/features/workspace/company-detail.css";
 
-type Stage = "review" | "edit" | "export";
+type Stage = "review" | "edit" | "confirm" | "export";
 function aiInputSnapshot(work: CompanyWork) {
   return JSON.stringify({ company: work.company, companySourceText: work.companySourceText, document: work.document, resume: work.resume, resumeDocument: work.resumeDocument, sourceResume: work.sourceResume, sourceResumeVersion: work.sourceResumeVersion });
 }
 const stages: { id: Stage; title: string; description: string }[] = [
   { id: "review", title: "공고 검토", description: "추출 내용 확인·확정" },
   { id: "edit", title: "맞춤 편집", description: "제안 검토·경험 보완" },
-  { id: "export", title: "내보내기", description: "최종 확인·파일 저장" },
+  { id: "confirm", title: "제출 내용 확인", description: "이력서와 상단 요약 확인" },
+  { id: "export", title: "PDF 디자인·다운로드", description: "디자인 선택과 파일 저장" },
 ];
 
 export default function CompanyWorkPage() {
@@ -60,6 +61,12 @@ export default function CompanyWorkPage() {
   const pendingComments = work.document.annotations.filter((item) => item.status === "pending").length;
   const canOrganize = Boolean(work.document.text.trim()) && !work.document.proposal && pendingComments === 0;
   const goTo = (next: Stage) => setSelectedStage(next);
+  const canOpenStage = (next: Stage) =>
+    next === "review" || Boolean(work.company && (next === "edit" || work.resume));
+  const showExportStage = (next: "confirm" | "export") => {
+    goTo(next);
+    requestAnimationFrame(() => document.getElementById(next === "export" ? "company-pdf-design-heading" : "company-export-content-heading")?.focus());
+  };
   const tailor = (useOriginal: boolean) => {
     const sourceResume = (useOriginal ? work.sourceResume : work.resume)!;
     const editingSnapshot = work.resume!;
@@ -77,10 +84,10 @@ export default function CompanyWorkPage() {
       <span className="studio-state-badge">{!work.company ? "공고 확인 중" : !companyCurrent ? "공고 재확정 필요" : work.tailoring ? "맞춤 제안 검토 중" : "회사별 편집본"}</span>
     </header>
     <nav className="company-detail-steps company-compact-steps" aria-label="회사별 이력서 작업 단계">
-      {stages.map((item, index) => <button type="button" key={item.id} aria-label={item.title} ref={(element) => { stageButtons.current[index] = element; }} aria-current={stage === item.id ? "step" : undefined} aria-controls={`company-stage-${item.id}`} disabled={item.id !== "review" && !work.company} onClick={() => goTo(item.id)} onKeyDown={(event) => {
+      {stages.map((item, index) => <button type="button" key={item.id} aria-label={item.title} ref={(element) => { stageButtons.current[index] = element; }} aria-current={stage === item.id ? "step" : undefined} aria-controls={`company-stage-${item.id}`} disabled={!canOpenStage(item.id)} onClick={() => goTo(item.id)} onKeyDown={(event) => {
         if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
         event.preventDefault();
-        const available = stages.map((entry, position) => ({ ...entry, position })).filter((entry) => entry.id === "review" || work.company);
+        const available = stages.map((entry, position) => ({ ...entry, position })).filter((entry) => canOpenStage(entry.id));
         const currentIndex = available.findIndex((entry) => entry.id === item.id);
         const target = event.key === "Home" ? available[0] : event.key === "End" ? available.at(-1)! : available[(currentIndex + (event.key === "ArrowRight" ? 1 : -1) + available.length) % available.length];
         goTo(target.id); stageButtons.current[target.position]?.focus();
@@ -128,19 +135,25 @@ export default function CompanyWorkPage() {
           return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) };
         })} /></details>
         <details className="company-detail-disclosure"><summary>보관 버전 {work.versions.length}개</summary><div className="company-detail-disclosure-content">{work.versions.length === 0 && <p>아직 보관한 버전이 없습니다. 편집본 위의 ‘현재 버전 보관’으로 저장할 수 있습니다.</p>}{[...work.versions].reverse().map((version) => <article className="company-detail-version" key={version.id}><p>{new Date(version.createdAt).toLocaleString("ko-KR")}</p><details><summary>내용 확인</summary><ResumeReadonlyDocument text={resumeToMarkdown(version.resume)} toolbar={<span className="studio-paper-filename">보관된 회사별 이력서</span>} /></details><button disabled={busy} onClick={() => change((current) => ({ ...current, resume: version.resume, intro: version.intro, tailoring: null, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(version.resume)), versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 편집본 보관 후 이 버전 복원</button></article>)}</div></details>
-        <div className="company-detail-stage-footer"><button type="button" onClick={() => goTo("review")}>이전: 공고 검토</button><p>편집을 마쳤다면 제출할 파일을 확인하세요.</p><button type="button" className="primary" onClick={() => goTo("export")}>내보내기로 이동</button></div>
+        <div className="company-detail-stage-footer"><button type="button" onClick={() => goTo("review")}>이전: 공고 검토</button><p>편집을 마쳤다면 제출할 파일을 확인하세요.</p><button type="button" className="primary" onClick={() => showExportStage("confirm")}>제출 내용 확인으로</button></div>
       </>}
     </section>}
 
-    {work.company && work.resume && <section id="company-stage-export" className="company-detail-panel" aria-label="내보내기 단계" hidden={stage !== "export"}>
-      <div className="company-detail-section-heading"><div><h2>제출할 이력서 확인</h2><p>현재 편집본으로 파일을 만듭니다. 소개글은 필요한 경우에만 추가하세요.</p></div><button type="button" onClick={() => goTo("edit")}>편집으로 돌아가기</button></div>
+    {work.company && work.resume && <section id="company-stage-confirm" className="company-detail-panel company-export-content" aria-label="제출 내용 확인 단계" hidden={stage !== "confirm"}>
+      <div className="company-detail-section-heading"><div><h2 id="company-export-content-heading" tabIndex={-1}>제출할 이력서 확인</h2><p>현재 편집본으로 파일을 만듭니다. 필요하면 PDF 상단 요약을 공고에 맞게 바꿀 수 있습니다.</p></div><button type="button" onClick={() => goTo("edit")}>편집으로 돌아가기</button></div>
       <ResumeReadonlyDocument text={resumeToMarkdown(work.resume)} toolbar={<span className="studio-paper-filename">제출할 이력서 · 내용 확인</span>} />
-      <details className="company-detail-disclosure"><summary>소개글 · 선택 사항{work.intro ? " · 작성됨" : ""}</summary><div className="company-detail-disclosure-content"><p>소개글 없이 이력서를 내보낼 수 있습니다.</p><button disabled={busy || !companyCurrent} onClick={() => {
+      <details className="company-detail-disclosure"><summary>PDF 상단 요약 · 선택 사항{work.intro ? " · 작성됨" : ""}</summary><div className="company-detail-disclosure-content"><p>요약을 만들면 PDF 상단의 기존 이력서 요약을 대체합니다.</p><button disabled={busy || !companyCurrent} onClick={() => {
         const inputSnapshot = aiInputSnapshot(work);
         const introSnapshot = JSON.stringify(work.intro);
-        void aiTask.run({ label: "소개글 작성", execute: (signal) => workspaceRequest<Intro>("/api/intro", { ...jsonRequest({ resume: work.resume, company: work.company, agent }), signal }), onSuccess: (intro) => change((current) => aiInputSnapshot(current) === inputSnapshot && JSON.stringify(current.intro) === introSnapshot ? { ...current, intro: IntroSchema.parse(intro) } : current) });
-      }}>{work.intro ? "소개글 다시 만들기" : "소개글 만들기"}</button>{work.intro && <><label>소개글<textarea name="company-intro" rows={6} value={work.intro.longIntro} onChange={(event) => change((current) => ({ ...current, intro: { ...current.intro!, longIntro: event.target.value } }))} /></label><button onClick={() => change((current) => ({ ...current, intro: null }))}>소개글 제외</button></>}</div></details>
-      <WorkExport work={work} onTemplateChange={(pdfTemplateId) => change((current) => ({ ...current, pdfTemplateId }))} onSaved={(artifactId, name) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), { id: artifactId, name, createdAt: new Date().toISOString() }] }))} />
+        void aiTask.run({ label: "PDF 상단 요약 작성", execute: (signal) => workspaceRequest<Intro>("/api/intro", { ...jsonRequest({ resume: work.resume, company: work.company, purpose: "pdf-summary", agent }), signal }), onSuccess: (intro) => change((current) => aiInputSnapshot(current) === inputSnapshot && JSON.stringify(current.intro) === introSnapshot ? { ...current, intro: IntroSchema.parse(intro) } : current) });
+      }}>PDF 상단 요약 만들기</button>{work.intro && <><label>PDF 상단 요약<textarea name="company-intro" rows={6} value={work.intro.longIntro} onChange={(event) => change((current) => ({ ...current, intro: { ...current.intro!, longIntro: event.target.value } }))} /></label><button onClick={() => change((current) => ({ ...current, intro: null }))}>기존 이력서 요약 사용</button></>}</div></details>
+      <div className="company-detail-stage-footer">
+        <p>내용을 확인했다면 제출할 PDF의 디자인을 고르세요.</p>
+        <button className="primary" type="button" onClick={() => showExportStage("export")}>다음: PDF 디자인 선택</button>
+      </div>
+    </section>}
+    {work.company && work.resume && <section id="company-stage-export" className="company-detail-panel" aria-label="PDF 디자인과 다운로드 단계" hidden={stage !== "export"}>
+      <WorkExport active={stage === "export"} work={work} onDesignChange={(pdfTemplateId, pdfThemeId) => change((current) => ({ ...current, pdfTemplateId, pdfThemeId }))} onSaved={(artifactId, name) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), { id: artifactId, name, createdAt: new Date().toISOString() }] }))} />
     </section>}
   </div>;
 }

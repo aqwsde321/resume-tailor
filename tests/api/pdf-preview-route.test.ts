@@ -96,7 +96,8 @@ describe("POST /api/pdf/preview", () => {
       companyFixture,
       "classic",
       "cobalt",
-      undefined
+      undefined,
+      { firstPageOnly: false }
     );
   });
 
@@ -129,7 +130,8 @@ describe("POST /api/pdf/preview", () => {
       companyFixture,
       "compact",
       "ember",
-      undefined
+      undefined,
+      { firstPageOnly: false }
     );
   });
 
@@ -162,7 +164,8 @@ describe("POST /api/pdf/preview", () => {
       companyFixture,
       "classic",
       "custom",
-      "#111111"
+      "#111111",
+      { firstPageOnly: false }
     );
   });
 
@@ -200,11 +203,31 @@ describe("POST /api/pdf/preview", () => {
       companyFixture,
       "classic",
       "cobalt",
-      undefined
+      undefined,
+      { firstPageOnly: false }
     );
   });
 
-  it("소개글이 비어 있으면 400을 반환한다", async () => {
+  it("썸네일은 첫 페이지만 렌더링하고 전체 미리보기 캐시와 분리한다", async () => {
+    const firstPage = "<svg>first</svg>";
+    const allPages = [firstPage, "<svg>second</svg>"];
+    vi.mocked(buildResumeSvgPreview)
+      .mockResolvedValueOnce({ pages: [firstPage] })
+      .mockResolvedValueOnce({ pages: allPages });
+    const request = (query = "") => new Request("http://localhost/api/pdf/preview" + query, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resume: resumeFixture, company: companyFixture, intro: introFixture })
+    });
+    const thumbnail = await POST(request("?firstPageOnly=1"));
+    const full = await POST(request());
+    expect((await thumbnail.json()).data.pages).toEqual([firstPage]);
+    expect((await full.json()).data.pages).toEqual(allPages);
+    expect(vi.mocked(buildResumeSvgPreview).mock.calls[0]?.[6]).toEqual({ firstPageOnly: true });
+  });
+
+  it("별도 소개글이 없어도 미리보기를 반환한다", async () => {
+    vi.mocked(buildResumeSvgPreview).mockResolvedValue({ pages: ["<svg>page-1</svg>"] });
     const request = new Request("http://localhost/api/pdf/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -223,8 +246,8 @@ describe("POST /api/pdf/preview", () => {
     const response = await POST(request);
     const body = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(body.ok).toBe(false);
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
   });
 
   it("Typst가 없으면 503을 반환한다", async () => {
