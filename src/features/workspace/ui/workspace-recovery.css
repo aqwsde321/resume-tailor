@@ -17,3 +17,6 @@
 @media(max-width:600px){.workspace-recovery,.workspace-task{padding:18px 16px}.workspace-task{align-items:stretch;flex-direction:column;gap:12px}.workspace-recovery-actions button{flex-grow:1}.workspace-recovery-dialog{padding:20px}}
 
 }
+
+.workspace-recovery-actions .workspace-recovery-primary { background: #6653be; border-color: #6653be; color: #fff; }
+.workspace-recovery-actions .workspace-recovery-primary:hover:not(:disabled) { background: #5643ad; }
