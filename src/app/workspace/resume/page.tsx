@@ -7,7 +7,8 @@ import { DocumentEditor } from "@/features/workspace/ui/document-editor";
 import { EnrichmentPanel } from "@/features/workspace/ui/enrichment-panel";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { publishMasterResume, sortResumeChronologically } from "@/entities/workspace/model/operations";
-import { applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
+import { saveConfirmedExperience } from "@/entities/workspace/model/confirmed-experience";
+import { acceptEnrichmentDrafts, applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
 import { ResumeSchema } from "@/shared/lib/schemas";
 import type { Resume } from "@/shared/lib/types";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
@@ -66,6 +67,9 @@ export default function MyResumePage() {
         onChange={(draft) => update((previous) => previous.master?.resultDraft?.document.id !== draft.document.id ? previous : ({ ...previous, master: { ...previous.master!, resultDraft: draft } }))}
         onConfirm={() => update((previous) => publishMasterResume(previous, previous.master!.document, candidate.resume))}
         enrichment={<EnrichmentPanel scope="common" resume={candidate.resume} sessions={master.enrichment} settings={workspace.settings}
+          commonExperiences={workspace.confirmedExperiences ?? []}
+          onSaveExperience={(fact) => update((previous) => saveConfirmedExperience(previous, fact, "common"))}
+          onRemoveExperience={(id) => update((previous) => ({ ...previous, confirmedExperiences: previous.confirmedExperiences?.filter((item) => item.id !== id) }))}
           onChange={(enrichment) => update((previous) => ({ ...previous, master: { ...previous.master!, enrichment } }))}
           onApply={(drafts) => update((previous) => {
             const current = previous.master!; const draft = current.resultDraft;
@@ -80,7 +84,7 @@ export default function MyResumePage() {
             const text = `${draft.document.text}\n\n## 보완한 경험\n\n${additions}`;
             return { ...previous, master: { ...current,
               resultDraft: { ...draft, resume, structuredText: text, document: { ...draft.document, text, history: [...draft.document.history, { text: draft.document.text, annotationIds: [], createdAt: new Date().toISOString() }], updatedAt: new Date().toISOString() } },
-              enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) }))
+              enrichment: acceptEnrichmentDrafts(current.enrichment, drafts)
             } };
           })} />}
       /></div>}

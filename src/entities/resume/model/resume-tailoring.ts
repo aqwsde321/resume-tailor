@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { ResumeSchema } from "@/shared/lib/schemas";
 import type { Company, Resume } from "@/shared/lib/types";
+import type { ConfirmedExperience } from "./confirmed-experience";
 
 const EvidenceIdsSchema = z.array(z.string().trim().min(1).max(100)).min(1).max(4);
 const TechnologiesSchema = z.array(z.string().trim().min(1).max(80)).max(30);
@@ -126,7 +127,7 @@ function addEvidence(
   });
 }
 
-export function buildResumeTailoringEvidence(resume: Resume): ResumeTailoringEvidence[] {
+export function buildResumeTailoringEvidence(resume: Resume, confirmedExperiences: readonly ConfirmedExperience[] = []): ResumeTailoringEvidence[] {
   const evidence: ResumeTailoringEvidence[] = [];
 
   addEvidence(evidence, "summary", "이력서 요약", resume.summary);
@@ -179,6 +180,16 @@ export function buildResumeTailoringEvidence(resume: Resume): ResumeTailoringEvi
     addEvidence(evidence, `skill-${index + 1}`, `기술 ${index + 1}`, item);
   });
 
+  for (const { id, draft } of confirmedExperiences) {
+    const title = [draft.title, draft.organization].filter(Boolean).join(" / ");
+    const text = [
+      draft.role && `역할: ${draft.role}`,
+      draft.period && `기간: ${draft.period}`,
+      draft.techStack.length && `기술: ${draft.techStack.join(", ")}`,
+      draft.description,
+    ].filter(Boolean).join("\n");
+    evidence.push({ id: `confirmed-${id}`, title: `확인한 경험 · ${title}`, text });
+  }
   return evidence;
 }
 
@@ -189,9 +200,10 @@ function includesKnownIds(ids: string[], allowedIds: Set<string>) {
 export function isResumeTailoringPlanValid(
   resume: Resume,
   company: Company,
-  plan: ResumeTailoringPlan
+  plan: ResumeTailoringPlan,
+  confirmedExperiences: readonly ConfirmedExperience[] = [],
 ): boolean {
-  const evidenceIds = new Set(buildResumeTailoringEvidence(resume).map((item) => item.id));
+  const evidenceIds = new Set(buildResumeTailoringEvidence(resume, confirmedExperiences).map((item) => item.id));
   const requirementIds = new Set(buildResumeTailoringRequirements(company).map((item) => item.id));
   const experienceIds = new Set(resume.experience.slice(0, 10).map((_, index) => `experience-${index + 1}`));
   const projectIds = new Set(resume.projects.slice(0, 12).map((_, index) => `project-${index + 1}`));

@@ -32,11 +32,11 @@ export function TailoringReview({ work, onApply, onDismiss }: {
   const source = review.sourceResume;
   const current = work.resume ?? review.editingSnapshot ?? source;
   const isStale = JSON.stringify(work.resume) !== JSON.stringify(review.editingSnapshot ?? source);
-  const evidence = new Map(buildResumeTailoringEvidence(source).map((item) => [item.id, item]));
+  const evidence = new Map(buildResumeTailoringEvidence(source, review.confirmedExperiences).map((item) => [item.id, item]));
   const requirements = new Map((work.company ? buildResumeTailoringRequirements(work.company) : []).map((item) => [item.id, item]));
   const plan = reviseTailoringPlan(review.plan, edits.revisions);
   const rows = buildTailoringReviewRows(current, source, plan);
-  const claimWarnings = buildTailoringClaimWarnings(source, plan, work.company?.techStack);
+  const claimWarnings = buildTailoringClaimWarnings(source, plan, work.company?.techStack, review.confirmedExperiences);
   const changedRows = rows.filter((row) => row.changed && !row.unavailableReason);
   const unchangedRows = rows.filter((row) => !row.changed && !row.unavailableReason && !edits.revisions.has(row.id));
   const activeSelection = selected.filter((id) => changedRows.some((row) => row.id === id));

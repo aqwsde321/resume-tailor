@@ -131,6 +131,23 @@ describe("POST /api/resume/tailor/stream", () => {
     );
   });
 
+  it("사용자가 확인한 경험을 인용할 수 있고 요청에 없는 확인 경험은 인용할 수 없다", async () => {
+    const fact = {
+      id: "64c8f4fc-0c30-4517-8322-34bfd35ba358",
+      draft: { category: "project", title: "서비스 운영", organization: "", role: "담당 개발자", period: "2025",
+        description: "QuickLoom 배포 시간을 30% 단축했습니다.", techStack: ["QuickLoom"] },
+    };
+    const factId = `confirmed-${fact.id}`;
+    const withFact = { ...plan, summary: { text: fact.draft.description, evidenceIds: [factId] } };
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce(withFact).mockResolvedValueOnce(withFact);
+
+    const response = await post({ resume, company: companyFixture, confirmedExperiences: [fact] });
+    expect(parseSse(await response.text()).find((event) => event.event === "result")?.data.data.plan).toEqual(withFact);
+    expect(vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.inputText).toContain(fact.draft.description);
+    const withoutFact = parseSse(await (await post({ resume, company: companyFixture })).text());
+    expect(withoutFact.find((event) => event.event === "result")).toBeUndefined();
+  });
+
   it("Codex 출력 스키마에 근거 ID 개수 제한을 포함한다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce(plan);
 

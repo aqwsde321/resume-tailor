@@ -14,6 +14,7 @@ import {
   CompanySchema,
   ResumeSchema
 } from "@/shared/lib/schemas";
+import { ConfirmedExperienceSchema, type ConfirmedExperience } from "@/entities/resume/model/confirmed-experience";
 import { runSkillJsonStream } from "@/server/codex-client";
 import { HttpError, apiErrorResponse, normalizeApiError, parseJsonBody } from "@/server/http";
 import { createSseResponse } from "@/server/sse";
@@ -25,12 +26,16 @@ const RequestSchema = z
   .object({
     resume: ResumeSchema,
     company: CompanySchema,
-    agent: AgentRunOptionsSchema.optional()
+    agent: AgentRunOptionsSchema.optional(),
+    confirmedExperiences: z.array(ConfirmedExperienceSchema).refine(
+      (items) => new Set(items.map(({ id }) => id)).size === items.length,
+      "확인 경험 ID가 중복됐어요.",
+    ).optional(),
   })
   .strict();
 
-function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<typeof CompanySchema>) {
-  const evidence = buildResumeTailoringEvidence(resume);
+function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<typeof CompanySchema>, confirmedExperiences?: ConfirmedExperience[]) {
+  const evidence = buildResumeTailoringEvidence(resume, confirmedExperiences);
   const requirements = buildResumeTailoringRequirements(company);
   const safeResume = {
     ...resume,
@@ -49,6 +54,9 @@ function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<t
     JSON.stringify(safeResume, null, 2),
     "",
     "[인용 가능한 이력서 근거 목록]",
+    ...(confirmedExperiences?.length ? [
+      "confirmed-로 시작하는 ID는 사용자가 별도로 확인한 경험입니다. 공고 요건, 한 줄 소개, 요약의 근거로 연결하거나 동일한 경험을 설명하는 기존 경력·프로젝트에 인용할 수 있습니다. 다른 경험의 기술이나 성과와 섞지 말고, 새 원본 항목 ID로 사용하지 않습니다.",
+    ] : []),
     JSON.stringify(evidence, null, 2),
     "",
     "[요건 매칭 규칙]",
@@ -70,7 +78,7 @@ export async function POST(request: Request) {
       try {
         const generated = await runSkillJsonStream<unknown>({
           skillName: "tailor-resume",
-          inputText: buildInputText(body.resume, body.company),
+          inputText: buildInputText(body.resume, body.company, body.confirmedExperiences),
           outputSchema: resumeTailoringOutputSchema,
           signal: request.signal,
           ...body.agent,
@@ -78,7 +86,7 @@ export async function POST(request: Request) {
         });
         const plan = parseTaskResult("맞춤 이력서", ResumeTailoringPlanSchema, generated);
 
-        if (!isResumeTailoringPlanValid(body.resume, body.company, plan)) {
+        if (!isResumeTailoringPlanValid(body.resume, body.company, plan, body.confirmedExperiences)) {
           throw new HttpError(502, "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요.");
         }
 

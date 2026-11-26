@@ -5,10 +5,10 @@ export function getCompanyRequirementCoverage(work: CompanyWork) {
   if (!work.company || work.companySourceText !== work.document.text) return null;
 
   const assessment = work.tailoring
-    ? { sourceResume: work.tailoring.sourceResume, matches: work.tailoring.plan.requirementMatches }
+    ? { sourceResume: work.tailoring.sourceResume, matches: work.tailoring.plan.requirementMatches, confirmedExperiences: work.tailoring.confirmedExperiences }
     : work.requirementAssessment;
   const matches = new Map(assessment?.matches.map((match) => [match.requirementId, match]));
-  const evidence = new Map(assessment ? buildResumeTailoringEvidence(assessment.sourceResume).map((item) => [item.id, item]) : []);
+  const evidence = new Map(assessment ? buildResumeTailoringEvidence(assessment.sourceResume, assessment.confirmedExperiences).map((item) => [item.id, item]) : []);
   const requirements = buildResumeTailoringRequirements(work.company);
   const groups = (["required", "preferred"] as const).map((type) => {
     const counts = { direct: 0, related: 0, unchecked: 0, "known-gap": 0 };

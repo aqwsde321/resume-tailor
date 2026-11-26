@@ -1,6 +1,7 @@
 import { addDiscoveredExperienceToResume } from "@/entities/intro/model/experience-discovery";
 import { ResumeSchema } from "@/shared/lib/schemas";
 import type { DiscoveredExperienceDraft, Resume } from "@/shared/lib/types";
+import type { CompanyWork } from "./workspace";
 export function applyEnrichmentDrafts(resume: Resume, drafts: { target?: string; draft: DiscoveredExperienceDraft }[]): Resume {
   let result = structuredClone(resume);
   const unique = (items: string[]) => [...new Set(items.map((item) => item.trim()).filter(Boolean))];
@@ -16,4 +17,19 @@ export function applyEnrichmentDrafts(resume: Resume, drafts: { target?: string;
     result.techStack = unique([...result.techStack, ...draft.techStack]);
   }
   return ResumeSchema.parse(result);
+}
+
+
+export function acceptEnrichmentDrafts(
+  sessions: CompanyWork["enrichment"],
+  drafts: { id: string; draft: DiscoveredExperienceDraft }[],
+): CompanyWork["enrichment"] {
+  const approved = new Map(drafts.map(({ id, draft }) => [id, draft]));
+  return sessions.map((session) => ({
+    ...session,
+    drafts: session.drafts.map((item) => {
+      const draft = approved.get(item.id);
+      return draft ? { ...item, draft, status: "accepted" } : item;
+    }),
+  }));
 }

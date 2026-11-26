@@ -1,4 +1,5 @@
 import { buildResumeTailoringEvidence, type ResumeTailoringPlan } from "./resume-tailoring";
+import type { ConfirmedExperience } from "./confirmed-experience";
 import type { Resume } from "@/shared/lib/types";
 
 export interface TailoringClaimWarnings {
@@ -76,8 +77,13 @@ function unsupportedClaims(proposed: Map<string, string>, evidence: string[], re
   return [...proposed].filter(([key]) => !supported.has(key)).map(([, display]) => display);
 }
 
-export function buildTailoringClaimWarnings(source: Resume, plan: ResumeTailoringPlan, jobTechnologies: readonly string[] = []) {
-  const evidenceById = new Map(buildResumeTailoringEvidence(source).map(({ id, text }) => [id, text]));
+export function buildTailoringClaimWarnings(
+  source: Resume,
+  plan: ResumeTailoringPlan,
+  jobTechnologies: readonly string[] = [],
+  confirmedExperiences: readonly ConfirmedExperience[] = [],
+) {
+  const evidenceById = new Map(buildResumeTailoringEvidence(source, confirmedExperiences).map(({ id, text }) => [id, text]));
   const proposals = [
     { id: "headline", ...plan.headline },
     { id: "summary", ...plan.summary },
@@ -86,6 +92,7 @@ export function buildTailoringClaimWarnings(source: Resume, plan: ResumeTailorin
   const knownTechnologies = [
     ...commonTechnologies, ...jobTechnologies, ...source.techStack,
     ...source.projects.flatMap((item) => item.techStack),
+    ...confirmedExperiences.flatMap(({ draft }) => draft.techStack),
   ];
   const warnings = new Map<string, TailoringClaimWarnings>();
   for (const { id, text, evidenceIds, technologies = [] } of proposals) {

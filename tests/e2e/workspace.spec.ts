@@ -150,7 +150,9 @@ test("내 이력서 등록은 키보드 탭 이동과 작은 화면에서 사용
 
 test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보완과 새 항목 추가를 함께 적용한다", async ({ page }) => {
   const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "이력서", "원본 자료"), ResumeSchema.parse({ ...resume, projects: [{ name: "기존 프로젝트", description: "API 구현" }] }));
-  const stored = await mockStorage(page, initial);
+  const job = newTextDocument("job", "예시 공고", "운영 담당");
+  const work = { ...createCompanyWork(initial.master!, job), company: CompanySchema.parse({ companyName: "예시 회사" }), companySourceText: job.text };
+  const stored = await mockStorage(page, { ...initial, works: [work] });
   let question = 0;
   await page.route("**/api/experience-discovery", (route) => {
     const body = route.request().postDataJSON();
@@ -167,6 +169,9 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
     await page.getByRole("button", { name: "답변 보내기", exact: true }).click();
     await expect(page.getByRole("checkbox", { name: "이 경험 반영", exact: true })).toHaveCount(index + 1);
   }
+  await page.getByRole("textbox", { name: "사용 기술", exact: true }).first().fill("Java, Kafka");
+  await page.getByRole("button", { name: "확인한 근거로 저장", exact: true }).first().click();
+  await expect.poll(() => stored().confirmedExperiences?.[0].draft.techStack).toEqual(["Java", "Kafka"]);
   await page.getByRole("combobox", { name: "반영할 위치", exact: true }).first().selectOption("project:0");
   for (const checkbox of await page.getByRole("checkbox", { name: "이 경험 반영", exact: true }).all()) await checkbox.check();
   await page.getByRole("button", { name: "선택한 경험을 모아서 반영", exact: true }).click();
@@ -175,6 +180,22 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
   expect(stored().master?.resultDraft?.resume.projects[0].description).toContain("추가 사실 1");
   expect(stored().master?.resume?.projects).toHaveLength(1);
   expect(stored().master?.document.source.originalText).toBe("원본 자료");
+
+  await page.route("**/api/resume/tailor/stream", (route) => {
+    const { resume, confirmedExperiences } = route.request().postDataJSON();
+    expect(confirmedExperiences).toEqual(stored().confirmedExperiences);
+    const factId = `confirmed-${confirmedExperiences[0].id}`;
+    const plan = { headline: { text: "Kafka 기반 경험", evidenceIds: [factId] }, summary: { text: "맞춤 소개", evidenceIds: [factId] }, experience: [], projects: [], requirementMatches: [], skillIds: [], highlightIds: [], strengthIds: [] };
+    return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume } })}\n\nevent: done\ndata: {"ok":true}\n\n` });
+  });
+  await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByRole("button", { name: "공통 원본으로 맞춤 제안 받기" }).click();
+  const review = page.getByRole("region", { name: "회사 맞춤 변경 검토" });
+  const headline = review.getByRole("article").filter({ has: review.getByRole("checkbox", { name: "한 줄 소개" }) });
+  await expect(headline.getByText("Kafka 기반 경험")).toBeVisible();
+  await headline.getByText("제안에 사용한 원본 근거 1개").click();
+  await expect(headline.getByText("확인한 경험 · 경험 1")).toBeVisible();
+  await expect(headline.getByText("연결된 원본에서 확인되지 않는 표현")).toHaveCount(0);
 });
 
 test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고 모델 설정이 맞춤 요청에 전달된다", async ({ page }) => {

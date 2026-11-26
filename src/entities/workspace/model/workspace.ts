@@ -5,6 +5,7 @@ import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
 import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
 import { DocumentChangeSchema } from "./document-review";
+import { ConfirmedExperienceSchema } from "@/entities/resume/model/confirmed-experience";
 import { RequirementMatchSchema, ResumeTailoringPlanSchema } from "@/entities/resume/model/resume-tailoring";
 
 const Id = z.string().uuid();
@@ -88,8 +89,8 @@ export const CompanyWorkSchema = z.object({
   company: CompanySchema.nullable(),
   companySourceText: z.string().optional(),
   resumeDocument: ReviewDocumentSchema.nullable().optional(),
-  tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
-  requirementAssessment: z.object({ sourceResume: ResumeSchema, matches: z.array(RequirementMatchSchema) }).strict().optional(),
+  tailoring: z.object({ sourceResume: ResumeSchema, confirmedExperiences: z.array(ConfirmedExperienceSchema).optional(), editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
+  requirementAssessment: z.object({ sourceResume: ResumeSchema, matches: z.array(RequirementMatchSchema), confirmedExperiences: z.array(ConfirmedExperienceSchema).optional() }).strict().optional(),
   pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
   pdfThemeId: z.enum(PDF_THEME_IDS).exclude(["custom"]).optional(),
   artifacts: z.array(CompanyPdfArtifactSchema).optional(),
@@ -98,6 +99,7 @@ export const CompanyWorkSchema = z.object({
   resume: ResumeSchema.nullable(),
   intro: IntroSchema.nullable(),
   enrichment: z.array(EnrichmentSchema),
+  confirmedExperiences: z.array(ConfirmedExperienceSchema).optional(),
   knownGaps: z.array(z.string()).optional(),
   versions: z.array(z.object({ id: Id, resume: ResumeSchema, intro: IntroSchema.nullable(), createdAt: Timestamp }).strict()),
   createdAt: Timestamp,
@@ -109,6 +111,7 @@ export const WorkspaceSchema = z.object({
   revision: z.number().int().nonnegative(),
   master: MasterResumeSchema.nullable(),
   works: z.array(CompanyWorkSchema),
+  confirmedExperiences: z.array(ConfirmedExperienceSchema).optional(),
   settings: z.object({ provider: z.enum(["codex", "claude"]).optional(), model: z.string().trim().max(120), modelReasoningEffort: ModelReasoningEffortSchema.or(z.literal("")) }).strict(),
   // 일회성 가져오기 UI를 제거한 후에도 기존 저장본·백업과의 호환성을 유지한다.
   legacyBackup: z.record(z.string(), z.unknown()).nullable(),

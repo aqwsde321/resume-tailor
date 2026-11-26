@@ -15,13 +15,14 @@ import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { newTextDocument, refreshCompanySource, resumeToMarkdown } from "@/entities/workspace/model/operations";
 import { refreshCompanyJobDocument } from "@/entities/workspace/model/company-source-refresh";
 import { setCompanyRequirementGap } from "@/entities/workspace/model/company-requirement-gaps";
-import type { CompanyWork, ReviewDocument } from "@/entities/workspace/model/workspace";
+import { getConfirmedExperiences, saveConfirmedExperience } from "@/entities/workspace/model/confirmed-experience";
+import type { CompanyWork, ReviewDocument, Workspace } from "@/entities/workspace/model/workspace";
 import { ResumeSchema, CompanySchema, IntroSchema } from "@/shared/lib/schemas";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
 import { postSseJson } from "@/shared/lib/stream-client";
 import type { Company, Intro, Resume } from "@/shared/lib/types";
 import type { ResumeTailoringResult } from "@/entities/resume/model/resume-tailoring";
-import { applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
+import { acceptEnrichmentDrafts, applyEnrichmentDrafts } from "@/entities/workspace/model/enrichment-application";
 import { WorkExport } from "@/features/workspace/ui/work-export";
 import "@/features/workspace/company-detail.css";
 
@@ -53,7 +54,7 @@ export default function CompanyWorkPage() {
   const fallbackResumeDocument = work?.resume ? { ...newTextDocument("resume", work.title, resumeToMarkdown(work.resume)), id: work.id } : null;
   if (!workspace) return null;
   if (!work) return <><p>작업을 찾지 못했습니다.</p><Link href="/workspace/companies">목록으로</Link></>;
-  const change = (updater: (work: CompanyWork) => CompanyWork) => update((previous) => ({ ...previous, works: previous.works.map((item) => item.id === id ? { ...updater(item), updatedAt: new Date().toISOString() } : item) }));
+  const change = (updater: (work: CompanyWork, workspace: Workspace) => CompanyWork) => update((previous) => ({ ...previous, works: previous.works.map((item) => item.id === id ? { ...updater(item, previous), updatedAt: new Date().toISOString() } : item) }));
   const setResume = (resume: Resume) => change((current) => {
     const document = current.resumeDocument ?? newTextDocument("resume", current.title, resumeToMarkdown(current.resume!));
     return { ...current, resume: ResumeSchema.parse(resume), resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null,
@@ -82,11 +83,16 @@ export default function CompanyWorkPage() {
   const tailor = (useOriginal: boolean) => {
     const sourceResume = (useOriginal ? work.sourceResume : work.resume)!;
     const editingSnapshot = work.resume!;
+    const confirmedExperiences = getConfirmedExperiences(workspace, work);
     const inputSnapshot = aiInputSnapshot(work);
     void aiTask.run({
       label: "맞춤 이력서 제안 작성",
-      execute: (signal) => postSseJson<ResumeTailoringResult>("/api/resume/tailor/stream", { resume: sourceResume, company: work.company, agent }, { signal }),
-      onSuccess: (result) => change((current) => aiInputSnapshot(current) === inputSnapshot ? { ...current, tailoring: { sourceResume, editingSnapshot, ...result }, requirementAssessment: { sourceResume, matches: result.plan.requirementMatches } } : current),
+      execute: (signal) => postSseJson<ResumeTailoringResult>("/api/resume/tailor/stream", { resume: sourceResume, company: work.company, agent, confirmedExperiences }, { signal }),
+      onSuccess: (result) => change((current, previous) =>
+        aiInputSnapshot(current) === inputSnapshot && JSON.stringify(getConfirmedExperiences(previous, current)) === JSON.stringify(confirmedExperiences)
+          ? { ...current, tailoring: { sourceResume, editingSnapshot, confirmedExperiences, ...result },
+            requirementAssessment: { sourceResume, confirmedExperiences, matches: result.plan.requirementMatches } }
+          : current),
     });
   };
   return <div className="company-detail">
@@ -146,9 +152,12 @@ export default function CompanyWorkPage() {
         }}>검토한 문서를 편집본에 반영</button></div>{editedCandidate && <section className="company-detail-candidate"><h3>편집본 반영 전 확인</h3><ResumeReadonlyDocument text={resumeToMarkdown(editedCandidate.resume)} toolbar={<span className="studio-paper-filename">변경 내용 · 반영 전 확인</span>} /><button className="primary" disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}</section>
         <details className="company-enrichment" ref={enrichmentDetails}><summary className="ai-enrichment-trigger"><StudioIcon name="sparkle" size={18} /><span>공고에 맞춰 경험 보완</span></summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings}
           topicRequest={enrichmentTopicRequest?.workId === work.id ? enrichmentTopicRequest : undefined} topicInputRef={enrichmentTopicInput} knownGaps={work.knownGaps}
+          commonExperiences={workspace.confirmedExperiences ?? []} companyExperiences={work.confirmedExperiences}
+          onSaveExperience={(fact, scope) => update((previous) => saveConfirmedExperience(previous, fact, scope, work.id))}
+          onRemoveExperience={(id) => change((current) => ({ ...current, confirmedExperiences: current.confirmedExperiences?.filter((item) => item.id !== id) }))}
           onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
           const resume = ResumeSchema.parse(applyEnrichmentDrafts(current.resume!, drafts));
-          return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) };
+          return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: acceptEnrichmentDrafts(current.enrichment, drafts) };
         })} /></details>
         <details className="company-detail-disclosure"><summary>보관 버전 {work.versions.length}개</summary><div className="company-detail-disclosure-content">{work.versions.length === 0 && <p>아직 보관한 버전이 없습니다. 편집본 위의 ‘현재 버전 보관’으로 저장할 수 있습니다.</p>}{[...work.versions].reverse().map((version) => <article className="company-detail-version" key={version.id}><p>{new Date(version.createdAt).toLocaleString("ko-KR")}</p><details><summary>내용 확인</summary><ResumeReadonlyDocument text={resumeToMarkdown(version.resume)} toolbar={<span className="studio-paper-filename">보관된 회사별 이력서</span>} /></details><button disabled={busy} onClick={() => change((current) => ({ ...current, resume: version.resume, intro: version.intro, tailoring: null, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(version.resume)), versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 편집본 보관 후 이 버전 복원</button></article>)}</div></details>
         <div className="company-detail-stage-footer"><button type="button" onClick={() => goTo("review")}>이전: 공고 검토</button><p>편집을 마쳤다면 제출할 파일을 확인하세요.</p><button type="button" className="primary" onClick={() => showExportStage("confirm")}>제출 내용 확인으로</button></div>
