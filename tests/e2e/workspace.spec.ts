@@ -390,3 +390,32 @@ test("긴 원문 비교는 양쪽 패널 높이를 맞추고 내부에서 스크
     expect(await page.locator(`${selector}:visible`).evaluate((element) => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto")).toBe(true);
   }
 });
+
+test("중복 공고 알림에서 기존 작업을 열거나 별도 작업을 만들 수 있다", async ({ page }) => {
+  const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "이력서", "개발 경력"), resume);
+  const text = "예시 회사에서 백엔드 개발자를 채용합니다. 결제 API 개발과 운영을 담당합니다.";
+  const document = newTextDocument("job", "기존 공고", text);
+  const work = createCompanyWork(initial.master!, document);
+  const stored = await mockStorage(page, { ...initial, works: [work] });
+  await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("job", "같은 공고", text), warnings: [] } } }));
+
+  const enterPosting = async () => {
+    await page.goto("/workspace/companies");
+    await page.getByRole("button", { name: "새 공고로 이력서 만들기", exact: true }).click();
+    await page.getByRole("tab", { name: "텍스트·Markdown", exact: true }).click();
+    await page.getByRole("textbox", { name: "원문", exact: true }).fill(text);
+    await page.getByRole("button", { name: "내용 추출", exact: true }).click();
+  };
+  await enterPosting();
+  const duplicate = page.getByRole("region", { name: "중복 공고 확인", exact: true });
+  await expect(duplicate).toContainText("같은 공고 본문");
+  expect(stored().works).toHaveLength(1);
+  await duplicate.getByRole("link", { name: "기존 작업 열기 · 기존 공고", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(work.id + "$"));
+  expect(stored().works).toHaveLength(1);
+
+  await enterPosting();
+  await duplicate.getByRole("button", { name: "새 작업으로 등록", exact: true }).click();
+  await expect.poll(() => stored().works.length).toBe(2);
+  await expect(page).toHaveURL(new RegExp(stored().works[0].id + "$"));
+});

@@ -570,3 +570,8 @@
 .settings-backup-scope strong { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
 .settings-backup-scope span { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; line-height: 1.7; }
 .settings-storage-grid .settings-backup-caption { margin: 12px 0 0; font-size: 12px; line-height: 1.7; }
+
+.company-duplicate-posting h2 { margin-top: 0; }
+.company-duplicate-posting li + li { margin-top: 0.5rem; }
+.company-duplicate-posting li span { display: block; color: var(--muted); }
+.company-duplicate-posting > div { display: flex; flex-wrap: wrap; gap: 0.5rem; }
