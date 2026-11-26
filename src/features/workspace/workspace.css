@@ -473,7 +473,8 @@
 .resume-readonly-document { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; max-width: 960px; margin: 0 auto; overflow: hidden; border: 1px solid #dee2eb; border-radius: 10px; background: #fff; }
 .studio-saved-document-card { height: min(760px, calc(100svh - 280px)); min-height: 320px; }
 .resume-confirm-document-card { height: min(760px, 75svh); min-height: 0; }
-.studio-resume-page .resume-readonly-document { max-width: none; }
+.studio-resume-page .resume-readonly-document,
+.studio-resume-page .resume-result-editor .annotation-layout:not(.is-list-open, .is-comparing) > .studio-document-column { max-width: none; }
 .resume-readonly-document > header { flex-shrink: 0; }
 .studio-saved-document-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 20px; padding: 18px 24px; border-bottom: 1px solid #e9ebf1; }
 .studio-saved-document-header > div { min-width: 0; }
