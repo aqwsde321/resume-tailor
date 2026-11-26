@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ApplicationFollowUpDraftSchema } from "@/entities/application/model/follow-up-draft";
+import { InterviewRoundSchema } from "@/entities/application/model/interview-rounds";
 import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import { PDF_TEMPLATE_IDS, type PdfTemplateId } from "@/entities/pdf/model/templates";
 import { PDF_THEME_IDS, type PdfThemeId } from "@/entities/pdf/model/themes";
@@ -88,6 +89,7 @@ export const ApplicationRecordSchema = z
     appliedAt: ApplicationDateSchema,
     statusHistory: z.array(ApplicationStatusHistoryEntrySchema).default([]),
     interviewPrep: ApplicationInterviewPrepSchema.nullable().default(null),
+    interviewRounds: z.array(InterviewRoundSchema).refine((items) => new Set(items.map(({ id }) => id)).size === items.length).default([]),
     followUpDrafts: z.array(ApplicationFollowUpDraftSchema).default([]),
     outcomeReview: ApplicationOutcomeReviewSchema.nullable().default(null),
     createdAt: z.string().datetime(),
@@ -238,6 +240,7 @@ export function updateApplicationRecord(
       | "nextActionDate"
       | "appliedAt"
       | "interviewPrep"
+      | "interviewRounds"
       | "followUpDrafts"
       | "outcomeReview"
     >

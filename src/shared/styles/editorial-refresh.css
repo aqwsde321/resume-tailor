@@ -3120,3 +3120,58 @@ button {
     justify-items: start;
   }
 }
+
+.application-calendar-event.event-interview {
+  border-color: #d4c9eb;
+  background: #f4f0fb;
+}
+
+.application-interview-rounds {
+  margin-top: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.application-interview-rounds > summary,
+.application-round-list > details > summary {
+  padding: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.application-round-list,
+.application-round-fields {
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.application-round-list > details {
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+.application-round-list > details > summary span {
+  margin-inline-start: 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+.application-round-list > .nav-btn { justify-self: start; }
+.application-round-schedule {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.75rem;
+}
+.application-round-checklist {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+.application-round-checklist > div,
+.application-round-checklist form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.application-round-checklist form > label { flex: 1 1 12rem; }
+.application-round-list > details > :is(.action-row, .text-btn, .application-round-prep) { margin: 0.5rem 0.75rem; }

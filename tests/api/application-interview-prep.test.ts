@@ -80,6 +80,12 @@ describe("POST /api/application/interview-prep", () => {
     });
   });
 
+  it("차수 이름을 기존 면접 준비 프롬프트에 전달한다", async () => {
+    vi.mocked(runSkillJson).mockResolvedValueOnce({});
+    await post({ resume, company, interviewRound: "2차 시스템 설계 면접" });
+    expect(vi.mocked(runSkillJson).mock.calls[0]?.[0]?.inputText).toContain("2차 시스템 설계 면접");
+  });
+
   it("rejects incomplete model output before returning it to the client", async () => {
     vi.mocked(runSkillJson).mockResolvedValueOnce({
       openingPitch: "짧은 소개",

@@ -1,3 +1,4 @@
+import { getInterviewRoundTitle } from "./interview-rounds";
 import type { ApplicationRecord } from "@/entities/application/model/application-record";
 
 export interface ApplicationCalendarEvent {
@@ -6,7 +7,9 @@ export interface ApplicationCalendarEvent {
   date: string;
   companyName: string;
   jobTitle: string;
-  kind: "applied" | "next-action";
+  kind: "applied" | "next-action" | "interview";
+  time?: string;
+  interviewRoundId?: string;
   label: string;
 }
 
@@ -34,6 +37,21 @@ export function buildApplicationCalendarEvents(
       });
     }
 
+    for (const round of record.interviewRounds) {
+      if (!round.date) continue;
+      events.push({
+        id: `${record.id}-interview-${round.id}`,
+        recordId: record.id,
+        date: round.date,
+        time: round.time ?? undefined,
+        companyName: record.companyName,
+        jobTitle: record.jobTitle,
+        kind: "interview",
+        interviewRoundId: round.id,
+        label: [round.time, getInterviewRoundTitle(round)].filter(Boolean).join(" "),
+      });
+    }
+
     if (record.nextActionDate) {
       events.push({
         id: `${record.id}-next-action`,
@@ -47,10 +65,12 @@ export function buildApplicationCalendarEvents(
     }
   }
 
+  const kindOrder = { applied: 0, interview: 1, "next-action": 2 };
   return events.sort(
     (left, right) =>
       left.date.localeCompare(right.date) ||
-      (left.kind === right.kind ? 0 : left.kind === "applied" ? -1 : 1) ||
+      kindOrder[left.kind] - kindOrder[right.kind] ||
+      (left.time ?? "").localeCompare(right.time ?? "") ||
       left.companyName.localeCompare(right.companyName, "ko-KR")
   );
 }

@@ -16,16 +16,19 @@ export const runtime = "nodejs";
 const RequestSchema = z.object({
   resume: ResumeSchema,
   company: CompanySchema,
-  agent: AgentRunOptionsSchema.optional()
+  agent: AgentRunOptionsSchema.optional(),
+  interviewRound: z.string().trim().min(1).max(100).optional()
 });
 
-function buildInputText(resume: unknown, company: unknown) {
+function buildInputText(resume: unknown, company: unknown, interviewRound?: string) {
   return [
     "[확정 이력서]",
     JSON.stringify(resume, null, 2),
     "",
     "[확정 채용공고]",
-    JSON.stringify(company, null, 2)
+    JSON.stringify(company, null, 2),
+    ...(interviewRound ? ["", "[준비할 면접 차수의 이름]", JSON.stringify(interviewRound),
+      "차수 이름은 면접 준비의 주제를 좁히는 정보입니다. 이름이 구체적이면 관련 질문을 우선하되 회사의 실제 전형이나 이력서 경험을 추정하지 마세요."] : []),
   ].join("\n");
 }
 
@@ -34,7 +37,7 @@ export async function POST(request: Request) {
     const body = await parseJsonBody(request, RequestSchema);
     const generated = await runSkillJson<unknown>({
       skillName: "prepare-interview",
-      inputText: buildInputText(body.resume, body.company),
+      inputText: buildInputText(body.resume, body.company, body.interviewRound),
       outputSchema: interviewPrepOutputSchema,
       ...body.agent
     });

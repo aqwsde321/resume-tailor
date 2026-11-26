@@ -16,7 +16,7 @@ export function ApplicationCalendarView({
   onSelectRecord
 }: {
   records: ApplicationRecord[];
-  onSelectRecord: (recordId: string) => void;
+  onSelectRecord: (recordId: string, interviewRoundId?: string) => void;
 }) {
   const [monthAnchor, setMonthAnchor] = useState(() => {
     const now = new Date();
@@ -72,7 +72,7 @@ export function ApplicationCalendarView({
         </div>
       </header>
       <p className="application-calendar-legend">
-        지원일과 다음 할 일을 표시합니다. 일정 항목을 누르면 해당 지원 기록으로 이동합니다.
+        지원일, 면접, 다음 할 일을 표시합니다. 일정 항목을 누르면 해당 지원 기록으로 이동합니다.
       </p>
       <div className="application-calendar-grid-wrap">
         <table className="application-calendar-table" aria-label={`${monthLabel} 지원 일정 달력`}>
@@ -104,7 +104,7 @@ export function ApplicationCalendarView({
                             className={`application-calendar-event event-${event.kind}`}
                             aria-label={`${event.companyName} · ${event.label}`}
                             title={`${event.companyName} · ${event.jobTitle} · ${event.label}`}
-                            onClick={() => onSelectRecord(event.recordId)}
+                            onClick={() => onSelectRecord(event.recordId, event.interviewRoundId)}
                           >
                             <strong>{event.companyName}</strong>
                             <span>{event.label}</span>

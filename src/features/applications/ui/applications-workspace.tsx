@@ -39,6 +39,7 @@ import {
   upsertApplicationFollowUpDraft,
   type FollowUpOccasion
 } from "@/entities/application/model/follow-up-draft";
+import { getInterviewRoundTitle, updateInterviewRound, type InterviewRound } from "@/entities/application/model/interview-rounds";
 import { ApplicationInterviewPrepSchema } from "@/entities/application/model/interview-prep";
 import {
   deleteApplicationPdf,
@@ -48,6 +49,8 @@ import {
 } from "@/entities/application/model/application-pdf-store";
 import { usePipeline } from "@/entities/pipeline/model/pipeline-context";
 import { ApplicationBoardView } from "@/features/applications/ui/application-board-view";
+import { ApplicationInterviewRounds } from "./application-interview-rounds";
+import { InterviewPrepContent } from "./interview-prep-content";
 import { ApplicationCalendarView } from "@/features/applications/ui/application-calendar-view";
 import { ApplicationRemindersPanel } from "@/features/applications/ui/application-reminders-panel";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
@@ -71,6 +74,8 @@ const DEADLINE_STATUS_LABELS: Record<Exclude<ApplicationDeadlineStatus, "none">,
 export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[] }) {
   const { state, patch, setError, setMessage } = usePipeline();
   const [busyRecordId, setBusyRecordId] = useState<string | null>(null);
+  const [busyRoundId, setBusyRoundId] = useState<string | null>(null);
+  const [focusedRound, setFocusedRound] = useState<{ recordId: string; roundId: string }>();
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,6 +114,17 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
       ...previous,
       applications: updateApplicationRecord(previous.applications, id, changes)
     }));
+  };
+
+  const changeInterviewRounds = (id: string, edit: (rounds: InterviewRound[]) => InterviewRound[]) => {
+    patch((previous) => {
+      const record = previous.applications.find((item) => item.id === id);
+      if (!record) return previous;
+      const interviewRounds = edit(record.interviewRounds);
+      return interviewRounds === record.interviewRounds ? previous : {
+        ...previous, applications: updateApplicationRecord(previous.applications, id, { interviewRounds }),
+      };
+    });
   };
 
   const downloadPdf = async (record: ApplicationRecord) => {
@@ -213,9 +229,11 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     }
   };
 
-  const generateInterviewPrep = async (record: ApplicationRecord) => {
-    if (!record.snapshot) return;
-    setBusyRecordId(record.id);
+  const generateInterviewPrep = async (record: ApplicationRecord, round?: InterviewRound) => {
+    if (!record.snapshot || busyRecordId || busyRoundId) return;
+    const title = round && getInterviewRoundTitle(round);
+    if (round) setBusyRoundId(round.id);
+    else setBusyRecordId(record.id);
     try {
       const response = await fetch("/api/application/interview-prep", {
         method: "POST",
@@ -223,6 +241,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
         body: JSON.stringify({
           resume: record.snapshot.resume,
           company: record.snapshot.company,
+          interviewRound: title,
           agent: toAgentRunOptions(state.agentSettings)
         })
       });
@@ -236,12 +255,18 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
       }
 
       const interviewPrep: ApplicationInterviewPrep = ApplicationInterviewPrepSchema.parse(body.data);
-      updateRecord(record.id, { interviewPrep });
+      if (round) {
+        changeInterviewRounds(record.id, (rounds) => updateInterviewRound(rounds, round.id, (current) =>
+          getInterviewRoundTitle(current) === title ? { ...current, interviewPrep } : current));
+      } else {
+        updateRecord(record.id, { interviewPrep });
+      }
       setMessage("면접 준비 자료를 저장했어요.");
     } catch (error) {
       setError(error instanceof Error ? error.message : "면접 준비 자료를 만들지 못했어요.");
     } finally {
-      setBusyRecordId(null);
+      if (round) setBusyRoundId(null);
+      else setBusyRecordId(null);
     }
   };
 
@@ -314,11 +339,13 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
     updateRecord(record.id, { outcomeReview: { ...current, ...changes } });
   };
 
-  const selectApplicationRecord = (recordId: string) => {
+  const selectApplicationRecord = (recordId: string, roundId?: string) => {
+    setFocusedRound(roundId ? { recordId, roundId } : undefined);
     setViewMode("list");
     window.setTimeout(() => {
-      document
-        .getElementById(`application-record-${recordId}`)
+      const round = roundId ? document.getElementById(`application-round-${recordId}-${roundId}`) : null;
+      round?.querySelector("summary")?.focus({ preventScroll: true });
+      (round ?? document.getElementById(`application-record-${recordId}`))
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 0);
   };
@@ -671,51 +698,23 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
             </label>
           </div>
 
+          <ApplicationInterviewRounds recordId={record.id} rounds={record.interviewRounds}
+            focusedRoundId={focusedRound?.recordId === record.id ? focusedRound.roundId : undefined}
+            busyRoundId={busyRoundId} busy={Boolean(busyRecordId)} canGenerate={Boolean(record.snapshot)}
+            onChange={(edit) => changeInterviewRounds(record.id, edit)} onGenerate={(round) => void generateInterviewPrep(record, round)} />
+
           <details className="application-interview-prep">
             <summary>면접 준비 자료{record.interviewPrep ? " · 저장됨" : ""}</summary>
             <div className="application-interview-prep-content">
               {record.interviewPrep ? (
-                <>
-                  <p className="application-artifact-date">
-                    {formatCreatedAt(record.interviewPrep.generatedAt)} 생성
-                  </p>
-                  <section>
-                    <h3>면접 시작 30초 소개</h3>
-                    <p>{record.interviewPrep.openingPitch}</p>
-                  </section>
-                  <section>
-                    <h3>예상 질문과 답변 개요</h3>
-                    <ol className="application-interview-questions">
-                      {record.interviewPrep.questions.map((question, index) => (
-                        <li key={`${question.question}-${index}`}>
-                          <h4>{question.question}</h4>
-                          <p><strong>확인 포인트:</strong> {question.focus}</p>
-                          <p><strong>이력서 근거:</strong> {question.resumeEvidence}</p>
-                          <ol>
-                            {question.answerOutline.map((step, stepIndex) => (
-                              <li key={`${step}-${stepIndex}`}>{step}</li>
-                            ))}
-                          </ol>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
-                  <section>
-                    <h3>회사에 물어볼 질문</h3>
-                    <ul>
-                      {record.interviewPrep.questionsToAsk.map((question, index) => (
-                        <li key={`${question}-${index}`}>{question}</li>
-                      ))}
-                    </ul>
-                  </section>
-                </>
+                <InterviewPrepContent prep={record.interviewPrep} />
               ) : (
                 <p>{record.snapshot ? "저장한 이력서와 공고를 바탕으로 예상 질문과 답변 개요를 만듭니다." : "제출본 PDF만 보관되어 있어요. 해당 PDF를 내려받아 면접을 준비할 수 있습니다."}</p>
               )}
               <button
                 type="button"
                 className="nav-btn"
-                disabled={busyRecordId === record.id || !record.snapshot}
+                disabled={Boolean(busyRecordId || busyRoundId) || !record.snapshot}
                 onClick={() => void generateInterviewPrep(record)}
               >
                 {busyRecordId === record.id
