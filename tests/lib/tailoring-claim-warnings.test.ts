@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ResumeTailoringPlan } from "@/entities/resume/model/resume-tailoring";
+import { applyResumeTailoringPlan, reviseTailoringPlan, type ResumeTailoringPlan } from "@/entities/resume/model/resume-tailoring";
 import { buildTailoringClaimWarnings } from "@/entities/resume/model/tailoring-claim-warnings";
 import { ResumeSchema } from "@/shared/lib/schemas";
 
@@ -89,5 +89,35 @@ describe("맞춤 이력서 문구의 근거 경고", () => {
       },
     });
     expect(warnings.get("summary")).toEqual({ numbers: [], technologies: ["QuickLoom"] });
+  });
+
+  it("수정한 제목·요약·경력·프로젝트를 기존 근거와 대조하고 이력서에 반영한다", () => {
+    const original: ResumeTailoringPlan = {
+      ...plan,
+      headline: { text: "AWS 개발자", evidenceIds: ["headline"] },
+      summary: { text: "QuickLoom으로 40% 개선", evidenceIds: ["summary"], technologies: ["QuickLoom"] },
+      experience: [{ sourceId: "experience-1", description: "Docker로 개발", evidenceIds: ["experience-1"] }],
+      projects: [{ sourceId: "project-1", description: "요청 2000건 처리", evidenceIds: ["project-1"] }],
+    };
+    const revised = reviseTailoringPlan(original, new Map([
+      ["headline", "서버 개발자"],
+      ["summary", "응답 시간을 개선하고 QuickLoom을 검증했습니다."],
+      ["experience-1", "Spring으로 API를 구현했습니다."],
+      ["project-1", "요청 1,000건을 처리했습니다."],
+      ["skill-1", "Docker"],
+    ]));
+
+    expect(revised.summary.evidenceIds).toEqual(["summary"]);
+    expect(original.headline.text).toBe("AWS 개발자");
+    expect([...buildTailoringClaimWarnings(source, revised)]).toEqual([
+      ["summary", { numbers: [], technologies: ["QuickLoom"] }],
+    ]);
+    expect(applyResumeTailoringPlan(source, revised)).toMatchObject({
+      headline: "서버 개발자",
+      summary: "응답 시간을 개선하고 QuickLoom을 검증했습니다.",
+      experience: [{ description: "Spring으로 API를 구현했습니다." }],
+      projects: [{ description: "요청 1,000건을 처리했습니다." }],
+      techStack: [],
+    });
   });
 });

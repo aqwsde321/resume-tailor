@@ -14,3 +14,29 @@
   margin: 3px 0 0;
   padding-inline-start: 1.25em;
 }
+
+.editor {
+  display: grid;
+  gap: 6px;
+  margin-block: 8px;
+}
+
+.editor textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  font: inherit;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 6px;
+}
+
+.checked {
+  margin-block-start: 8px;
+  color: #32664b;
+  font-size: 0.78rem;
+}

@@ -66,12 +66,12 @@ export function useResumeTailoringWorkflow(args: {
     });
   }, [args.company, args.resume, runStreamTask, state.agentSettings]);
 
-  const apply = useCallback(() => {
+  const apply = useCallback((resume: Resume) => {
     if (!review) {
       return;
     }
 
-    args.setResume(review.resume);
+    args.setResume(resume);
     setReview(null);
   }, [args, review]);
 

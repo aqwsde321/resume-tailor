@@ -5,10 +5,12 @@ import type { Company, Resume } from "@/shared/lib/types";
 
 const EvidenceIdsSchema = z.array(z.string().trim().min(1).max(100)).min(1).max(4);
 const TechnologiesSchema = z.array(z.string().trim().min(1).max(80)).max(30);
+export const MAX_TAILORING_COPY_LENGTH = 1600;
+const TailoringCopySchema = z.string().trim().min(1).max(MAX_TAILORING_COPY_LENGTH);
 
 const TailoredTextSchema = z
   .object({
-    text: z.string().trim().min(1).max(1600),
+    text: TailoringCopySchema,
     evidenceIds: EvidenceIdsSchema,
     technologies: TechnologiesSchema.optional()
   })
@@ -17,7 +19,7 @@ const TailoredTextSchema = z
 const TailoredResumeItemSchema = z
   .object({
     sourceId: z.string().trim().min(1).max(100),
-    description: z.string().trim().min(1).max(1600),
+    description: TailoringCopySchema,
     evidenceIds: EvidenceIdsSchema,
     technologies: TechnologiesSchema.optional()
   })
@@ -63,6 +65,22 @@ export const ResumeTailoringResultSchema = z
 export type ResumeTailoringPlan = z.infer<typeof ResumeTailoringPlanSchema>;
 export type ResumeTailoringRequirementMatch = z.infer<typeof RequirementMatchSchema>;
 export type ResumeTailoringResult = z.infer<typeof ResumeTailoringResultSchema>;
+
+export function reviseTailoringPlan(plan: ResumeTailoringPlan, revisions: ReadonlyMap<string, string>): ResumeTailoringPlan {
+  if (revisions.size === 0) return plan;
+
+  const reviseItem = (item: ResumeTailoringPlan["experience"][number]) => ({
+    ...item,
+    description: revisions.get(item.sourceId) ?? item.description,
+  });
+  return {
+    ...plan,
+    headline: { ...plan.headline, text: revisions.get("headline") ?? plan.headline.text },
+    summary: { ...plan.summary, text: revisions.get("summary") ?? plan.summary.text },
+    experience: plan.experience.map(reviseItem),
+    projects: plan.projects.map(reviseItem),
+  };
+}
 
 export interface ResumeTailoringEvidence {
   id: string;
@@ -286,7 +304,7 @@ export const resumeTailoringOutputSchema = {
       additionalProperties: false,
       required: ["text", "evidenceIds", "technologies"],
       properties: {
-        text: { type: "string", maxLength: 1600 },
+        text: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
         technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
@@ -296,7 +314,7 @@ export const resumeTailoringOutputSchema = {
       additionalProperties: false,
       required: ["text", "evidenceIds", "technologies"],
       properties: {
-        text: { type: "string", maxLength: 1600 },
+        text: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
         technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
@@ -310,7 +328,7 @@ export const resumeTailoringOutputSchema = {
         required: ["sourceId", "description", "evidenceIds", "technologies"],
         properties: {
           sourceId: { type: "string" },
-          description: { type: "string", maxLength: 1600 },
+          description: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
           technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
@@ -325,7 +343,7 @@ export const resumeTailoringOutputSchema = {
         required: ["sourceId", "description", "evidenceIds", "technologies"],
         properties: {
           sourceId: { type: "string" },
-          description: { type: "string", maxLength: 1600 },
+          description: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
           technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }

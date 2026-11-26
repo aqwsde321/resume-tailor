@@ -48,7 +48,7 @@ interface PdfEditorWorkspaceProps {
   onExport: () => void;
   onSaveApplication: () => void;
   onTailorResume: () => void;
-  onApplyTailoredResume: () => void;
+  onApplyTailoredResume: (resume: Resume) => void;
   onDismissTailoredResume: () => void;
   onIntroChange: (nextIntro: Intro) => void;
   onResumeChange: (nextResume: Resume) => void;

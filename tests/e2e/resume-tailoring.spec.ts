@@ -217,13 +217,25 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
   const headline = page.locator(".resume-tailoring-copy-change").filter({ has: page.getByRole("heading", { name: "직무 제목" }) });
   await expect(headline.getByText("수치 200건", { exact: true })).toBeVisible();
   await expect(headline.getByText("기술 Kubernetes", { exact: true })).toBeVisible();
+  const apply = page.getByRole("button", { name: "맞춤 이력서 적용" });
+  await headline.getByRole("button", { name: "문구 수정", exact: true }).click();
+  const wording = headline.getByRole("textbox", { name: "수정할 문구" });
+  await wording.fill("임시 문구");
+  await expect(apply).toBeDisabled();
+  await headline.getByRole("button", { name: "수정 취소", exact: true }).click();
+  await expect(headline.getByText("수치 200건", { exact: true })).toBeVisible();
+  await headline.getByRole("button", { name: "문구 수정", exact: true }).click();
+  await wording.fill("관리자 도구를 개발한 프론트엔드 개발자");
+  await headline.getByRole("button", { name: "수정 후 근거 다시 확인" }).click();
+  await expect(headline.getByText("수치·기술 추가 경고 없음", { exact: true })).toBeVisible();
+  await expect(headline.getByText("기술 Kubernetes", { exact: true })).toHaveCount(0);
   const requirementMap = page.getByRole("region", { name: "공고 요건 매칭" });
   await expect(requirementMap).toContainText("필수 요건 3개 중 3개 근거 연결");
   await expect(requirementMap).toContainText("우대 조건 2개 중 1개 근거 연결");
   await expect(requirementMap).toContainText("디자인 시스템 운영");
   await expect(requirementMap.getByText("근거 없음")).toBeVisible();
 
-  await page.getByRole("button", { name: "맞춤 이력서 적용" }).click();
+  await apply.click();
   await page.getByRole("button", { name: "지원 기록 저장" }).click();
   await expect(page.getByRole("link", { name: "지원 기록 1" })).toBeVisible();
 
@@ -235,4 +247,5 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
     "Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다."
   );
   expect(savedResume.techStack).toEqual(["TypeScript", "React"]);
+  expect(savedResume.headline).toBe("관리자 도구를 개발한 프론트엔드 개발자");
 });

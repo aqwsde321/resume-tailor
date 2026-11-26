@@ -3,9 +3,10 @@
 import { useState } from "react";
 import type { CompanyWork } from "@/entities/workspace/model/workspace";
 import { buildTailoringReviewRows, mergeTailoringSelection } from "@/entities/workspace/model/tailoring-selection";
-import { buildResumeTailoringEvidence, buildResumeTailoringRequirements } from "@/entities/resume/model/resume-tailoring";
+import { buildResumeTailoringEvidence, buildResumeTailoringRequirements, reviseTailoringPlan } from "@/entities/resume/model/resume-tailoring";
 import { buildTailoringClaimWarnings } from "@/entities/resume/model/tailoring-claim-warnings";
-import { TailoringClaimWarning } from "@/features/resume/ui/tailoring-claim-warning";
+import { useTailoringCopyEdits } from "@/features/resume/hooks/use-tailoring-copy-edits";
+import { TailoringCopyReview } from "@/features/resume/ui/tailoring-copy-review";
 import type { Resume } from "@/shared/lib/types";
 import "../tailoring-review.css";
 
@@ -27,6 +28,7 @@ export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, 
   const [selected, setSelected] = useState<string[]>([]);
   const [showUnchanged, setShowUnchanged] = useState(false);
   const [error, setError] = useState("");
+  const edits = useTailoringCopyEdits();
   const review = work.tailoring;
   if (!review) return null;
 
@@ -35,12 +37,13 @@ export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, 
   const isStale = JSON.stringify(work.resume) !== JSON.stringify(review.editingSnapshot ?? source);
   const evidence = new Map(buildResumeTailoringEvidence(source).map((item) => [item.id, item]));
   const requirements = new Map((work.company ? buildResumeTailoringRequirements(work.company) : []).map((item) => [item.id, item]));
-  const rows = buildTailoringReviewRows(current, source, review.plan);
-  const claimWarnings = buildTailoringClaimWarnings(source, review.plan, work.company?.techStack);
+  const plan = reviseTailoringPlan(review.plan, edits.revisions);
+  const rows = buildTailoringReviewRows(current, source, plan);
+  const claimWarnings = buildTailoringClaimWarnings(source, plan, work.company?.techStack);
   const changedRows = rows.filter((row) => row.changed && !row.unavailableReason);
-  const unchangedRows = rows.filter((row) => !row.changed && !row.unavailableReason);
+  const unchangedRows = rows.filter((row) => !row.changed && !row.unavailableReason && !edits.revisions.has(row.id));
   const activeSelection = selected.filter((id) => changedRows.some((row) => row.id === id));
-  const visibleRows = rows.filter((row) => showUnchanged || row.changed || row.unavailableReason);
+  const visibleRows = rows.filter((row) => showUnchanged || row.changed || row.unavailableReason || edits.revisions.has(row.id) || edits.editingId === row.id);
   const unavailableMessage = !work.resume
     ? "회사별 이력서가 없어 반영할 수 없습니다. 이력서를 만든 뒤 다시 제안받아 주세요."
     : isStale
@@ -110,8 +113,10 @@ export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, 
                   <div><h3>반영 전 <span>현재 회사별 이력서</span></h3><p>{row.before || (row.addsItem ? "현재 이력서에 없는 항목입니다." : "작성된 내용이 없습니다.")}</p></div>
                   <div>
                     <h3>반영 후 <span>{row.changed ? "선택하면 바뀔 내용" : "현재 내용과 같음"}</span></h3>
-                    <p>{row.after || "작성된 내용이 없습니다."}</p>
-                    <TailoringClaimWarning warning={claimWarnings.get(row.id)} />
+                    <TailoringCopyReview id={row.id} text={row.after} warning={claimWarnings.get(row.id)}
+                      edits={edits} disabled={Boolean(unavailableMessage)}>
+                      <p>{row.after || "작성된 내용이 없습니다."}</p>
+                    </TailoringCopyReview>
                   </div>
                 </div>
                 {row.addsItem && <p className="tailoring-row-note">선택하면 기존 항목 뒤에 추가합니다. 현재 항목과 순서는 유지합니다.</p>}
@@ -128,9 +133,9 @@ export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, 
       </div>
       <footer className="tailoring-review-footer">
         <div><p>선택하지 않은 내용은 그대로 유지됩니다.</p><span>경력과 프로젝트의 기존 순서도 유지합니다.</span></div>
-        <button type="button" className="primary" disabled={!activeSelection.length || !!unavailableMessage} onClick={() => {
-          if (!work.resume || unavailableMessage) return;
-          try { onApply(mergeTailoringSelection(work.resume, source, review.plan, activeSelection)); }
+        <button type="button" className="primary" disabled={!activeSelection.length || !!unavailableMessage || edits.editingId !== null} onClick={() => {
+          if (!work.resume || unavailableMessage || edits.editingId !== null) return;
+          try { onApply(mergeTailoringSelection(work.resume, source, plan, activeSelection)); }
           catch (caught) { setError(caught instanceof Error ? caught.message : "반영하지 못했습니다. 선택한 항목을 확인해 주세요."); }
         }}>{activeSelection.length ? `선택한 ${activeSelection.length}개 변경 반영` : "반영할 변경을 선택하세요"}</button>
       </footer>

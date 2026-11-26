@@ -178,7 +178,8 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
 });
 
 test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고 모델 설정이 맞춤 요청에 전달된다", async ({ page }) => {
-  const initial: Workspace = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "내 이력서", "개발 경력"), resume);
+  const source = { ...resume, summary: "응답 시간을 개선했습니다." };
+  const initial: Workspace = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "내 이력서", "개발 경력"), source);
   const stored = await mockStorage(page, initial);
   const company = { companyName: "예시 회사", jobTitle: "백엔드 개발자", companyDescription: "", jobDescription: "API 개발", requirements: ["Java"], preferredSkills: [], techStack: ["Java"] };
   await page.route("**/api/workspace/source", (route) => route.fulfill({ json: { ok: true, data: { document: newTextDocument("job", "새 공고", "예시 회사 Java 채용"), warnings: [] } } }));
@@ -213,7 +214,26 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await expect(flagged.getByText("수치 40%", { exact: true })).toBeVisible();
   await expect(flagged.getByText("기술 Kubernetes", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "변경 전체 선택", exact: true }).click();
-  await page.getByRole("button", { name: /선택한 \d+개 변경 반영/ }).click();
+  const apply = review.getByRole("button", { name: /선택한 \d+개 변경 반영/ });
+  await flagged.getByRole("button", { name: "문구 수정", exact: true }).click();
+  const wording = flagged.getByRole("textbox", { name: "수정할 문구" });
+  const recheck = flagged.getByRole("button", { name: "수정 후 근거 다시 확인" });
+  await expect(wording).toBeFocused();
+  await expect(apply).toBeDisabled();
+  await wording.fill("   ");
+  await expect(recheck).toBeDisabled();
+  await wording.fill("응답 시간을 25% 개선");
+  await recheck.click();
+  await expect(flagged.getByText("수치 25%", { exact: true })).toBeVisible();
+  await expect(flagged.getByText("수치 40%", { exact: true })).toHaveCount(0);
+  await expect(flagged.getByText("기술 Kubernetes", { exact: true })).toHaveCount(0);
+  await flagged.getByRole("button", { name: "문구 수정", exact: true }).click();
+  await wording.fill("응답 시간 개선");
+  await recheck.click();
+  await expect(flagged.getByText("수치·기술 추가 경고 없음", { exact: true })).toBeVisible();
+  await expect(warning).toHaveCount(0);
+  await apply.click();
+  await expect.poll(() => stored().works[0]?.resume?.headline).toBe("응답 시간 개선");
   await expect.poll(() => stored().works[0]?.resume?.summary).toBe("맞춤 소개");
   expect(model).toBe("test-model");
 });
