@@ -52,7 +52,7 @@ const ApplicationStatusHistoryEntrySchema = z
   })
   .strict();
 
-const ApplicationSnapshotSchema = z
+export const ApplicationSnapshotSchema = z
   .object({
     resume: ResumeSchema,
     company: CompanySchema,
@@ -93,9 +93,15 @@ export const ApplicationRecordSchema = z
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     pdfFileName: z.string().trim().min(1),
-    snapshot: ApplicationSnapshotSchema
+    snapshot: ApplicationSnapshotSchema.nullable(),
+    submission: z.object({
+      companyWorkId: z.string().min(1),
+      artifactId: z.string().min(1),
+      exportedAt: z.string().datetime(),
+    }).strict().optional(),
   })
-  .strict();
+  .strict()
+  .refine((record) => record.snapshot !== null || record.submission !== undefined, "지원 기록의 저장 자료가 필요해요.");
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
 export type ApplicationOutcome = z.infer<typeof ApplicationOutcomeSchema>;
@@ -120,17 +126,13 @@ export interface CreateApplicationRecordInput {
   customAccentHex: string;
 }
 
-export function createApplicationRecord(
-  input: CreateApplicationRecordInput,
-  options: { id?: string; now?: string } = {}
-): ApplicationRecord {
-  const now = options.now ?? new Date().toISOString();
+export function createApplicationSnapshot(input: CreateApplicationRecordInput): ApplicationSnapshot {
   const resumeSnapshot = {
     ...input.resume,
     pdfProfileImageDataUrl: "",
     pdfProfileImageVisible: false
   };
-  const snapshot = structuredClone({
+  return ApplicationSnapshotSchema.parse({
     resume: resumeSnapshot,
     company: input.company,
     intro: input.intro,
@@ -140,25 +142,56 @@ export function createApplicationRecord(
     themeId: input.themeId,
     customAccentHex: input.customAccentHex
   });
+}
 
+type RecordOptions = { id?: string; now?: string };
+
+function initializeApplicationRecord(
+  company: Company,
+  initial: Pick<ApplicationRecord, "pdfFileName" | "snapshot" | "status" | "submission">,
+  options: RecordOptions,
+): ApplicationRecord {
+  const now = options.now ?? new Date().toISOString();
   return ApplicationRecordSchema.parse({
+    ...initial,
     id: options.id ?? crypto.randomUUID(),
-    companyName: input.company.companyName.trim() || "회사",
-    jobTitle: input.company.jobTitle.trim() || "포지션",
-    status: "preparing",
+    companyName: company.companyName.trim() || "회사",
+    jobTitle: company.jobTitle.trim() || "포지션",
     notes: "",
     nextAction: "",
     nextActionDate: null,
-    appliedAt: null,
-    statusHistory: [{ status: "preparing", changedAt: now }],
+    appliedAt: initial.status === "applied" ? getLocalDateKey(new Date(now)) : null,
+    statusHistory: [{ status: initial.status, changedAt: now }],
     interviewPrep: null,
     followUpDrafts: [],
     outcomeReview: null,
     createdAt: now,
     updatedAt: now,
-    pdfFileName: buildPdfDownloadName(input.company, input.resume),
-    snapshot
   });
+}
+
+export function createApplicationRecord(input: CreateApplicationRecordInput, options: RecordOptions = {}): ApplicationRecord {
+  return initializeApplicationRecord(input.company, {
+    status: "preparing",
+    pdfFileName: buildPdfDownloadName(input.company, input.resume),
+    snapshot: createApplicationSnapshot(input),
+  }, options);
+}
+
+export function createSubmittedApplicationRecord(
+  { company, companyWorkId, artifact }: {
+    company: Company;
+    companyWorkId: string;
+    artifact: { id: string; name: string; createdAt: string; snapshot?: ApplicationSnapshot };
+  },
+  options: RecordOptions = {},
+): ApplicationRecord {
+  return initializeApplicationRecord(artifact.snapshot?.company ?? company, {
+    status: "applied",
+    pdfFileName: artifact.name,
+    snapshot: artifact.snapshot ?? null,
+    submission: { companyWorkId, artifactId: artifact.id, exportedAt: artifact.createdAt },
+  }, options);
 }
 
 export function normalizeApplicationRecord(value: unknown): ApplicationRecord | null {
@@ -265,8 +298,8 @@ export function filterApplicationRecords(
       record.jobTitle,
       record.notes,
       record.nextAction,
-      record.snapshot.resume.name,
-      record.snapshot.resume.desiredPosition
+      record.snapshot?.resume.name ?? "",
+      record.snapshot?.resume.desiredPosition ?? ""
     ].some((value) => value.toLocaleLowerCase("ko-KR").includes(normalizedQuery));
   });
 }

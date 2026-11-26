@@ -142,6 +142,11 @@
 .company-pdf-history summary span, .company-pdf-history time { color: var(--muted); font-size: 12px; }
 .company-pdf-history ul { list-style: none; margin: 12px 0 0; padding: 0; }
 .company-pdf-history li { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; padding-block: 8px; }
+.company-application-submission { display: grid; gap: 10px; margin-top: 20px; padding-block: 16px; border-top: 1px solid #dee2eb; }
+.company-application-submission h3, .company-application-submission p { margin: 0; }
+.company-application-submission label { display: grid; gap: 6px; min-width: 0; }
+.company-application-submission select { width: 100%; }
+.company-submission-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
 
 
 .company-pdf-design-card { border-radius: 8px; text-align: center; }

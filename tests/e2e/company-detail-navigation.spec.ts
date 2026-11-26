@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { createEmptyWorkspace } from "../../src/entities/workspace/model/workspace";
 import { createCompanyWork, newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
 import { CompanySchema, ResumeSchema } from "../../src/shared/lib/schemas";
@@ -92,6 +93,68 @@ test("소개글 재작성 중 사용자가 고친 문장은 늦은 응답으로 
   await expect(page.getByRole("button", { name: "PDF 상단 요약 만들기", exact: true })).toBeEnabled();
   await expect(page.getByRole("textbox", { name: "PDF 상단 요약", exact: true })).toHaveValue("지금 직접 고친 소개글");
   await expect.poll(() => stored().works[0].intro?.longIntro).toBe("지금 직접 고친 소개글");
+});
+
+test("고른 PDF를 지원 완료 기록에 고정하고 새 PDF를 출력한 뒤에도 같은 파일을 받는다", async ({ page }) => {
+  const { work, stored } = await companyWithDeferredAi(page);
+  const attachmentIds = Array.from({ length: 3 }, () => crypto.randomUUID());
+  let exportCount = 0;
+  let attachmentAvailable = false;
+  await page.route("**/api/pdf/preview**", (route) => route.fulfill({ json: { ok: true, data: { pages: [] } } }));
+  await page.route("**/api/workspace/export", (route) => {
+    const id = attachmentIds[exportCount++];
+    return route.fulfill({
+      contentType: "application/pdf",
+      headers: { "X-Workspace-Attachment-ID": id },
+      body: `%PDF-${id}`,
+    });
+  });
+  await page.route(`**/api/workspace/attachment/${attachmentIds[0]}`, (route) => attachmentAvailable
+    ? route.fulfill({ contentType: "application/pdf", body: `%PDF-${attachmentIds[0]}` })
+    : route.fulfill({ status: 404 }));
+
+  await page.goto(`/workspace/companies/${work.id}`);
+  const openExport = () => page.getByRole("button", { name: "PDF 디자인·다운로드", exact: true }).click();
+  await openExport();
+  await page.getByRole("button", { name: "Modern · Forest 선택", exact: true }).click();
+  const exportPdf = async () => {
+    const done = page.waitForEvent("download");
+    await page.getByRole("button", { name: "PDF 생성·다운로드", exact: true }).click();
+    await done;
+  };
+  await exportPdf();
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await page.getByText("PDF 상단 요약 · 선택 사항 · 작성됨", { exact: true }).click();
+  await page.getByRole("textbox", { name: "PDF 상단 요약", exact: true }).fill("나중에 수정한 소개글");
+  await openExport();
+  await exportPdf();
+  await expect.poll(() => stored().works[0].artifacts?.length).toBe(2);
+
+  const save = page.getByRole("button", { name: "지원 완료 기록", exact: true });
+  await expect(save).toBeDisabled();
+  await page.getByRole("combobox", { name: "실제 제출한 PDF", exact: true }).selectOption(attachmentIds[0]);
+  await expect(page.getByRole("link", { name: "선택한 PDF 확인", exact: true })).toHaveAttribute("href", `/api/workspace/attachment/${attachmentIds[0]}`);
+  await save.click();
+  await expect(page.getByText("선택한 PDF를 불러오지 못했어요.", { exact: true })).toBeVisible();
+  attachmentAvailable = true;
+  await save.click();
+  await expect(page.getByText("제출본을 고정했어요.", { exact: true })).toBeVisible();
+  await exportPdf();
+  await expect.poll(() => stored().works[0].artifacts?.length).toBe(3);
+  await page.reload();
+  await openExport();
+  await expect(save).toHaveCount(0);
+  await page.getByRole("link", { name: "지원 기록 보기", exact: true }).click();
+  const record = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "예시 회사", exact: true }) });
+  await expect(record).toHaveCount(1);
+  await expect(record.getByRole("combobox", { name: "예시 회사 진행 상태" })).toHaveValue("applied");
+  await record.getByText("저장한 자료 보기", { exact: true }).click();
+  await expect(record.getByText("사용자가 작성한 소개글", { exact: true })).toBeVisible();
+  await record.getByRole("combobox", { name: "예시 회사 진행 상태" }).selectOption("interviewing");
+  const downloaded = page.waitForEvent("download");
+  await record.getByRole("button", { name: "제출본 PDF 다운로드", exact: true }).click();
+  const path = await (await downloaded).path();
+  expect(await readFile(path, "utf8")).toBe(`%PDF-${attachmentIds[0]}`);
 });
 
 test("회사 편집은 한 문서에서 읽기와 댓글을 제공하고 내보내기는 내부 스크롤로 확인한다", async ({ page }) => {

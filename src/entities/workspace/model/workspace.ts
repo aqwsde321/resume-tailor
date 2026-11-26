@@ -1,4 +1,5 @@
 import { PDF_THEME_IDS } from "@/entities/pdf/model/themes";
+import { ApplicationSnapshotSchema } from "@/entities/application/model/application-record";
 import { PDF_TEMPLATE_IDS } from "@/entities/pdf/model/templates";
 import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
@@ -72,6 +73,14 @@ export const MasterResumeSchema = z.object({
   updatedAt: Timestamp,
 }).strict();
 
+const CompanyPdfArtifactSchema = z.object({
+  id: Id,
+  name: z.string(),
+  createdAt: Timestamp,
+  snapshot: ApplicationSnapshotSchema.optional(),
+}).strict();
+export type CompanyPdfArtifact = z.infer<typeof CompanyPdfArtifactSchema>;
+
 export const CompanyWorkSchema = z.object({
   id: Id,
   title: z.string().max(300),
@@ -82,7 +91,7 @@ export const CompanyWorkSchema = z.object({
   tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
   pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
   pdfThemeId: z.enum(PDF_THEME_IDS).exclude(["custom"]).optional(),
-  artifacts: z.array(z.object({ id: Id, name: z.string(), createdAt: Timestamp }).strict()).optional(),
+  artifacts: z.array(CompanyPdfArtifactSchema).optional(),
   sourceResumeVersion: z.number().int().positive().nullable(),
   sourceResume: ResumeSchema.nullable(),
   resume: ResumeSchema.nullable(),

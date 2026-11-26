@@ -21,6 +21,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <nav id="studio-navigation" aria-label="주 메뉴" onClick={() => setMenuOpen(false)}>
           <Link href="/workspace/resume" aria-current={section === "내 이력서" ? "page" : undefined}><StudioIcon name="document" />내 이력서</Link>
           <Link href="/workspace/companies" aria-current={section === "회사별 이력서" ? "page" : undefined}><StudioIcon name="company" />회사별 이력서</Link>
+          <Link href="/applications"><StudioIcon name="document" />지원 기록</Link>
           <Link href="/workspace/settings" aria-current={section === "설정" ? "page" : undefined}><StudioIcon name="settings" />설정</Link>
         </nav>
       </aside>

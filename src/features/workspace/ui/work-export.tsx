@@ -3,7 +3,9 @@ import { StudioIcon } from "./studio-icon";
 import { useEffect, useRef, useState } from "react";
 import { useTypstPreview } from "@/features/pdf/ui/use-typst-preview";
 import { IntroSchema } from "@/shared/lib/schemas";
-import type { CompanyWork } from "@/entities/workspace/model/workspace";
+import { createApplicationSnapshot } from "@/entities/application/model/application-record";
+import type { CompanyPdfArtifact, CompanyWork } from "@/entities/workspace/model/workspace";
+import { ApplicationSubmission } from "./application-submission";
 import { resumeToMarkdown } from "@/entities/workspace/model/operations";
 import { PDF_PREVIEW_RENDER_VERSION, PDF_TEMPLATE_OPTIONS, type PdfTemplateId } from "@/entities/pdf/model/templates";
 import { DEFAULT_PDF_THEME_ID, PDF_THEME_OPTIONS, type PdfThemeId } from "@/entities/pdf/model/themes";
@@ -119,7 +121,7 @@ function DesignGallery({ work, selectedTemplate, selectedTheme, onSelect, onPrev
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function WorkExport({ active, work, onSaved, onDesignChange }: { active: boolean; work: CompanyWork; onDesignChange: (templateId: PdfTemplateId, themeId: PresetThemeId) => void; onSaved: (id: string, name: string) => void }) {
+export function WorkExport({ active, work, onSaved, onDesignChange }: { active: boolean; work: CompanyWork; onDesignChange: (templateId: PdfTemplateId, themeId: PresetThemeId) => void; onSaved: (artifact: CompanyPdfArtifact) => void }) {
   const templateId = work.pdfTemplateId;
   const themeId = work.pdfThemeId ?? DEFAULT_PDF_THEME_ID;
   const [detail, setDetail] = useState<{ template: PdfTemplateId; theme: PresetThemeId } | null>(null);
@@ -132,7 +134,8 @@ export function WorkExport({ active, work, onSaved, onDesignChange }: { active: 
     if (template !== templateId || theme !== themeId) onDesignChange(template, theme);
   }
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  if (!work.resume || !work.company) return null;
+  const { resume, company, intro } = work;
+  if (!resume || !company) return null;
   const safeName = work.title.replace(/[\\/:*?"<>|]/g, "-").slice(0, 100);
   const templateLabel = PDF_TEMPLATE_OPTIONS.find(({ id }) => id === templateId)?.label;
   const themeLabel = themes.find(({ id }) => id === themeId)?.label;
@@ -151,7 +154,7 @@ export function WorkExport({ active, work, onSaved, onDesignChange }: { active: 
           <h3 id="company-pdf-detail-title">{PDF_TEMPLATE_OPTIONS.find(({ id }) => id === detail.template)?.label} · {themes.find(({ id }) => id === detail.theme)?.label}</h3>
           <button type="button" onClick={() => dialog.current?.close()} autoFocus>닫기</button>
         </header>
-        <ExportPreview key={`${detail.template}:${detail.theme}`} resume={work.resume} company={work.company} intro={work.intro} templateId={detail.template} themeId={detail.theme} />
+        <ExportPreview key={`${detail.template}:${detail.theme}`} resume={resume} company={company} intro={intro} templateId={detail.template} themeId={detail.theme} />
         <footer><button className="primary" type="button" onClick={() => { selectDesign(detail.template, detail.theme); dialog.current?.close(); }}>이 디자인 선택</button></footer>
       </>}
     </dialog>
@@ -160,11 +163,21 @@ export function WorkExport({ active, work, onSaved, onDesignChange }: { active: 
     <button className="primary" disabled={busy || !templateId} onClick={async () => {
       setBusy(true); setError("");
       try {
-        const response = await fetch("/api/workspace/export", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resume: work.resume, company: work.company, intro: work.intro, templateId, themeId }) });
+        const response = await fetch("/api/workspace/export", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resume, company, intro, templateId, themeId }) });
         if (!response.ok) { const result = await response.json(); throw new Error(result.error?.details || result.error?.message || "PDF 출력 실패"); }
         const id = response.headers.get("X-Workspace-Attachment-ID");
-        if (id) onSaved(id, `${safeName}.pdf`);
-        download(await response.blob(), `${safeName}.pdf`);
+        const name = `${safeName}.pdf`;
+        const pdf = await response.blob();
+        if (id && templateId) onSaved({
+          id, name, createdAt: new Date().toISOString(),
+          snapshot: createApplicationSnapshot({
+            resume, company, intro: intro ?? IntroSchema.parse({ longIntro: resume.summary }),
+            resumeSnapshot: resumeToMarkdown(resume),
+            companySnapshot: work.companySourceText?.trim() || JSON.stringify(company),
+            templateId, themeId, customAccentHex: "",
+          }),
+        });
+        download(pdf, name);
       } catch (error) { setError((error as Error).message); }
       finally { setBusy(false); }
     }}>{busy ? "PDF 만드는 중…" : "PDF 생성·다운로드"}</button>
@@ -178,6 +191,7 @@ export function WorkExport({ active, work, onSaved, onDesignChange }: { active: 
         </li>)}
       </ul>
     </details>}
+    <ApplicationSubmission key={work.id} work={work} company={company} />
     {error && <p role="alert">{error}</p>}
   </section>;
 }

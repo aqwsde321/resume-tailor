@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildApplicationDashboard,
+  createApplicationSnapshot,
   createApplicationRecord,
+  createSubmittedApplicationRecord,
   deleteApplicationRecord,
   filterApplicationRecords,
   getApplicationDeadlineStatus,
@@ -33,6 +35,40 @@ function createRecord() {
 }
 
 describe("application records", () => {
+  it("선택한 PDF와 생성 시점 자료를 고정하고 지원일과 지원 완료 상태를 기록한다", () => {
+    const input = createInput();
+    const snapshot = createApplicationSnapshot(input);
+    const now = new Date(2026, 10, 9, 12).toISOString();
+    const record = createSubmittedApplicationRecord({
+      company: { ...input.company, companyName: "나중에 수정된 회사명" },
+      companyWorkId: "company-work",
+      artifact: { id: "file-1", name: "실제 제출본.pdf", createdAt: "2026-11-08T06:00:00.000Z", snapshot },
+    }, { id: "submitted", now });
+
+    expect(record).toMatchObject({
+      status: "applied",
+      appliedAt: "2026-11-09",
+      companyName: input.company.companyName,
+      pdfFileName: "실제 제출본.pdf",
+      submission: { companyWorkId: "company-work", artifactId: "file-1", exportedAt: "2026-11-08T06:00:00.000Z" },
+      snapshot,
+    });
+    expect(record.statusHistory).toEqual([{ status: "applied", changedAt: now }]);
+    expect(updateApplicationRecord([record], record.id, { status: "interviewing" })[0]).toMatchObject({
+      pdfFileName: record.pdfFileName, submission: record.submission, snapshot,
+    });
+  });
+
+  it("기존 PDF를 고를 때 현재 이력서를 제출 당시 자료로 저장하지 않는다", () => {
+    const record = createSubmittedApplicationRecord({
+      company: companyFixture,
+      companyWorkId: "company-work",
+      artifact: { id: "old-file", name: "보관본.pdf", createdAt: "2026-11-08T06:00:00.000Z" },
+    });
+    expect(record.snapshot).toBeNull();
+    expect(filterApplicationRecords([record], "Beta")).toEqual([record]);
+  });
+
   it("creates an immutable text snapshot and omits the duplicated profile image", () => {
     const input = createInput();
     const record = createApplicationRecord(input, { id: "application-1", now: "2026-11-09T00:00:00.000Z" });
@@ -63,7 +99,7 @@ describe("application records", () => {
     });
 
     input.resume.techStack.push("Changed after save");
-    expect(record.snapshot.resume.techStack).not.toContain("Changed after save");
+    expect(record.snapshot!.resume.techStack).not.toContain("Changed after save");
   });
 
   it("updates status and notes without changing the saved materials", () => {

@@ -127,7 +127,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
       anchor.click();
       anchor.remove();
       window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-      setMessage("보관한 PDF를 내려받았어요.");
+      setMessage(record.submission ? "제출본 PDF를 내려받았어요." : "보관한 PDF를 내려받았어요.");
     } catch (error) {
       setError(error instanceof Error ? error.message : "PDF를 내려받지 못했어요.");
     } finally {
@@ -214,6 +214,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   };
 
   const generateInterviewPrep = async (record: ApplicationRecord) => {
+    if (!record.snapshot) return;
     setBusyRecordId(record.id);
     try {
       const response = await fetch("/api/application/interview-prep", {
@@ -245,6 +246,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
   };
 
   const generateFollowUpDraft = async (record: ApplicationRecord) => {
+    if (!record.snapshot) return;
     setBusyRecordId(record.id);
     try {
       const response = await fetch("/api/application/follow-up-draft", {
@@ -579,7 +581,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
 
           <details className="application-snapshot">
             <summary>저장한 자료 보기</summary>
-            <div className="application-snapshot-body">
+            {record.snapshot ? <div className="application-snapshot-body">
               <section>
                 <h3>공고</h3>
                 <p>{record.snapshot.company.jobDescription || "공고 설명이 없어요."}</p>
@@ -596,7 +598,9 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                 PDF 설정: {record.snapshot.templateId} · {record.snapshot.themeId}
                 {record.snapshot.customAccentHex ? ` · ${record.snapshot.customAccentHex}` : ""}
               </p>
-            </div>
+            </div> : <div className="application-snapshot-body">
+              <p>이전에 만든 파일이라 제출본 PDF만 보관되어 있어요.</p>
+            </div>}
           </details>
 
           <div className="application-controls">
@@ -706,12 +710,12 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                   </section>
                 </>
               ) : (
-                <p>저장한 이력서와 공고를 바탕으로 예상 질문과 답변 개요를 만듭니다.</p>
+                <p>{record.snapshot ? "저장한 이력서와 공고를 바탕으로 예상 질문과 답변 개요를 만듭니다." : "제출본 PDF만 보관되어 있어요. 해당 PDF를 내려받아 면접을 준비할 수 있습니다."}</p>
               )}
               <button
                 type="button"
                 className="nav-btn"
-                disabled={busyRecordId === record.id}
+                disabled={busyRecordId === record.id || !record.snapshot}
                 onClick={() => void generateInterviewPrep(record)}
               >
                 {busyRecordId === record.id
@@ -772,12 +776,12 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                     </button>
                   </div>
               ) : (
-                  <p>저장한 회사 정보, 진행 상태, 메모를 바탕으로 보낼 메일 초안을 만듭니다.</p>
+                  <p>{record.snapshot ? "저장한 회사 정보, 진행 상태, 메모를 바탕으로 보낼 메일 초안을 만듭니다." : "메일 초안을 만드는 데 필요한 공고 자료가 없어요."}</p>
               )}
               <button
                 type="button"
                 className="nav-btn"
-                disabled={busyRecordId === record.id}
+                disabled={busyRecordId === record.id || !record.snapshot}
                 onClick={() => void generateFollowUpDraft(record)}
               >
                 {busyRecordId === record.id
@@ -863,7 +867,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
           </details>
 
           <footer className="application-card-footer">
-            <span className="application-pdf-name">{record.pdfFileName}</span>
+            <span className="application-pdf-name">{record.submission && "제출본 · "}{record.pdfFileName}</span>
             <div className="action-row">
               <button
                 type="button"
@@ -871,7 +875,7 @@ export function ApplicationsWorkspace({ records }: { records: ApplicationRecord[
                 disabled={busyRecordId === record.id}
                 onClick={() => void downloadPdf(record)}
               >
-                PDF 다운로드
+                {record.submission ? "제출본 PDF 다운로드" : "PDF 다운로드"}
               </button>
               <button
                 type="button"

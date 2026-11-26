@@ -167,7 +167,7 @@ export default function CompanyWorkPage() {
       </div>
     </section>}
     {work.company && work.resume && <section id="company-stage-export" className="company-detail-panel" aria-label="PDF 디자인과 다운로드 단계" hidden={stage !== "export"}>
-      <WorkExport active={stage === "export"} work={work} onDesignChange={(pdfTemplateId, pdfThemeId) => change((current) => ({ ...current, pdfTemplateId, pdfThemeId }))} onSaved={(artifactId, name) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), { id: artifactId, name, createdAt: new Date().toISOString() }] }))} />
+      <WorkExport active={stage === "export"} work={work} onDesignChange={(pdfTemplateId, pdfThemeId) => change((current) => ({ ...current, pdfTemplateId, pdfThemeId }))} onSaved={(artifact) => change((current) => ({ ...current, artifacts: [...(current.artifacts ?? []), artifact] }))} />
     </section>}
   </div>;
 }
