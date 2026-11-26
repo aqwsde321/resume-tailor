@@ -1,9 +1,9 @@
 import { mockModelCatalog } from "./helpers/model-catalog";
 import { test, expect, type Page } from "@playwright/test";
 import { createEmptyWorkspace, type Workspace } from "../../src/entities/workspace/model/workspace";
-import { newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
+import { createCompanyWork, newTextDocument, publishMasterResume } from "../../src/entities/workspace/model/operations";
 import { createResultDraft } from "../../src/entities/workspace/model/resume-result-draft";
-import { ResumeSchema } from "../../src/shared/lib/schemas";
+import { CompanySchema, ResumeSchema } from "../../src/shared/lib/schemas";
 const resume = ResumeSchema.parse({ name: "예시 개발자", summary: "원본 소개", desiredPosition: "백엔드 개발자", techStack: ["Java"] });
 async function mockStorage(page: Page, initial = createEmptyWorkspace()) {
   // 문서 도구 동작은 저장본이 아닌 명시적인 이력서 편집 초안에서 검증한다.
@@ -224,6 +224,47 @@ test("자료 교체는 별도 창에서 안내하고 취소하면 기존 문서�
   await expect(dialog).not.toBeVisible();
   await expect(page.getByRole("region", { name: "추출 문서", exact: true })).toHaveText("기존 문서");
   expect(stored().master?.document.text).toBe("기존 문서");
+});
+
+test("공고 요건에서 경험 보완을 시작하고 해당 경험 없음 기록을 취소할 수 있다", async ({ page }) => {
+  const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "이력서", "개발 경력"), resume);
+  const document = newTextDocument("job", "예시 공고", "Kubernetes 운영 경험");
+  const company = CompanySchema.parse({ companyName: "예시 회사", jobTitle: "백엔드 개발자", requirements: [document.text] });
+  const work = createCompanyWork(initial.master!, document);
+  const plan = {
+    headline: { text: "맞춤 제목", evidenceIds: ["summary"] },
+    summary: { text: "맞춤 소개", evidenceIds: ["summary"] },
+    experience: [], projects: [], skillIds: [], highlightIds: [], strengthIds: [],
+    requirementMatches: [{ requirementId: "requirement-1", matchType: "gap" as const, evidenceIds: [], reason: "원본에 운영 경험이 없습니다." }],
+  };
+  const stored = await mockStorage(page, { ...initial, works: [{
+    ...work, company, companySourceText: document.text,
+    tailoring: { plan, sourceResume: resume, editingSnapshot: resume, resume },
+  }] });
+  await page.route("**/api/experience-discovery", (route) => {
+    expect(route.request().postDataJSON().requirement).toBe(document.text);
+    const result = { status: "question", message: "직접 맡은 운영 업무가 있었나요?", draft: null };
+    return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: result })}\n\nevent: done\ndata: {"ok":true}\n\n` });
+  });
+  await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByText("공고 요건과 경험 연결", { exact: false }).click();
+  await page.getByRole("button", { name: "이 경험 확인하기", exact: true }).click();
+  const topic = page.getByRole("textbox", { name: "보완할 내용", exact: true });
+  await expect(topic).toHaveValue(document.text);
+  await expect(topic).toBeFocused();
+  await page.getByRole("button", { name: "새 질문 받기", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "내 답변", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "해당 경험 없음", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "내 답변", exact: true })).toHaveCount(0);
+  await expect.poll(() => stored().works[0].knownGaps).toEqual([document.text]);
+  await page.reload();
+  await page.getByText("공고 요건과 경험 연결", { exact: false }).click();
+  await expect(page.getByText("해당 경험 없음", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이 경험 확인하기", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "기록 취소", exact: true }).click();
+  await expect(page.getByRole("button", { name: "이 경험 확인하기", exact: true })).toBeVisible();
+  await expect.poll(() => stored().works[0].knownGaps).toEqual([]);
 });
 
 test("원본 비교는 최초 원문과 편집본을 구분하고 댓글 보조 도구는 더보기에서 연다", async ({ page }) => {

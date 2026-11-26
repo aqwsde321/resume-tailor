@@ -30,7 +30,8 @@
 .tailoring-requirement > strong { display: block; margin: 7px 0 5px; font-size: 13px; overflow-wrap: anywhere; }
 .resume-studio .tailoring-requirement p, .resume-studio .tailoring-row-evidence p { margin: 5px 0; font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tailoring-match-label { display: inline-block; padding: 3px 7px; border-radius: 4px; background: #efedf8; color: #5947a5; font-size: 11px; font-weight: 600; }
-.tailoring-match-label[data-match="gap"] { background: #fff0d9; color: #855519; }
+.tailoring-match-label:is([data-match="gap"], [data-match="known-gap"]) { background: #fff0d9; color: #855519; }
+.tailoring-requirement-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .tailoring-match-label[data-match="direct"] { background: #e8f3ed; color: #32664b; }
 .tailoring-selection-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 16px 26px; border-top: 1px solid var(--review-line); border-bottom: 1px solid var(--review-line); }
 .resume-studio .tailoring-selection-toolbar > p { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }

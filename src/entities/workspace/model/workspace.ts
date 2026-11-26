@@ -42,6 +42,7 @@ export const ReviewDocumentSchema = z.object({
 export const EnrichmentSchema = z.object({
   id: Id,
   topic: z.string().max(2000),
+  requirement: z.string().optional(),
   status: z.enum(["question", "draft", "done"]).default("question"),
   messages: z.array(ExperienceDiscoveryMessageSchema),
   drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, target: z.string().optional(), status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
@@ -87,6 +88,7 @@ export const CompanyWorkSchema = z.object({
   resume: ResumeSchema.nullable(),
   intro: IntroSchema.nullable(),
   enrichment: z.array(EnrichmentSchema),
+  knownGaps: z.array(z.string()).optional(),
   versions: z.array(z.object({ id: Id, resume: ResumeSchema, intro: IntroSchema.nullable(), createdAt: Timestamp }).strict()),
   createdAt: Timestamp,
   updatedAt: Timestamp,

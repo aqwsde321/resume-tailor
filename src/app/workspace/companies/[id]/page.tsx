@@ -13,6 +13,7 @@ import { useAiTask } from "@/features/workspace/hooks/use-ai-task";
 import { jsonRequest, workspaceRequest } from "@/features/workspace/api";
 import { newTextDocument, refreshCompanySource, resumeToMarkdown } from "@/entities/workspace/model/operations";
 import { refreshCompanyJobDocument } from "@/entities/workspace/model/company-source-refresh";
+import { setCompanyRequirementGap } from "@/entities/workspace/model/company-requirement-gaps";
 import type { CompanyWork, ReviewDocument } from "@/entities/workspace/model/workspace";
 import { ResumeSchema, CompanySchema, IntroSchema } from "@/shared/lib/schemas";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
@@ -43,7 +44,10 @@ export default function CompanyWorkPage() {
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [candidate, setCandidate] = useState<{ company: Company; sourceText: string } | null>(null);
   const [editedCandidate, setEditedCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
+  const [enrichmentTopicRequest, setEnrichmentTopicRequest] = useState<{ workId: string; text: string }>();
   const stageButtons = useRef<(HTMLButtonElement | null)[]>([]);
+  const enrichmentDetails = useRef<HTMLDetailsElement>(null);
+  const enrichmentTopicInput = useRef<HTMLTextAreaElement>(null);
   const work = workspace?.works.find((item) => item.id === id);
   const fallbackResumeDocument = work?.resume ? { ...newTextDocument("resume", work.title, resumeToMarkdown(work.resume)), id: work.id } : null;
   if (!workspace) return null;
@@ -59,6 +63,12 @@ export default function CompanyWorkPage() {
   const companyCurrent = Boolean(work.company && work.companySourceText === work.document.text);
   const stage = selectedStage ?? (companyCurrent ? "edit" : "review");
   const pendingComments = work.document.annotations.filter((item) => item.status === "pending").length;
+  const checkRequirement = (text: string) => {
+    if (!enrichmentDetails.current) return;
+    setEnrichmentTopicRequest({ workId: work.id, text });
+    enrichmentDetails.current.open = true;
+    enrichmentTopicInput.current?.focus();
+  };
   const canOrganize = Boolean(work.document.text.trim()) && !work.document.proposal && pendingComments === 0;
   const goTo = (next: Stage) => setSelectedStage(next);
   const canOpenStage = (next: Stage) =>
@@ -124,13 +134,17 @@ export default function CompanyWorkPage() {
     {work.company && <section id="company-stage-edit" className="company-detail-panel" aria-label="맞춤 편집 단계" hidden={stage !== "edit"}>
       {workspace.master && workspace.master.version !== work.sourceResumeVersion && <section className="company-detail-notice"><div><strong>공통 이력서의 새 버전이 있습니다.</strong><p>기준 원본을 바꿔도 회사별 편집본은 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...refreshCompanySource(current, workspace.master!), tailoring: null }))}>새 공통 원본을 기준으로 선택</button></section>}
       <section className="company-detail-generator"><div><h2>맞춤 이력서</h2><p>회사에 필요한 경험을 골라 제안합니다. 직접 확인한 변경만 편집본에 반영됩니다.</p><span>공통 원본 버전 {work.sourceResumeVersion}</span></div><div className="company-detail-generator-actions"><button className="primary" disabled={busy || !companyCurrent || !work.resume} onClick={() => tailor(false)}>현재 편집본으로 맞춤 제안 받기</button><button disabled={busy || !companyCurrent || !work.sourceResume} onClick={() => tailor(true)}>공통 원본으로 맞춤 제안 받기</button></div></section>
-      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={setResume} onDismiss={() => change((current) => ({ ...current, tailoring: null }))} />}
+      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={setResume} onDismiss={() => change((current) => ({ ...current, tailoring: null }))}
+        requirementActionsEnabled={!busy && companyCurrent && Boolean(work.resume)} onCheckRequirement={checkRequirement}
+        onSetRequirementGap={(text, marked) => change((current) => setCompanyRequirementGap(current, text, marked))} />}
       {work.resume && <>
         <section className="company-detail-current"><div className="company-detail-section-heading"><div><h2>회사별 편집본</h2><p>문장이나 기술을 드래그해 수정 요청을 남기세요. 공통 이력서는 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...current, versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 버전 보관</button></div><DocumentEditor variant="studio" presentation="resume" hideHeading active={stage === "edit"} document={work.resumeDocument ?? fallbackResumeDocument!} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} /><div className="company-detail-action-row"><p>문서를 정리한 뒤 반영할 내용을 한 번 더 확인합니다.</p><button className="primary" disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => {
           const sourceText = work.resumeDocument!.text;
           void aiTask.run({ label: "편집 문서 정리", execute: (signal) => workspaceRequest<Resume>("/api/resume", { ...jsonRequest({ text: sourceText, agent }), signal }), onSuccess: (resume) => setEditedCandidate({ resume, sourceText }) });
         }}>검토한 문서를 편집본에 반영</button></div>{editedCandidate && <section className="company-detail-candidate"><h3>편집본 반영 전 확인</h3><ResumeReadonlyDocument text={resumeToMarkdown(editedCandidate.resume)} toolbar={<span className="studio-paper-filename">변경 내용 · 반영 전 확인</span>} /><button className="primary" disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}</section>
-        <details className="company-enrichment"><summary className="ai-enrichment-trigger"><StudioIcon name="sparkle" size={18} /><span>공고에 맞춰 경험 보완</span></summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings} onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
+        <details className="company-enrichment" ref={enrichmentDetails}><summary className="ai-enrichment-trigger"><StudioIcon name="sparkle" size={18} /><span>공고에 맞춰 경험 보완</span></summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings}
+          topicRequest={enrichmentTopicRequest?.workId === work.id ? enrichmentTopicRequest : undefined} topicInputRef={enrichmentTopicInput} knownGaps={work.knownGaps}
+          onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
           const resume = ResumeSchema.parse(applyEnrichmentDrafts(current.resume!, drafts));
           return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: current.enrichment.map((session) => ({ ...session, drafts: session.drafts.map((item) => drafts.some((approved) => approved.id === item.id) ? { ...item, status: "accepted" as const } : item) })) };
         })} /></details>
