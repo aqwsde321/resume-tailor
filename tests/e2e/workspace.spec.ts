@@ -180,18 +180,23 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
   expect(stored().master?.resultDraft?.resume.projects[0].description).toContain("추가 사실 1");
   expect(stored().master?.resume?.projects).toHaveLength(1);
   expect(stored().master?.document.source.originalText).toBe("원본 자료");
+  await page.getByText("반영한 경험 2개", { exact: true }).click();
+  const accepted = page.getByRole("article").filter({ has: page.getByText("경험 2", { exact: true }) });
+  await accepted.getByRole("button", { name: "확인한 근거로 저장", exact: true }).click();
+  await expect.poll(() => stored().confirmedExperiences?.map(({ draft }) => draft.title)).toEqual(["경험 2", "경험 1"]);
+
 
   await page.route("**/api/resume/tailor/stream", (route) => {
     const { resume, confirmedExperiences } = route.request().postDataJSON();
     expect(confirmedExperiences).toEqual(stored().confirmedExperiences);
-    const factId = `confirmed-${confirmedExperiences[0].id}`;
+    const factId = `confirmed-${confirmedExperiences.find((fact: { draft: { title: string } }) => fact.draft.title === "경험 1").id}`;
     const plan = { headline: { text: "Kafka 기반 경험", evidenceIds: [factId] }, summary: { text: "맞춤 소개", evidenceIds: [factId] }, experience: [], projects: [], requirementMatches: [], skillIds: [], highlightIds: [], strengthIds: [] };
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume } })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await page.goto(`/workspace/companies/${work.id}`);
   await page.getByRole("button", { name: "공통 원본으로 맞춤 제안 받기" }).click();
   const review = page.getByRole("region", { name: "회사 맞춤 변경 검토" });
-  const headline = review.getByRole("article").filter({ has: review.getByRole("checkbox", { name: "한 줄 소개" }) });
+  const headline = review.getByRole("article").filter({ has: page.getByRole("checkbox", { name: "한 줄 소개", exact: true }) });
   await expect(headline.getByText("Kafka 기반 경험")).toBeVisible();
   await headline.getByText("제안에 사용한 원본 근거 1개").click();
   await expect(headline.getByText("확인한 경험 · 경험 1")).toBeVisible();

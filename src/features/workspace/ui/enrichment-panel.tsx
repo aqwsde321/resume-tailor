@@ -38,7 +38,9 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
   const answer = answerDraft && answerDraft.sessionId === current?.id ? answerDraft.value : "";
   const topicBlocked = knownGaps.includes(requirement ?? topic.trim());
   const currentBlocked = current && knownGaps.includes(current.requirement ?? current.topic.trim());
-  const pending = sessions.flatMap((session) => session.drafts.filter((item) => item.status === "pending").map((item) => ({ sessionId: session.id, ...item })));
+  const drafts = sessions.flatMap((session) => session.drafts.map((item) => ({ sessionId: session.id, ...item })));
+  const pending = drafts.filter((item) => item.status === "pending");
+  const accepted = drafts.filter((item) => item.status === "accepted");
   function reviewedDraft(item: ApprovedDraft) {
     const edit = technologyEdits[item.id];
     return edit === undefined ? item.draft : { ...item.draft,
@@ -46,6 +48,21 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
   }
   const hasValidTechnologies = (draft: DiscoveredExperienceDraft) =>
     draft.techStack.length <= 30 && draft.techStack.every((value) => value.length <= 80);
+
+  function evidenceActions({ id, draft }: ConfirmedExperience) {
+    const saved = savedExperiences.find((item) => item.id === id);
+    const experienceScope = experienceScopes[id] ?? saved?.scope ?? (scope === "job" ? "company" : "common");
+    const unchanged = saved?.scope === experienceScope && JSON.stringify(saved.draft) === JSON.stringify(draft);
+    return <>
+      {scope === "job" && <label>근거를 다시 사용할 범위<select value={experienceScope} onChange={(event) => setExperienceScopes((scopes) => ({ ...scopes, [id]: event.target.value as ConfirmedExperienceScope }))}>
+        <option value="company">이 회사만</option><option value="common">공통</option>
+      </select></label>}
+      <button type="button" disabled={busy || unchanged || !hasValidTechnologies(draft) || !draft.description.trim() || !(draft.title.trim() || draft.organization.trim())}
+        onClick={() => onSaveExperience({ id, draft }, experienceScope)}>
+        {saved ? unchanged ? "재사용 근거로 저장됨" : "확인한 근거 다시 저장" : "확인한 근거로 저장"}
+      </button>
+    </>;
+  }
 
   async function ask(start: boolean) {
     const session: Session | undefined = start
@@ -80,12 +97,20 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
         <p>{[draft.organization, draft.role, draft.period].filter(Boolean).join(" · ")}</p>
         <p>{draft.description}</p>
         {draft.techStack.length > 0 && <p>사용 기술 {draft.techStack.join(", ")}</p>}
-        {(scope === "common" || savedScope === "company") && <button type="button" onClick={() => onRemoveExperience(id)}>저장한 근거 삭제</button>}
+        {(scope === "common" || savedScope === "company") && <button type="button" onClick={() => onRemoveExperience(id)}>재사용 목록에서 삭제</button>}
+      </article>)}
+    </details>}
+    {accepted.length > 0 && <details>
+      <summary>반영한 경험 {accepted.length}개</summary>
+      {accepted.map(({ id, draft }) => <article className="review-comment" key={id}>
+        <strong>{draft.title || draft.organization}</strong>
+        <p>{[draft.organization, draft.role, draft.period].filter(Boolean).join(" · ")}</p>
+        <p>{draft.description}</p>
+        {draft.techStack.length > 0 && <p>사용 기술 {draft.techStack.join(", ")}</p>}
+        {evidenceActions({ id, draft })}
       </article>)}
     </details>}
     {pending.length > 0 && <><h3>모아 둔 경험 초안</h3>{pending.map((item) => {
-      const saved = savedExperiences.find(({ id }) => id === item.id);
-      const experienceScope = experienceScopes[item.id] ?? saved?.scope ?? (scope === "job" ? "company" : "common");
       const techText = technologyEdits[item.id] ?? item.draft.techStack.join(", ");
       const reviewed = reviewedDraft(item);
       const valid = hasValidTechnologies(reviewed);
@@ -95,13 +120,7 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
       {(["title", "organization", "role", "period", "description"] as const).map((key) => <label key={key}>{({ title: "제목", organization: "소속", role: "역할", period: "기간", description: "경험 내용" })[key]}<textarea rows={key === "description" ? 4 : 1} maxLength={key === "description" ? 1600 : key === "period" ? 100 : 160} value={item.draft[key]} onChange={(event) => onChange(sessions.map((session) => ({ ...session, drafts: session.drafts.map((entry) => entry.id === item.id ? { ...entry, draft: { ...entry.draft, [key]: event.target.value } } : entry) })))} /></label>)}
       <label>사용 기술<input type="text" value={techText} onChange={(event) => setTechnologyEdits((edits) => ({ ...edits, [item.id]: event.target.value }))} /></label>
       {!valid && <p role="alert">기술은 이름당 80자 이내로, 쉼표로 구분해 최대 30개 입력해 주세요.</p>}
-      {scope === "job" && <label>근거를 다시 사용할 범위<select value={experienceScope} onChange={(event) => setExperienceScopes((scopes) => ({ ...scopes, [item.id]: event.target.value as ConfirmedExperienceScope }))}>
-        <option value="company">이 회사만</option><option value="common">공통</option>
-      </select></label>}
-      <button type="button" disabled={busy || !valid || !reviewed.description.trim() || !(reviewed.title.trim() || reviewed.organization.trim())
-        || Boolean(saved && saved.scope === experienceScope && JSON.stringify(saved.draft) === JSON.stringify(reviewed))} onClick={() => {
-        onSaveExperience({ id: item.id, draft: reviewed }, experienceScope);
-      }}>{saved ? "확인한 근거 다시 저장" : "확인한 근거로 저장"}</button>
+      {evidenceActions({ id: item.id, draft: reviewed })}
       <button disabled={busy} onClick={() => onChange(sessions.map((session) => ({ ...session, drafts: session.drafts.map((entry) => entry.id === item.id ? { ...entry, status: "dismissed" } : entry) })))}>이 초안 제외</button>
     </article>;
     })}<button className="primary" disabled={busy || !selected.some((id) => pending.some((item) => item.id === id))} onClick={() => {
