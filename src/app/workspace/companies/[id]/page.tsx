@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useWorkspace } from "@/features/workspace/context";
 import { DocumentEditor } from "@/features/workspace/ui/document-editor";
+import { CompanyVersionHistory } from "@/features/workspace/ui/company-version-history";
+import { archiveCompanyVersion, restoreCompanyVersion } from "@/entities/workspace/model/company-version-history";
 import { CompanyRequirementCoverage } from "@/features/workspace/ui/company-requirement-coverage";
 import { TailoringReview } from "@/features/workspace/ui/tailoring-review";
 import { StudioIcon } from "@/features/workspace/ui/studio-icon";
@@ -43,6 +45,7 @@ export default function CompanyWorkPage() {
   const aiTask = useAiTask();
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
+  const [versionNote, setVersionNote] = useState("");
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [candidate, setCandidate] = useState<{ company: Company; sourceText: string } | null>(null);
   const [editedCandidate, setEditedCandidate] = useState<{ resume: Resume; sourceText: string } | null>(null);
@@ -55,10 +58,9 @@ export default function CompanyWorkPage() {
   if (!workspace) return null;
   if (!work) return <><p>작업을 찾지 못했습니다.</p><Link href="/workspace/companies">목록으로</Link></>;
   const change = (updater: (work: CompanyWork, workspace: Workspace) => CompanyWork) => update((previous) => ({ ...previous, works: previous.works.map((item) => item.id === id ? { ...updater(item, previous), updatedAt: new Date().toISOString() } : item) }));
-  const setResume = (resume: Resume) => change((current) => {
+  const setResume = (resume: Resume, cause: "before-tailoring" | "before-edit") => change((current) => {
     const document = current.resumeDocument ?? newTextDocument("resume", current.title, resumeToMarkdown(current.resume!));
-    return { ...current, resume: ResumeSchema.parse(resume), resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null,
-      versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] };
+    return { ...archiveCompanyVersion(current, cause), resume: ResumeSchema.parse(resume), resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null };
   });
   const agent = toAgentRunOptions(workspace.settings);
   const busy = aiTask.busy || refreshing;
@@ -144,12 +146,18 @@ export default function CompanyWorkPage() {
     {work.company && <section id="company-stage-edit" className="company-detail-panel" aria-label="맞춤 편집 단계" hidden={stage !== "edit"}>
       {workspace.master && workspace.master.version !== work.sourceResumeVersion && <section className="company-detail-notice"><div><strong>공통 이력서의 새 버전이 있습니다.</strong><p>기준 원본을 바꿔도 회사별 편집본은 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...refreshCompanySource(current, workspace.master!), tailoring: null }))}>새 공통 원본을 기준으로 선택</button></section>}
       <section className="company-detail-generator"><div><h2>맞춤 이력서</h2><p>회사에 필요한 경험을 골라 제안합니다. 직접 확인한 변경만 편집본에 반영됩니다.</p><span>공통 원본 버전 {work.sourceResumeVersion}</span></div><div className="company-detail-generator-actions"><button className="primary" disabled={busy || !companyCurrent || !work.resume} onClick={() => tailor(false)}>현재 편집본으로 맞춤 제안 받기</button><button disabled={busy || !companyCurrent || !work.sourceResume} onClick={() => tailor(true)}>공통 원본으로 맞춤 제안 받기</button></div></section>
-      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={setResume} onDismiss={() => change((current) => ({ ...current, tailoring: null }))} />}
+      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={(resume) => setResume(resume, "before-tailoring")} onDismiss={() => change((current) => ({ ...current, tailoring: null }))} />}
       {work.resume && <>
-        <section className="company-detail-current"><div className="company-detail-section-heading"><div><h2>회사별 편집본</h2><p>문장이나 기술을 드래그해 수정 요청을 남기세요. 공통 이력서는 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...current, versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 버전 보관</button></div><DocumentEditor variant="studio" presentation="resume" hideHeading active={stage === "edit"} document={work.resumeDocument ?? fallbackResumeDocument!} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} /><div className="company-detail-action-row"><p>문서를 정리한 뒤 반영할 내용을 한 번 더 확인합니다.</p><button className="primary" disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => {
+        <section className="company-detail-current"><div className="company-detail-section-heading"><div><h2>회사별 편집본</h2><p>문장이나 기술을 드래그해 수정 요청을 남기세요. 공통 이력서는 유지됩니다.</p></div><div className="company-version-save">
+          <label>보관 메모 (선택)<input value={versionNote} onChange={(event) => setVersionNote(event.target.value)} maxLength={300} /></label>
+          <button type="button" disabled={busy} onClick={() => {
+            change((current) => archiveCompanyVersion(current, "manual", versionNote));
+            setVersionNote("");
+          }}>현재 버전 보관</button>
+        </div></div><DocumentEditor variant="studio" presentation="resume" hideHeading active={stage === "edit"} document={work.resumeDocument ?? fallbackResumeDocument!} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} /><div className="company-detail-action-row"><p>문서를 정리한 뒤 반영할 내용을 한 번 더 확인합니다.</p><button className="primary" disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => {
           const sourceText = work.resumeDocument!.text;
           void aiTask.run({ label: "편집 문서 정리", execute: (signal) => workspaceRequest<Resume>("/api/resume", { ...jsonRequest({ text: sourceText, agent }), signal }), onSuccess: (resume) => setEditedCandidate({ resume, sourceText }) });
-        }}>검토한 문서를 편집본에 반영</button></div>{editedCandidate && <section className="company-detail-candidate"><h3>편집본 반영 전 확인</h3><ResumeReadonlyDocument text={resumeToMarkdown(editedCandidate.resume)} toolbar={<span className="studio-paper-filename">변경 내용 · 반영 전 확인</span>} /><button className="primary" disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}</section>
+        }}>검토한 문서를 편집본에 반영</button></div>{editedCandidate && <section className="company-detail-candidate"><h3>편집본 반영 전 확인</h3><ResumeReadonlyDocument text={resumeToMarkdown(editedCandidate.resume)} toolbar={<span className="studio-paper-filename">변경 내용 · 반영 전 확인</span>} /><button className="primary" disabled={editedCandidate.sourceText !== work.resumeDocument?.text} onClick={() => { setResume(editedCandidate.resume, "before-edit"); setEditedCandidate(null); }}>이 내용으로 편집본 확정</button></section>}</section>
         <details className="company-enrichment" ref={enrichmentDetails}><summary className="ai-enrichment-trigger"><StudioIcon name="sparkle" size={18} /><span>공고에 맞춰 경험 보완</span></summary><EnrichmentPanel scope="job" resume={work.resume} company={work.company} sessions={work.enrichment} settings={workspace.settings}
           topicRequest={enrichmentTopicRequest?.workId === work.id ? enrichmentTopicRequest : undefined} topicInputRef={enrichmentTopicInput} knownGaps={work.knownGaps}
           commonExperiences={workspace.confirmedExperiences ?? []} companyExperiences={work.confirmedExperiences}
@@ -157,9 +165,10 @@ export default function CompanyWorkPage() {
           onRemoveExperience={(id) => change((current) => ({ ...current, confirmedExperiences: current.confirmedExperiences?.filter((item) => item.id !== id) }))}
           onChange={(enrichment) => change((current) => ({ ...current, enrichment }))} onApply={(drafts) => change((current) => {
           const resume = ResumeSchema.parse(applyEnrichmentDrafts(current.resume!, drafts));
-          return { ...current, resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: acceptEnrichmentDrafts(current.enrichment, drafts) };
+          return { ...archiveCompanyVersion(current, "before-enrichment"), resume, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(resume)), tailoring: null, enrichment: acceptEnrichmentDrafts(current.enrichment, drafts) };
         })} /></details>
-        <details className="company-detail-disclosure"><summary>보관 버전 {work.versions.length}개</summary><div className="company-detail-disclosure-content">{work.versions.length === 0 && <p>아직 보관한 버전이 없습니다. 편집본 위의 ‘현재 버전 보관’으로 저장할 수 있습니다.</p>}{[...work.versions].reverse().map((version) => <article className="company-detail-version" key={version.id}><p>{new Date(version.createdAt).toLocaleString("ko-KR")}</p><details><summary>내용 확인</summary><ResumeReadonlyDocument text={resumeToMarkdown(version.resume)} toolbar={<span className="studio-paper-filename">보관된 회사별 이력서</span>} /></details><button disabled={busy} onClick={() => change((current) => ({ ...current, resume: version.resume, intro: version.intro, tailoring: null, resumeDocument: newTextDocument("resume", current.title, resumeToMarkdown(version.resume)), versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 편집본 보관 후 이 버전 복원</button></article>)}</div></details>
+        <CompanyVersionHistory key={work.id} versions={work.versions} resume={work.resume} intro={work.intro} busy={busy}
+          onRestore={(versionId) => { change((current) => restoreCompanyVersion(current, versionId)); setEditedCandidate(null); }} />
         <div className="company-detail-stage-footer"><button type="button" onClick={() => goTo("review")}>이전: 공고 검토</button><p>편집을 마쳤다면 제출할 파일을 확인하세요.</p><button type="button" className="primary" onClick={() => showExportStage("confirm")}>제출 내용 확인으로</button></div>
       </>}
     </section>}
@@ -170,8 +179,8 @@ export default function CompanyWorkPage() {
       <details className="company-detail-disclosure"><summary>PDF 상단 요약 · 선택 사항{work.intro ? " · 작성됨" : ""}</summary><div className="company-detail-disclosure-content"><p>요약을 만들면 PDF 상단의 기존 이력서 요약을 대체합니다.</p><button disabled={busy || !companyCurrent} onClick={() => {
         const inputSnapshot = aiInputSnapshot(work);
         const introSnapshot = JSON.stringify(work.intro);
-        void aiTask.run({ label: "PDF 상단 요약 작성", execute: (signal) => workspaceRequest<Intro>("/api/intro", { ...jsonRequest({ resume: work.resume, company: work.company, purpose: "pdf-summary", agent }), signal }), onSuccess: (intro) => change((current) => aiInputSnapshot(current) === inputSnapshot && JSON.stringify(current.intro) === introSnapshot ? { ...current, intro: IntroSchema.parse(intro) } : current) });
-      }}>PDF 상단 요약 만들기</button>{work.intro && <><label>PDF 상단 요약<textarea name="company-intro" rows={6} value={work.intro.longIntro} onChange={(event) => change((current) => ({ ...current, intro: { ...current.intro!, longIntro: event.target.value } }))} /></label><button onClick={() => change((current) => ({ ...current, intro: null }))}>기존 이력서 요약 사용</button></>}</div></details>
+        void aiTask.run({ label: "PDF 상단 요약 작성", execute: (signal) => workspaceRequest<Intro>("/api/intro", { ...jsonRequest({ resume: work.resume, company: work.company, purpose: "pdf-summary", agent }), signal }), onSuccess: (intro) => change((current) => aiInputSnapshot(current) === inputSnapshot && JSON.stringify(current.intro) === introSnapshot ? { ...archiveCompanyVersion(current, "before-intro"), intro: IntroSchema.parse(intro) } : current) });
+      }}>PDF 상단 요약 만들기</button>{work.intro && <><label>PDF 상단 요약<textarea name="company-intro" rows={6} value={work.intro.longIntro} onChange={(event) => change((current) => ({ ...current, intro: { ...current.intro!, longIntro: event.target.value } }))} /></label><button onClick={() => change((current) => ({ ...archiveCompanyVersion(current, "before-intro"), intro: null }))}>기존 이력서 요약 사용</button></>}</div></details>
       <div className="company-detail-stage-footer">
         <p>내용을 확인했다면 제출할 PDF의 디자인을 고르세요.</p>
         <button className="primary" type="button" onClick={() => showExportStage("export")}>다음: PDF 디자인 선택</button>

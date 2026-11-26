@@ -292,3 +292,29 @@ test("URL 공고 다시 불러오기는 회사 이력서와 댓글을 보존하�
   await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
   await expect(page.getByRole("button", { name: "댓글 1개", exact: true })).toBeVisible();
 });
+
+test("두 보관 버전과 현재 편집본을 비교하고 복원한 뒤에도 직전 버전을 확인할 수 있다", async ({ page }) => {
+  const { work, stored } = await companyWithDeferredAi(page);
+  await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByRole("textbox", { name: "보관 메모 (선택)", exact: true }).fill("첫 제출용 표현");
+  await page.getByRole("button", { name: "현재 버전 보관", exact: true }).click();
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await page.getByText("PDF 상단 요약 · 선택 사항 · 작성됨", { exact: true }).click();
+  await page.getByRole("textbox", { name: "PDF 상단 요약", exact: true }).fill("수정한 PDF 소개");
+  await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
+  await page.getByRole("button", { name: "현재 버전 보관", exact: true }).click();
+  await expect.poll(() => stored().works[0].versions.length).toBe(2);
+  const [first, second] = stored().works[0].versions;
+  await page.getByText("보관 버전 2개", { exact: true }).click();
+  await page.getByText("버전 비교", { exact: true }).click();
+  await page.getByRole("combobox", { name: "이전 버전", exact: true }).selectOption(first.id);
+  await page.getByRole("combobox", { name: "비교 대상", exact: true }).selectOption(second.id);
+  const changes = page.getByRole("region", { name: "PDF 상단 요약", exact: true });
+  await expect(changes).toContainText("사용자가 작성한 소개글");
+  await expect(changes).toContainText("수정한 PDF 소개");
+  const firstVersion = page.getByRole("article").filter({ hasText: "첫 제출용 표현" });
+  await firstVersion.getByRole("button", { name: "현재 편집본 보관 후 이 버전 복원", exact: true }).click();
+  await expect.poll(() => stored().works[0].versions.at(-1)?.cause).toBe("before-restore");
+  await page.getByRole("combobox", { name: "비교 대상", exact: true }).selectOption("");
+  await expect(page.getByText("두 버전의 이력서와 PDF 상단 요약이 같습니다.", { exact: true })).toBeVisible();
+});

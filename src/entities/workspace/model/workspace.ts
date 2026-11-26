@@ -83,6 +83,16 @@ const CompanyPdfArtifactSchema = z.object({
 }).strict();
 export type CompanyPdfArtifact = z.infer<typeof CompanyPdfArtifactSchema>;
 
+const CompanyVersionSchema = z.object({
+  id: Id,
+  resume: ResumeSchema,
+  intro: IntroSchema.nullable(),
+  createdAt: Timestamp,
+  cause: z.enum(["manual", "before-tailoring", "before-edit", "before-enrichment", "before-intro", "before-restore"]).optional(),
+  note: z.string().max(300).optional(),
+}).strict();
+export type CompanyVersion = z.infer<typeof CompanyVersionSchema>;
+
 export const CompanyWorkSchema = z.object({
   id: Id,
   title: z.string().max(300),
@@ -103,7 +113,7 @@ export const CompanyWorkSchema = z.object({
   enrichment: z.array(EnrichmentSchema),
   confirmedExperiences: z.array(ConfirmedExperienceSchema).optional(),
   knownGaps: z.array(z.string()).optional(),
-  versions: z.array(z.object({ id: Id, resume: ResumeSchema, intro: IntroSchema.nullable(), createdAt: Timestamp }).strict()),
+  versions: z.array(CompanyVersionSchema),
   createdAt: Timestamp,
   updatedAt: Timestamp,
 }).strict();
