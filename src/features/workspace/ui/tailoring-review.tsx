@@ -17,13 +17,10 @@ const matchLabels = {
   gap: "추가 확인 필요",
 };
 
-export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, onSetRequirementGap, requirementActionsEnabled }: {
+export function TailoringReview({ work, onApply, onDismiss }: {
   work: CompanyWork;
   onApply: (resume: Resume) => void;
   onDismiss: () => void;
-  onCheckRequirement: (text: string) => void;
-  onSetRequirementGap: (text: string, marked: boolean) => void;
-  requirementActionsEnabled: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [showUnchanged, setShowUnchanged] = useState(false);
@@ -59,31 +56,6 @@ export function TailoringReview({ work, onApply, onDismiss, onCheckRequirement, 
         </div>
         <button type="button" onClick={onDismiss}>검토 닫기</button>
       </header>
-
-      <details className="tailoring-requirements">
-        <summary>공고 요건과 경험 연결 <span>{review.plan.requirementMatches.length}개</span></summary>
-        <p>제안에 사용한 이력서의 근거로 연결했습니다. 추가 확인이 필요한 요건은 자동으로 채우지 않습니다.</p>
-        {review.plan.requirementMatches.length === 0 && <p>연결된 공고 요건이 없습니다.</p>}
-        {review.plan.requirementMatches.map((match) => {
-          const requirement = requirements.get(match.requirementId);
-          const isKnownGap = Boolean(requirement && work.knownGaps?.includes(requirement.text));
-          const labelId = `tailoring-${match.requirementId}`;
-          return (
-            <div className="tailoring-requirement" key={match.requirementId}>
-              <span className="tailoring-match-label" data-match={isKnownGap ? "known-gap" : match.matchType}>{isKnownGap ? "해당 경험 없음" : matchLabels[match.matchType]}</span>
-              <strong id={labelId}>{requirement?.text ?? "공고 요건 원문을 찾지 못했습니다."}</strong>
-              <p>{match.reason}</p>
-              {match.evidenceIds.length > 0 && <details><summary>연결한 원본 근거 {match.evidenceIds.length}개</summary>
-                {match.evidenceIds.map((id) => <blockquote key={id}><strong>{evidence.get(id)?.title ?? "원본 근거"}</strong><p>{evidence.get(id)?.text ?? "이 근거의 원문을 찾지 못했습니다."}</p></blockquote>)}
-              </details>}
-              {requirement && (isKnownGap || match.matchType === "gap") && <div className="tailoring-requirement-actions">
-                {!isKnownGap && <button type="button" aria-describedby={labelId} disabled={!requirementActionsEnabled} onClick={() => onCheckRequirement(requirement.text)}>이 경험 확인하기</button>}
-                <button type="button" aria-describedby={labelId} disabled={!requirementActionsEnabled} onClick={() => onSetRequirementGap(requirement.text, !isKnownGap)}>{isKnownGap ? "기록 취소" : "해당 경험 없음"}</button>
-              </div>}
-            </div>
-          );
-        })}
-      </details>
 
       {unavailableMessage && <p className="tailoring-review-notice" role="status">{unavailableMessage}</p>}
       <div className="tailoring-selection-toolbar">

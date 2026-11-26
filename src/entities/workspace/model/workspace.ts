@@ -5,7 +5,7 @@ import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
 import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
 import { DocumentChangeSchema } from "./document-review";
-import { ResumeTailoringPlanSchema } from "@/entities/resume/model/resume-tailoring";
+import { RequirementMatchSchema, ResumeTailoringPlanSchema } from "@/entities/resume/model/resume-tailoring";
 
 const Id = z.string().uuid();
 const Timestamp = z.string().datetime();
@@ -89,6 +89,7 @@ export const CompanyWorkSchema = z.object({
   companySourceText: z.string().optional(),
   resumeDocument: ReviewDocumentSchema.nullable().optional(),
   tailoring: z.object({ sourceResume: ResumeSchema, editingSnapshot: ResumeSchema.optional(), plan: ResumeTailoringPlanSchema, resume: ResumeSchema }).strict().nullable().optional(),
+  requirementAssessment: z.object({ sourceResume: ResumeSchema, matches: z.array(RequirementMatchSchema) }).strict().optional(),
   pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
   pdfThemeId: z.enum(PDF_THEME_IDS).exclude(["custom"]).optional(),
   artifacts: z.array(CompanyPdfArtifactSchema).optional(),

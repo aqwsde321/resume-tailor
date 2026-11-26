@@ -235,6 +235,11 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await apply.click();
   await expect.poll(() => stored().works[0]?.resume?.headline).toBe("응답 시간 개선");
   await expect.poll(() => stored().works[0]?.resume?.summary).toBe("맞춤 소개");
+  await page.reload();
+  const coverage = page.getByRole("region", { name: "공고 요건 충족 현황" });
+  await expect(coverage).toContainText("필수 1개");
+  await coverage.getByText("공고 요건과 경험 연결", { exact: true }).click();
+  await expect(coverage).toContainText("최근 맞춤 제안에서 사용한 이력서 근거입니다.");
   expect(model).toBe("test-model");
 });
 
@@ -274,8 +279,11 @@ test("공고 요건에서 경험 보완을 시작하고 해당 경험 없음 기
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: result })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await page.goto(`/workspace/companies/${work.id}`);
-  await page.getByText("공고 요건과 경험 연결", { exact: false }).click();
-  await page.getByRole("button", { name: "이 경험 확인하기", exact: true }).click();
+  const coverage = page.getByRole("region", { name: "공고 요건 충족 현황" });
+  await expect(coverage).toContainText("필수 1개 · 직접 근거 0개 · 관련 경험 0개 · 미확인 1개");
+  await page.getByRole("button", { name: "공고 검토", exact: true }).click();
+  await coverage.getByText("공고 요건과 경험 연결", { exact: true }).click();
+  await coverage.getByRole("button", { name: "이 경험 확인하기", exact: true }).click();
   const topic = page.getByRole("textbox", { name: "보완할 내용", exact: true });
   await expect(topic).toHaveValue(document.text);
   await expect(topic).toBeFocused();

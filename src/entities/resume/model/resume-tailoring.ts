@@ -27,7 +27,7 @@ const TailoredResumeItemSchema = z
 
 const RequirementMatchTypeSchema = z.enum(["direct", "transferable", "adjacent", "gap"]);
 
-const RequirementMatchSchema = z
+export const RequirementMatchSchema = z
   .object({
     requirementId: z.string().trim().min(1).max(100),
     matchType: RequirementMatchTypeSchema,

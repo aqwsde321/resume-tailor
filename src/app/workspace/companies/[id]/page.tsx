@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useWorkspace } from "@/features/workspace/context";
 import { DocumentEditor } from "@/features/workspace/ui/document-editor";
+import { CompanyRequirementCoverage } from "@/features/workspace/ui/company-requirement-coverage";
 import { TailoringReview } from "@/features/workspace/ui/tailoring-review";
 import { StudioIcon } from "@/features/workspace/ui/studio-icon";
 import { EnrichmentPanel } from "@/features/workspace/ui/enrichment-panel";
@@ -66,8 +67,9 @@ export default function CompanyWorkPage() {
   const checkRequirement = (text: string) => {
     if (!enrichmentDetails.current) return;
     setEnrichmentTopicRequest({ workId: work.id, text });
+    setSelectedStage("edit");
     enrichmentDetails.current.open = true;
-    enrichmentTopicInput.current?.focus();
+    requestAnimationFrame(() => enrichmentTopicInput.current?.focus());
   };
   const canOrganize = Boolean(work.document.text.trim()) && !work.document.proposal && pendingComments === 0;
   const goTo = (next: Stage) => setSelectedStage(next);
@@ -84,7 +86,7 @@ export default function CompanyWorkPage() {
     void aiTask.run({
       label: "맞춤 이력서 제안 작성",
       execute: (signal) => postSseJson<ResumeTailoringResult>("/api/resume/tailor/stream", { resume: sourceResume, company: work.company, agent }, { signal }),
-      onSuccess: (result) => change((current) => aiInputSnapshot(current) === inputSnapshot ? { ...current, tailoring: { sourceResume, editingSnapshot, ...result } } : current),
+      onSuccess: (result) => change((current) => aiInputSnapshot(current) === inputSnapshot ? { ...current, tailoring: { sourceResume, editingSnapshot, ...result }, requirementAssessment: { sourceResume, matches: result.plan.requirementMatches } } : current),
     });
   };
   return <div className="company-detail">
@@ -93,6 +95,8 @@ export default function CompanyWorkPage() {
       <div><h1>{work.company?.companyName || work.title}</h1><p>{work.company?.jobTitle || "공고를 확인하고 회사에 맞는 이력서를 만들어 보세요."}</p></div>
       <span className="studio-state-badge">{!work.company ? "공고 확인 중" : !companyCurrent ? "공고 재확정 필요" : work.tailoring ? "맞춤 제안 검토 중" : "회사별 편집본"}</span>
     </header>
+    <CompanyRequirementCoverage work={work} actionsEnabled={!busy && companyCurrent && Boolean(work.resume)} onCheck={checkRequirement}
+      onMark={(text, marked) => change((current) => setCompanyRequirementGap(current, text, marked))} />
     <nav className="company-detail-steps company-compact-steps" aria-label="회사별 이력서 작업 단계">
       {stages.map((item, index) => <button type="button" key={item.id} aria-label={item.title} ref={(element) => { stageButtons.current[index] = element; }} aria-current={stage === item.id ? "step" : undefined} aria-controls={`company-stage-${item.id}`} disabled={!canOpenStage(item.id)} onClick={() => goTo(item.id)} onKeyDown={(event) => {
         if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
@@ -127,16 +131,14 @@ export default function CompanyWorkPage() {
         const sourceText = work.document.text;
         void aiTask.run({ label: "공고 내용 정리", execute: (signal) => workspaceRequest<Company>("/api/company", { ...jsonRequest({ text: sourceText, agent }), signal }), onSuccess: (company) => setCandidate({ company, sourceText }) });
       }}>검토한 공고 정리</button></div>
-      {candidate && <section className="company-detail-company-preview"><div className="company-detail-section-heading"><div><h2>정리된 공고 확인</h2><p>아래 내용이 맞으면 확정하고 맞춤 편집을 시작하세요.</p></div></div><h3>{candidate.company.companyName} · {candidate.company.jobTitle}</h3><p className="company-detail-prose">{candidate.company.jobDescription}</p><div className="company-detail-requirements"><section><h4>필수 요건</h4>{candidate.company.requirements.length ? <ul>{candidate.company.requirements.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>명시된 필수 요건이 없습니다.</p>}</section><section><h4>우대 요건</h4>{candidate.company.preferredSkills.length ? <ul>{candidate.company.preferredSkills.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>명시된 우대 요건이 없습니다.</p>}</section></div><button className="primary" disabled={candidate.sourceText !== work.document.text} onClick={() => { change((current) => ({ ...current, company: CompanySchema.parse(candidate.company), companySourceText: candidate.sourceText, title: `${candidate.company.companyName} · ${candidate.company.jobTitle}`, tailoring: null })); setCandidate(null); goTo("edit"); }}>이 공고로 확정</button></section>}
+      {candidate && <section className="company-detail-company-preview"><div className="company-detail-section-heading"><div><h2>정리된 공고 확인</h2><p>아래 내용이 맞으면 확정하고 맞춤 편집을 시작하세요.</p></div></div><h3>{candidate.company.companyName} · {candidate.company.jobTitle}</h3><p className="company-detail-prose">{candidate.company.jobDescription}</p><div className="company-detail-requirements"><section><h4>필수 요건</h4>{candidate.company.requirements.length ? <ul>{candidate.company.requirements.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>명시된 필수 요건이 없습니다.</p>}</section><section><h4>우대 요건</h4>{candidate.company.preferredSkills.length ? <ul>{candidate.company.preferredSkills.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>명시된 우대 요건이 없습니다.</p>}</section></div><button className="primary" disabled={candidate.sourceText !== work.document.text} onClick={() => { change((current) => ({ ...current, company: CompanySchema.parse(candidate.company), companySourceText: candidate.sourceText, title: `${candidate.company.companyName} · ${candidate.company.jobTitle}`, tailoring: null, requirementAssessment: undefined })); setCandidate(null); goTo("edit"); }}>이 공고로 확정</button></section>}
       {companyCurrent && !candidate && <div className="company-detail-stage-footer"><p>공고가 확정되었습니다. 회사에 맞춰 이력서를 편집할 수 있습니다.</p><button type="button" className="primary" onClick={() => goTo("edit")}>맞춤 편집으로 이동</button></div>}
     </section>
 
     {work.company && <section id="company-stage-edit" className="company-detail-panel" aria-label="맞춤 편집 단계" hidden={stage !== "edit"}>
       {workspace.master && workspace.master.version !== work.sourceResumeVersion && <section className="company-detail-notice"><div><strong>공통 이력서의 새 버전이 있습니다.</strong><p>기준 원본을 바꿔도 회사별 편집본은 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...refreshCompanySource(current, workspace.master!), tailoring: null }))}>새 공통 원본을 기준으로 선택</button></section>}
       <section className="company-detail-generator"><div><h2>맞춤 이력서</h2><p>회사에 필요한 경험을 골라 제안합니다. 직접 확인한 변경만 편집본에 반영됩니다.</p><span>공통 원본 버전 {work.sourceResumeVersion}</span></div><div className="company-detail-generator-actions"><button className="primary" disabled={busy || !companyCurrent || !work.resume} onClick={() => tailor(false)}>현재 편집본으로 맞춤 제안 받기</button><button disabled={busy || !companyCurrent || !work.sourceResume} onClick={() => tailor(true)}>공통 원본으로 맞춤 제안 받기</button></div></section>
-      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={setResume} onDismiss={() => change((current) => ({ ...current, tailoring: null }))}
-        requirementActionsEnabled={!busy && companyCurrent && Boolean(work.resume)} onCheckRequirement={checkRequirement}
-        onSetRequirementGap={(text, marked) => change((current) => setCompanyRequirementGap(current, text, marked))} />}
+      {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={setResume} onDismiss={() => change((current) => ({ ...current, tailoring: null }))} />}
       {work.resume && <>
         <section className="company-detail-current"><div className="company-detail-section-heading"><div><h2>회사별 편집본</h2><p>문장이나 기술을 드래그해 수정 요청을 남기세요. 공통 이력서는 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...current, versions: [...current.versions, { id: crypto.randomUUID(), resume: current.resume!, intro: current.intro, createdAt: new Date().toISOString() }] }))}>현재 버전 보관</button></div><DocumentEditor variant="studio" presentation="resume" hideHeading active={stage === "edit"} document={work.resumeDocument ?? fallbackResumeDocument!} settings={workspace.settings} onChange={(resumeDocument) => { change((current) => ({ ...current, resumeDocument })); setEditedCandidate(null); }} /><div className="company-detail-action-row"><p>문서를 정리한 뒤 반영할 내용을 한 번 더 확인합니다.</p><button className="primary" disabled={busy || !work.resumeDocument || Boolean(work.resumeDocument.proposal) || work.resumeDocument.annotations.some((item) => item.status === "pending")} onClick={() => {
           const sourceText = work.resumeDocument!.text;

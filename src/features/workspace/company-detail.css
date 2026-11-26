@@ -163,3 +163,24 @@ html:has(.company-pdf-dialog:modal) { overflow: hidden; }
 .company-pdf-dialog > footer { justify-content: flex-end; border-top: 1px solid #dee2eb; }
 .company-pdf-dialog > .company-pdf-preview { min-height: 0; overscroll-behavior: contain; }
 .company-pdf-dialog > p { margin: 0; padding: 16px; }
+
+.company-requirement-coverage {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--studio-border, #dbe2ea);
+  border-radius: 0.75rem;
+}
+
+.company-requirement-coverage h2,
+.company-requirement-coverage p {
+  margin: 0;
+}
+
+.company-requirement-coverage h2 {
+  font-size: 1rem;
+}
+
+.company-requirement-coverage details > p {
+  margin-block: 0.5rem;
+}
