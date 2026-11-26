@@ -143,6 +143,20 @@ describe("POST /api/resume/tailor/stream", () => {
     expect(serializedSchema).toContain("\"maxItems\":6");
   });
 
+  it("문구에 등장하는 기술 후보를 받아 검토 화면에 전달한다", async () => {
+    const withTechnologies = { ...plan, summary: {
+      ...plan.summary,
+      text: "QuickLoom으로 대시보드를 개발했습니다.",
+      technologies: ["QuickLoom"]
+    } };
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce(withTechnologies);
+
+    const events = parseSse(await (await post({ resume, company: companyFixture })).text());
+    expect(events.find((event) => event.event === "result")?.data.data.plan).toEqual(withTechnologies);
+    const output = JSON.stringify(vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.outputSchema);
+    expect(output.match(/"technologies":/g)).toHaveLength(4);
+  });
+
   it("이력서에 없는 근거 참조를 반환하면 결과를 내보내지 않는다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
       ...plan,

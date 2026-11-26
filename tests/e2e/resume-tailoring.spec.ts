@@ -121,7 +121,7 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
     const requestBody = route.request().postDataJSON() as { resume: typeof resume };
     const plan = {
       headline: {
-        text: "Beta Corp 제품에 맞는 관리자 도구 경험을 가진 개발자",
+        text: "Beta Corp 관리자 도구에 Kubernetes를 도입해 요청 200건을 처리한 개발자",
         evidenceIds: ["experience-1", "project-1"]
       },
       summary: {
@@ -214,6 +214,9 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
     page.getByText("Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다.")
   ).toBeVisible();
   await expect(page.getByText("프로젝트 · Admin Console").first()).toBeVisible();
+  const headline = page.locator(".resume-tailoring-copy-change").filter({ has: page.getByRole("heading", { name: "직무 제목" }) });
+  await expect(headline.getByText("수치 200건", { exact: true })).toBeVisible();
+  await expect(headline.getByText("기술 Kubernetes", { exact: true })).toBeVisible();
   const requirementMap = page.getByRole("region", { name: "공고 요건 매칭" });
   await expect(requirementMap).toContainText("필수 요건 3개 중 3개 근거 연결");
   await expect(requirementMap).toContainText("우대 조건 2개 중 1개 근거 연결");

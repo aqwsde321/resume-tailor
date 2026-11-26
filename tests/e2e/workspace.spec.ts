@@ -186,7 +186,7 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   let model = "";
   await page.route("**/api/resume/tailor/stream", (route) => {
     const request = route.request().postDataJSON(); model = request.agent.model;
-    const plan = { headline: { text: "맞춤 제목", evidenceIds: ["summary"] }, summary: { text: "맞춤 소개", evidenceIds: ["summary"] }, experience: [], projects: [], requirementMatches: [], skillIds: [], highlightIds: [], strengthIds: [] };
+    const plan = { headline: { text: "Kubernetes로 응답 시간을 40% 개선", evidenceIds: ["summary"] }, summary: { text: "맞춤 소개", evidenceIds: ["summary"] }, experience: [], projects: [], requirementMatches: [], skillIds: [], highlightIds: [], strengthIds: [] };
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume: request.resume } })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await mockModelCatalog(page);
@@ -205,6 +205,13 @@ test("회사별 공고를 확정하면 소개글 없이 PDF를 만들 수 있고
   await expect(page.getByRole("button", { name: "PDF 생성·다운로드", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "맞춤 편집", exact: true }).click();
   await page.getByRole("button", { name: "현재 편집본으로 맞춤 제안 받기", exact: true }).click();
+  const review = page.getByRole("region", { name: "회사 맞춤 변경 검토" });
+  const warning = review.getByText("연결된 원본에서 확인되지 않는 표현", { exact: true });
+  await expect(warning).toHaveCount(1);
+  const flagged = review.getByRole("article").filter({ has: page.getByRole("checkbox", { name: "한 줄 소개", exact: true }) });
+  await expect(flagged.getByText("연결된 원본에서 확인되지 않는 표현", { exact: true })).toBeVisible();
+  await expect(flagged.getByText("수치 40%", { exact: true })).toBeVisible();
+  await expect(flagged.getByText("기술 Kubernetes", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "변경 전체 선택", exact: true }).click();
   await page.getByRole("button", { name: /선택한 \d+개 변경 반영/ }).click();
   await expect.poll(() => stored().works[0]?.resume?.summary).toBe("맞춤 소개");

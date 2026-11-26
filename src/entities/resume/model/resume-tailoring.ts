@@ -4,11 +4,13 @@ import { ResumeSchema } from "@/shared/lib/schemas";
 import type { Company, Resume } from "@/shared/lib/types";
 
 const EvidenceIdsSchema = z.array(z.string().trim().min(1).max(100)).min(1).max(4);
+const TechnologiesSchema = z.array(z.string().trim().min(1).max(80)).max(30);
 
 const TailoredTextSchema = z
   .object({
     text: z.string().trim().min(1).max(1600),
-    evidenceIds: EvidenceIdsSchema
+    evidenceIds: EvidenceIdsSchema,
+    technologies: TechnologiesSchema.optional()
   })
   .strict();
 
@@ -16,7 +18,8 @@ const TailoredResumeItemSchema = z
   .object({
     sourceId: z.string().trim().min(1).max(100),
     description: z.string().trim().min(1).max(1600),
-    evidenceIds: EvidenceIdsSchema
+    evidenceIds: EvidenceIdsSchema,
+    technologies: TechnologiesSchema.optional()
   })
   .strict();
 
@@ -260,6 +263,10 @@ export function applyResumeTailoringPlan(resume: Resume, plan: ResumeTailoringPl
   };
 }
 
+const technologiesOutputSchema = {
+  type: "array", maxItems: 30, items: { type: "string", minLength: 1, maxLength: 80 }
+} as const;
+
 export const resumeTailoringOutputSchema = {
   type: "object",
   additionalProperties: false,
@@ -277,18 +284,20 @@ export const resumeTailoringOutputSchema = {
     headline: {
       type: "object",
       additionalProperties: false,
-      required: ["text", "evidenceIds"],
+      required: ["text", "evidenceIds", "technologies"],
       properties: {
         text: { type: "string", maxLength: 1600 },
+        technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
     },
     summary: {
       type: "object",
       additionalProperties: false,
-      required: ["text", "evidenceIds"],
+      required: ["text", "evidenceIds", "technologies"],
       properties: {
         text: { type: "string", maxLength: 1600 },
+        technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
     },
@@ -298,10 +307,11 @@ export const resumeTailoringOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sourceId", "description", "evidenceIds"],
+        required: ["sourceId", "description", "evidenceIds", "technologies"],
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: 1600 },
+          technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
       }
@@ -312,10 +322,11 @@ export const resumeTailoringOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sourceId", "description", "evidenceIds"],
+        required: ["sourceId", "description", "evidenceIds", "technologies"],
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: 1600 },
+          technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
       }

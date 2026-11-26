@@ -5,7 +5,9 @@ import {
   buildResumeTailoringRequirements,
   type ResumeTailoringRequirementMatch
 } from "@/entities/resume/model/resume-tailoring";
+import { buildTailoringClaimWarnings } from "@/entities/resume/model/tailoring-claim-warnings";
 import type { ResumeTailoringReview } from "@/features/pdf/hooks/use-resume-tailoring-workflow";
+import { TailoringClaimWarning } from "@/features/resume/ui/tailoring-claim-warning";
 
 const MATCH_TYPE_LABELS: Record<ResumeTailoringRequirementMatch["matchType"], string> = {
   direct: "직접 일치",
@@ -29,6 +31,7 @@ export function ResumeTailoringReviewPanel({
     buildResumeTailoringEvidence(review.sourceResume).map((item) => [item.id, item])
   );
   const requirements = buildResumeTailoringRequirements(review.sourceCompany);
+  const claimWarnings = buildTailoringClaimWarnings(review.sourceResume, review.plan, review.sourceCompany.techStack);
   const matchesByRequirementId = new Map(
     review.plan.requirementMatches.map((item) => [item.requirementId, item])
   );
@@ -118,6 +121,7 @@ export function ResumeTailoringReviewPanel({
         <h4>직무 제목</h4>
         <p className="resume-tailoring-before">기존: {review.sourceResume.headline || "없음"}</p>
         <p className="resume-tailoring-after">맞춤: {review.plan.headline.text}</p>
+        <TailoringClaimWarning warning={claimWarnings.get("headline")} />
         {renderEvidence(review.plan.headline.evidenceIds)}
       </section>
 
@@ -125,6 +129,7 @@ export function ResumeTailoringReviewPanel({
         <h4>요약</h4>
         <p className="resume-tailoring-before">기존: {review.sourceResume.summary || "없음"}</p>
         <p className="resume-tailoring-after">맞춤: {review.plan.summary.text}</p>
+        <TailoringClaimWarning warning={claimWarnings.get("summary")} />
         {renderEvidence(review.plan.summary.evidenceIds)}
       </section>
 
@@ -139,6 +144,7 @@ export function ResumeTailoringReviewPanel({
                 <strong>{source?.title ?? item.sourceId}</strong>
                 {original && <p className="resume-tailoring-before">기존: {original.description}</p>}
                 <p className="resume-tailoring-after">맞춤: {item.description}</p>
+                <TailoringClaimWarning warning={claimWarnings.get(item.sourceId)} />
                 {renderEvidence(item.evidenceIds)}
               </article>
             );
@@ -157,6 +163,7 @@ export function ResumeTailoringReviewPanel({
                 <strong>{source?.title ?? item.sourceId}</strong>
                 {original && <p className="resume-tailoring-before">기존: {original.description}</p>}
                 <p className="resume-tailoring-after">맞춤: {item.description}</p>
+                <TailoringClaimWarning warning={claimWarnings.get(item.sourceId)} />
                 {renderEvidence(item.evidenceIds)}
               </article>
             );

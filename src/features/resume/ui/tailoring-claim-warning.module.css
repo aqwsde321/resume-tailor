@@ -1,0 +1,16 @@
+.warning {
+  margin-block-start: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e7ca8e;
+  border-radius: 6px;
+  background: #fff8e9;
+  color: #69471b;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.warning ul {
+  margin: 3px 0 0;
+  padding-inline-start: 1.25em;
+}
