@@ -42,7 +42,12 @@ export default function PdfPage() {
   const resumeTailoring = useResumeTailoringWorkflow({
     company: pdfCompany,
     resume: pdfResume,
-    setResume: setPdfResume
+    setResume: (resume) => {
+      setPdfResume(resume);
+      if (resume.summary !== pdfResume?.summary) {
+        setPdfIntro((previous) => previous && { ...previous, longIntro: resume.summary });
+      }
+    }
   });
 
   return (

@@ -26,6 +26,21 @@ const plan: ResumeTailoringPlan = {
 };
 
 describe("맞춤 이력서 문구의 근거 경고", () => {
+  it("같은 요약의 다른 문구에만 인용된 수치와 기술은 경고한다", () => {
+    const warnings = buildTailoringClaimWarnings(source, {
+      ...plan,
+      summary: {
+        text: "Kubernetes로 응답을 20% 개선했습니다.\n대시보드를 운영했습니다.",
+        evidenceIds: ["summary", "project-1"],
+        lineCitations: [
+          { requirementIds: [], evidenceIds: ["summary"] },
+          { requirementIds: [], evidenceIds: ["project-1"] },
+        ],
+      },
+    });
+    expect(warnings.get("summary")).toEqual({ numbers: ["20%"], technologies: ["Kubernetes"] });
+  });
+
   it("공고에만 있는 기술과 단위가 다른 수치를 해당 제안에 표시한다", () => {
     const warnings = buildTailoringClaimWarnings(source, {
       ...plan,

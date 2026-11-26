@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   applyResumeTailoringPlan,
   buildResumeTailoringEvidence,
-  buildResumeTailoringRequirements,
+  buildResumeTailoringTargets,
   isResumeTailoringPlanValid,
   ResumeTailoringPlanSchema,
   ResumeTailoringResultSchema,
@@ -36,7 +36,7 @@ const RequestSchema = z
 
 function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<typeof CompanySchema>, confirmedExperiences?: ConfirmedExperience[]) {
   const evidence = buildResumeTailoringEvidence(resume, confirmedExperiences);
-  const requirements = buildResumeTailoringRequirements(company);
+  const targets = buildResumeTailoringTargets(company);
   const safeResume = {
     ...resume,
     pdfProfileImageDataUrl: "",
@@ -47,8 +47,8 @@ function buildInputText(resume: z.infer<typeof ResumeSchema>, company: z.infer<t
     "[채용 공고]",
     JSON.stringify(company, null, 2),
     "",
-    "[요건 ID 목록: 각 항목을 정확히 한 번씩 매칭할 것]",
-    JSON.stringify(requirements, null, 2),
+    "[공고 요건·업무·도메인 ID 목록: 각 항목을 정확히 한 번씩 매칭할 것]",
+    JSON.stringify(targets, null, 2),
     "",
     "[원본 이력서: 사실을 추가하지 말고, 기존 내용을 재구성할 것]",
     JSON.stringify(safeResume, null, 2),
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         });
         const plan = parseTaskResult("맞춤 이력서", ResumeTailoringPlanSchema, generated);
 
-        if (!isResumeTailoringPlanValid(body.resume, body.company, plan, body.confirmedExperiences)) {
+        if (!plan.headline.lineCitations || !isResumeTailoringPlanValid(body.resume, body.company, plan, body.confirmedExperiences)) {
           throw new HttpError(502, "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요.");
         }
 

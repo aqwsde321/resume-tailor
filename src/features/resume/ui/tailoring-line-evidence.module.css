@@ -1,0 +1,46 @@
+.lines {
+  display: grid;
+  gap: 8px;
+}
+
+.line {
+  border: 1px solid #dee2eb;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.line > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.line > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.sources {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #dee2eb;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.sources h4,
+.sources blockquote {
+  margin: 0;
+}
+
+.sources h4:not(:first-child) {
+  margin-top: 4px;
+}
+
+.sources blockquote {
+  border-inline-start: 2px solid #c8bde9;
+  padding-inline-start: 10px;
+  white-space: pre-wrap;
+}

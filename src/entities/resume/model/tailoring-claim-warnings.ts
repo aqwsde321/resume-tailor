@@ -1,4 +1,4 @@
-import { buildResumeTailoringEvidence, type ResumeTailoringPlan } from "./resume-tailoring";
+import { buildResumeTailoringEvidence, splitTailoringLines, type ResumeTailoringPlan } from "./resume-tailoring";
 import type { ConfirmedExperience } from "./confirmed-experience";
 import type { Resume } from "@/shared/lib/types";
 
@@ -95,13 +95,20 @@ export function buildTailoringClaimWarnings(
     ...confirmedExperiences.flatMap(({ draft }) => draft.techStack),
   ];
   const warnings = new Map<string, TailoringClaimWarnings>();
-  for (const { id, text, evidenceIds, technologies = [] } of proposals) {
-    const evidence = evidenceIds.map((id) => evidenceById.get(id) ?? "");
+  for (const { id, text, evidenceIds, lineCitations, technologies = [] } of proposals) {
     const technologyClaims = technologyMatcher([...knownTechnologies, ...technologies]);
-    const missingNumbers = unsupportedClaims(numberClaims(text), evidence, numberClaims);
-    const missingTechnologies = unsupportedClaims(technologyClaims(text), evidence, technologyClaims);
-    if (missingNumbers.length || missingTechnologies.length) {
-      warnings.set(id, { numbers: missingNumbers, technologies: missingTechnologies });
+    const lines = lineCitations
+      ? splitTailoringLines(text).map((line, index) => ({ text: line, evidenceIds: lineCitations[index]?.evidenceIds ?? [] }))
+      : [{ text, evidenceIds }];
+    const numbers = new Set<string>();
+    const unsupportedTechnologies = new Set<string>();
+    for (const line of lines) {
+      const evidence = line.evidenceIds.map((evidenceId) => evidenceById.get(evidenceId) ?? "");
+      unsupportedClaims(numberClaims(line.text), evidence, numberClaims).forEach((value) => numbers.add(value));
+      unsupportedClaims(technologyClaims(line.text), evidence, technologyClaims).forEach((value) => unsupportedTechnologies.add(value));
+    }
+    if (numbers.size || unsupportedTechnologies.size) {
+      warnings.set(id, { numbers: [...numbers], technologies: [...unsupportedTechnologies] });
     }
   }
   return warnings;

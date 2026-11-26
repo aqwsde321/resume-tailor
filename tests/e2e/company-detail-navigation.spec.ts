@@ -95,6 +95,74 @@ test("소개글 재작성 중 사용자가 고친 문장은 늦은 응답으로 
   await expect.poll(() => stored().works[0].intro?.longIntro).toBe("지금 직접 고친 소개글");
 });
 
+test("맞춤 요약은 문구별 공고 요건과 원본 근거를 보여주고 PDF 상단에 반영한다", async ({ page }) => {
+  const { work, stored } = await companyWithDeferredAi(page);
+  work.company = CompanySchema.parse({
+    ...work.company, requirements: ["장애 대응"], jobDescription: "결제 실패 원인 추적",
+  });
+  work.resume = ResumeSchema.parse({
+    ...work.resume,
+    experience: [{ company: "커머스 팀", role: "개발자", description: "주문 장애 재처리" }],
+    projects: [{ name: "알림 도구", description: "실패 로그 추적" }],
+  });
+  const first = "주문 장애에 대응하고 재처리를 담당했습니다.";
+  const second = "알림 도구에서 실패 로그를 추적했습니다.";
+  const plan = {
+    headline: { text: "운영 장애에 대응한 개발자", evidenceIds: ["experience-1"] },
+    summary: {
+      text: first + "\n" + second,
+      evidenceIds: ["experience-1", "project-1"],
+      lineCitations: [
+        { requirementIds: ["requirement-1"], evidenceIds: ["experience-1"] },
+        { requirementIds: ["job-context"], evidenceIds: ["project-1"] },
+      ],
+    },
+    experience: [], projects: [], skillIds: [], highlightIds: [], strengthIds: [],
+    requirementMatches: [
+      { requirementId: "requirement-1", matchType: "direct", evidenceIds: ["experience-1"], reason: "장애를 직접 대응했습니다." },
+      { requirementId: "job-context", matchType: "transferable", evidenceIds: ["project-1"], reason: "실패 원인을 추적한 경험입니다." },
+    ],
+  };
+  await page.route("**/api/resume/tailor/stream", (route) => route.fulfill({
+    contentType: "text/event-stream",
+    body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume: work.resume } })}\n\nevent: done\ndata: {"ok":true}\n\n`,
+  }));
+  await page.route("**/api/pdf/preview**", (route) => route.fulfill({ json: { ok: true, data: { pages: [] } } }));
+  await page.route("**/api/workspace/export", (route) => route.fulfill({ contentType: "application/pdf", body: "%PDF-test" }));
+
+  await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByRole("button", { name: "현재 편집본으로 맞춤 제안 받기", exact: true }).click();
+  const review = page.getByRole("region", { name: "회사 맞춤 변경 검토" });
+  const summary = review.getByRole("article").filter({ has: page.getByRole("checkbox", { name: "소개", exact: true }) });
+  const firstEvidence = summary.getByText(first, { exact: true });
+  await firstEvidence.click();
+  const firstLine = summary.locator("details").filter({ has: page.getByText(first, { exact: true }) });
+  await expect(firstLine).toContainText("장애 대응");
+  await expect(firstLine).toContainText("주문 장애 재처리");
+  await expect(firstLine).not.toContainText("실패 로그 추적");
+  const secondEvidence = summary.getByText(second, { exact: true });
+  await secondEvidence.click();
+  const secondLine = summary.locator("details").filter({ has: page.getByText(second, { exact: true }) });
+  await expect(secondLine).toContainText("결제 실패 원인 추적");
+  await expect(secondLine).toContainText("전이 가능한 경험");
+  await expect(secondLine).toContainText("실패 로그 추적");
+
+  await summary.getByRole("checkbox", { name: "소개", exact: true }).check();
+  await review.getByRole("button", { name: "선택한 1개 변경 반영" }).click();
+  await expect.poll(() => stored().works[0].resume?.summary).toBe(plan.summary.text);
+  await expect.poll(() => stored().works[0].intro).toBeNull();
+  expect(stored().works[0].versions.at(-1)?.intro?.longIntro).toBe("사용자가 작성한 소개글");
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await expect(page.getByRole("region", { name: "확인할 이력서 본문" })).toContainText(first);
+  await page.getByRole("button", { name: "PDF 디자인·다운로드", exact: true }).click();
+  await page.getByRole("button", { name: "Modern · Forest 선택", exact: true }).click();
+  const exportRequest = page.waitForRequest((request) => request.url().endsWith("/api/workspace/export"));
+  const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "PDF 생성·다운로드", exact: true }).click();
+  expect((await exportRequest).postDataJSON()).toMatchObject({ resume: { summary: plan.summary.text }, intro: null });
+  await downloaded;
+});
+
 test("메일 첨부 PDF를 기본 제출본으로 보여주고 실제 제출한 다른 PDF를 고정한다", async ({ page }) => {
   const { work, stored } = await companyWithDeferredAi(page);
   const attachmentIds = Array.from({ length: 3 }, () => crypto.randomUUID());

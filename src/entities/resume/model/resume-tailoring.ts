@@ -5,6 +5,11 @@ import type { Company, Resume } from "@/shared/lib/types";
 import type { ConfirmedExperience } from "./confirmed-experience";
 
 const EvidenceIdsSchema = z.array(z.string().trim().min(1).max(100)).min(1).max(4);
+const LineCitationsSchema = z.array(z.object({
+  evidenceIds: EvidenceIdsSchema,
+  requirementIds: z.array(z.string().trim().min(1).max(100)).max(4),
+}).strict()).min(1).max(5);
+export type TailoringLineCitation = z.infer<typeof LineCitationsSchema>[number];
 const TechnologiesSchema = z.array(z.string().trim().min(1).max(80)).max(30);
 export const MAX_TAILORING_COPY_LENGTH = 1600;
 const TailoringCopySchema = z.string().trim().min(1).max(MAX_TAILORING_COPY_LENGTH);
@@ -13,6 +18,7 @@ const TailoredTextSchema = z
   .object({
     text: TailoringCopySchema,
     evidenceIds: EvidenceIdsSchema,
+    lineCitations: LineCitationsSchema.optional(),
     technologies: TechnologiesSchema.optional()
   })
   .strict();
@@ -22,6 +28,7 @@ const TailoredResumeItemSchema = z
     sourceId: z.string().trim().min(1).max(100),
     description: TailoringCopySchema,
     evidenceIds: EvidenceIdsSchema,
+    lineCitations: LineCitationsSchema.optional(),
     technologies: TechnologiesSchema.optional()
   })
   .strict();
@@ -67,17 +74,25 @@ export type ResumeTailoringPlan = z.infer<typeof ResumeTailoringPlanSchema>;
 export type ResumeTailoringRequirementMatch = z.infer<typeof RequirementMatchSchema>;
 export type ResumeTailoringResult = z.infer<typeof ResumeTailoringResultSchema>;
 
+export function splitTailoringLines(text: string): string[] {
+  return text.split(/\r\n?|\n/).map((line) => line.trim()).filter(Boolean);
+}
+
 export function reviseTailoringPlan(plan: ResumeTailoringPlan, revisions: ReadonlyMap<string, string>): ResumeTailoringPlan {
   if (revisions.size === 0) return plan;
 
-  const reviseItem = (item: ResumeTailoringPlan["experience"][number]) => ({
-    ...item,
-    description: revisions.get(item.sourceId) ?? item.description,
-  });
+  const reviseText = (id: string, item: ResumeTailoringPlan["summary"]) => {
+    const text = revisions.get(id);
+    return text && text !== item.text ? { ...item, text, lineCitations: undefined } : item;
+  };
+  const reviseItem = (item: ResumeTailoringPlan["experience"][number]) => {
+    const description = revisions.get(item.sourceId);
+    return description && description !== item.description ? { ...item, description, lineCitations: undefined } : item;
+  };
   return {
     ...plan,
-    headline: { ...plan.headline, text: revisions.get("headline") ?? plan.headline.text },
-    summary: { ...plan.summary, text: revisions.get("summary") ?? plan.summary.text },
+    headline: reviseText("headline", plan.headline),
+    summary: reviseText("summary", plan.summary),
     experience: plan.experience.map(reviseItem),
     projects: plan.projects.map(reviseItem),
   };
@@ -103,6 +118,16 @@ export function buildResumeTailoringRequirements(company: Company): ResumeTailor
     }))
   ].filter((item) => item.text.length > 0);
 }
+
+export function buildResumeTailoringTargets(company: Company) {
+  return [
+    ...buildResumeTailoringRequirements(company),
+    { id: "job-context", type: "responsibilities" as const, text: company.jobDescription.trim() },
+    { id: "company-context", type: "domain" as const, text: company.companyDescription.trim() },
+  ].filter(({ text }) => text.length > 0);
+}
+
+export type ResumeTailoringTarget = ReturnType<typeof buildResumeTailoringTargets>[number];
 
 const MAX_EVIDENCE_ITEMS = 68;
 const MAX_EVIDENCE_TEXT_LENGTH = 1600;
@@ -204,7 +229,13 @@ export function isResumeTailoringPlanValid(
   confirmedExperiences: readonly ConfirmedExperience[] = [],
 ): boolean {
   const evidenceIds = new Set(buildResumeTailoringEvidence(resume, confirmedExperiences).map((item) => item.id));
-  const requirementIds = new Set(buildResumeTailoringRequirements(company).map((item) => item.id));
+  const copies = [
+    plan.headline, plan.summary,
+    ...[...plan.experience, ...plan.projects].map((item) => ({ ...item, text: item.description })),
+  ];
+  const hasLineCitations = copies.some((copy) => copy.lineCitations !== undefined);
+  const targets = hasLineCitations ? buildResumeTailoringTargets(company) : buildResumeTailoringRequirements(company);
+  const requirementIds = new Set(targets.map((item) => item.id));
   const experienceIds = new Set(resume.experience.slice(0, 10).map((_, index) => `experience-${index + 1}`));
   const projectIds = new Set(resume.projects.slice(0, 12).map((_, index) => `project-${index + 1}`));
   const skillIds = new Set(resume.techStack.slice(0, 12).map((_, index) => `skill-${index + 1}`));
@@ -213,12 +244,7 @@ export function isResumeTailoringPlanValid(
   const strengths = resume.pdfStrengths.length > 0 ? resume.pdfStrengths : resume.strengths;
   const strengthIds = new Set(strengths.slice(0, 8).map((_, index) => `strength-${index + 1}`));
 
-  const citationsAreValid = [
-    ...plan.headline.evidenceIds,
-    ...plan.summary.evidenceIds,
-    ...plan.experience.flatMap((item) => item.evidenceIds),
-    ...plan.projects.flatMap((item) => item.evidenceIds)
-  ].every((id) => evidenceIds.has(id));
+  const citationsAreValid = copies.every((copy) => includesKnownIds(copy.evidenceIds, evidenceIds));
 
   const experienceIsValid =
     plan.experience.every(
@@ -228,6 +254,7 @@ export function isResumeTailoringPlanValid(
     plan.projects.every(
       (item) => projectIds.has(item.sourceId) && item.evidenceIds.includes(item.sourceId)
     ) && new Set(plan.projects.map((item) => item.sourceId)).size === plan.projects.length;
+  const matchesById = new Map(plan.requirementMatches.map((item) => [item.requirementId, item]));
   const requirementIdsInPlan = plan.requirementMatches.map((item) => item.requirementId);
   const requirementMatchesAreValid =
     requirementIdsInPlan.length === requirementIds.size &&
@@ -240,9 +267,21 @@ export function isResumeTailoringPlanValid(
 
       return referencesKnownEvidence && evidenceMatchesType;
     });
+  const lineCitationsAreValid = !hasLineCitations || copies.every(({ text, evidenceIds, lineCitations }) => {
+    if (!lineCitations || lineCitations.length !== splitTailoringLines(text).length) return false;
+    const citedEvidence = new Set(lineCitations.flatMap((line) => line.evidenceIds));
+    return citedEvidence.size === evidenceIds.length && evidenceIds.every((id) => citedEvidence.has(id)) &&
+      lineCitations.every((line) => includesKnownIds(line.evidenceIds, citedEvidence) &&
+        includesKnownIds(line.requirementIds, requirementIds) &&
+        line.requirementIds.every((id) => {
+          const match = matchesById.get(id);
+          return match && match.matchType !== "gap" && line.evidenceIds.some((evidenceId) => match.evidenceIds.includes(evidenceId));
+        }));
+  });
 
   return (
     citationsAreValid &&
+    lineCitationsAreValid &&
     experienceIsValid &&
     projectsAreValid &&
     requirementMatchesAreValid &&
@@ -296,6 +335,17 @@ export function applyResumeTailoringPlan(resume: Resume, plan: ResumeTailoringPl
 const technologiesOutputSchema = {
   type: "array", maxItems: 30, items: { type: "string", minLength: 1, maxLength: 80 }
 } as const;
+const lineCitationsOutputSchema = {
+  type: "array", minItems: 1, maxItems: 5,
+  items: {
+    type: "object", additionalProperties: false,
+    required: ["evidenceIds", "requirementIds"],
+    properties: {
+      evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } },
+      requirementIds: { type: "array", maxItems: 4, items: { type: "string" } },
+    },
+  },
+} as const;
 
 export const resumeTailoringOutputSchema = {
   type: "object",
@@ -314,9 +364,10 @@ export const resumeTailoringOutputSchema = {
     headline: {
       type: "object",
       additionalProperties: false,
-      required: ["text", "evidenceIds", "technologies"],
+      required: ["text", "evidenceIds", "technologies", "lineCitations"],
       properties: {
         text: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
+        lineCitations: lineCitationsOutputSchema,
         technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
@@ -324,9 +375,10 @@ export const resumeTailoringOutputSchema = {
     summary: {
       type: "object",
       additionalProperties: false,
-      required: ["text", "evidenceIds", "technologies"],
+      required: ["text", "evidenceIds", "technologies", "lineCitations"],
       properties: {
         text: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
+        lineCitations: lineCitationsOutputSchema,
         technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }
@@ -337,10 +389,11 @@ export const resumeTailoringOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sourceId", "description", "evidenceIds", "technologies"],
+        required: ["sourceId", "description", "evidenceIds", "technologies", "lineCitations"],
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
+          lineCitations: lineCitationsOutputSchema,
           technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }
@@ -352,10 +405,11 @@ export const resumeTailoringOutputSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sourceId", "description", "evidenceIds", "technologies"],
+        required: ["sourceId", "description", "evidenceIds", "technologies", "lineCitations"],
         properties: {
           sourceId: { type: "string" },
           description: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
+          lineCitations: lineCitationsOutputSchema,
           technologies: technologiesOutputSchema,
           evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
         }

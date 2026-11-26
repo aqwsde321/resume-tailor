@@ -16,6 +16,7 @@ describe("회사별 이력서 변경 비교", () => {
     const source = ResumeSchema.parse({ summary: "공통 소개", projects: [{ name: "A", description: "공통 내용" }] });
     const current = ResumeSchema.parse({ summary: "직접 고친 소개", projects: [{ name: "B", description: "유지" }, { name: "A", description: "직접 고친 내용" }] });
     const rows = buildTailoringReviewRows(current, source, plan);
+    expect(rows.map(({ id }) => id)).toEqual(["headline", "summary", "project-1", "skills", "highlights", "strengths"]);
     expect(rows.find((row) => row.id === "summary")?.before).toBe("직접 고친 소개");
     expect(rows.find((row) => row.id === "project-1")).toMatchObject({ before: "직접 고친 내용", after: "맞춤 프로젝트", changed: true, addsItem: false });
     const applied = mergeTailoringSelection(current, source, plan, ["project-1"]);

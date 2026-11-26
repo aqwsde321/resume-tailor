@@ -4,13 +4,16 @@ import {
   applyResumeTailoringPlan,
   buildResumeTailoringEvidence,
   buildResumeTailoringRequirements,
+  buildResumeTailoringTargets,
   reviseTailoringPlan,
-  type ResumeTailoringRequirementMatch
+  type ResumeTailoringRequirementMatch,
+  type TailoringLineCitation,
 } from "@/entities/resume/model/resume-tailoring";
 import { buildTailoringClaimWarnings } from "@/entities/resume/model/tailoring-claim-warnings";
 import type { ResumeTailoringReview } from "@/features/pdf/hooks/use-resume-tailoring-workflow";
 import { useTailoringCopyEdits } from "@/features/resume/hooks/use-tailoring-copy-edits";
 import { TailoringCopyReview } from "@/features/resume/ui/tailoring-copy-review";
+import { TailoringLineEvidence } from "@/features/resume/ui/tailoring-line-evidence";
 import type { Resume } from "@/shared/lib/types";
 
 const MATCH_TYPE_LABELS: Record<ResumeTailoringRequirementMatch["matchType"], string> = {
@@ -37,6 +40,7 @@ export function ResumeTailoringReviewPanel({
     buildResumeTailoringEvidence(review.sourceResume).map((item) => [item.id, item])
   );
   const requirements = buildResumeTailoringRequirements(review.sourceCompany);
+  const targets = new Map(buildResumeTailoringTargets(review.sourceCompany).map((target) => [target.id, target]));
   const claimWarnings = buildTailoringClaimWarnings(review.sourceResume, plan, review.sourceCompany.techStack);
   const matchesByRequirementId = new Map(
     review.plan.requirementMatches.map((item) => [item.requirementId, item])
@@ -57,6 +61,20 @@ export function ResumeTailoringReviewPanel({
       })}
     </ul>
   );
+
+  const renderCopy = (id: string, text: string, originalText: string, evidenceIds: string[], citations?: TailoringLineCitation[]) => {
+    const lineEvidence = citations && <TailoringLineEvidence text={originalText} citations={citations}
+      evidence={evidenceById} targets={targets} matches={matchesByRequirementId} />;
+    return <>
+      <TailoringCopyReview id={id} text={text} warning={claimWarnings.get(id)} edits={edits}>
+        {lineEvidence && text === originalText ? lineEvidence : <p className="resume-tailoring-after">맞춤: {text}</p>}
+      </TailoringCopyReview>
+      {lineEvidence ? text !== originalText && <>
+        <p>AI가 처음 제안한 문구와 그때 연결한 근거입니다.</p>
+        {lineEvidence}
+      </> : renderEvidence(evidenceIds)}
+    </>;
+  };
 
   const renderRequirements = (type: "required" | "preferred") =>
     requirements
@@ -96,7 +114,7 @@ export function ResumeTailoringReviewPanel({
         <div>
           <p className="card-kicker">검토 후 적용</p>
           <h3>공고에 맞춘 이력서 초안</h3>
-          <p>원본 경력과 프로젝트에서 바뀐 표현을 확인하고 적용해 주세요.</p>
+          <p>바뀐 문구와 원본 경험을 확인해 주세요. 요약을 적용하면 PDF 상단에도 반영됩니다.</p>
         </div>
       </header>
 
@@ -126,35 +144,26 @@ export function ResumeTailoringReviewPanel({
       <section className="resume-tailoring-copy-change">
         <h4>직무 제목</h4>
         <p className="resume-tailoring-before">기존: {review.sourceResume.headline || "없음"}</p>
-        <TailoringCopyReview id="headline" text={plan.headline.text} warning={claimWarnings.get("headline")} edits={edits}>
-          <p className="resume-tailoring-after">맞춤: {plan.headline.text}</p>
-        </TailoringCopyReview>
-        {renderEvidence(plan.headline.evidenceIds)}
+        {renderCopy("headline", plan.headline.text, review.plan.headline.text, plan.headline.evidenceIds, review.plan.headline.lineCitations)}
       </section>
 
       <section className="resume-tailoring-copy-change">
         <h4>요약</h4>
         <p className="resume-tailoring-before">기존: {review.sourceResume.summary || "없음"}</p>
-        <TailoringCopyReview id="summary" text={plan.summary.text} warning={claimWarnings.get("summary")} edits={edits}>
-          <p className="resume-tailoring-after">맞춤: {plan.summary.text}</p>
-        </TailoringCopyReview>
-        {renderEvidence(plan.summary.evidenceIds)}
+        {renderCopy("summary", plan.summary.text, review.plan.summary.text, plan.summary.evidenceIds, review.plan.summary.lineCitations)}
       </section>
 
       {plan.experience.length > 0 && (
         <section className="resume-tailoring-item-group">
           <h4>경력 순서와 표현</h4>
-          {plan.experience.map((item) => {
+          {plan.experience.map((item, index) => {
             const source = evidenceById.get(item.sourceId);
             const original = review.sourceResume.experience[Number(item.sourceId.split("-").at(-1)) - 1];
             return (
               <article className="resume-tailoring-item" key={item.sourceId}>
                 <strong>{source?.title ?? item.sourceId}</strong>
                 {original && <p className="resume-tailoring-before">기존: {original.description}</p>}
-                <TailoringCopyReview id={item.sourceId} text={item.description} warning={claimWarnings.get(item.sourceId)} edits={edits}>
-                  <p className="resume-tailoring-after">맞춤: {item.description}</p>
-                </TailoringCopyReview>
-                {renderEvidence(item.evidenceIds)}
+                {renderCopy(item.sourceId, item.description, review.plan.experience[index].description, item.evidenceIds, review.plan.experience[index].lineCitations)}
               </article>
             );
           })}
@@ -164,17 +173,14 @@ export function ResumeTailoringReviewPanel({
       {plan.projects.length > 0 && (
         <section className="resume-tailoring-item-group">
           <h4>프로젝트 순서와 표현</h4>
-          {plan.projects.map((item) => {
+          {plan.projects.map((item, index) => {
             const source = evidenceById.get(item.sourceId);
             const original = review.sourceResume.projects[Number(item.sourceId.split("-").at(-1)) - 1];
             return (
               <article className="resume-tailoring-item" key={item.sourceId}>
                 <strong>{source?.title ?? item.sourceId}</strong>
                 {original && <p className="resume-tailoring-before">기존: {original.description}</p>}
-                <TailoringCopyReview id={item.sourceId} text={item.description} warning={claimWarnings.get(item.sourceId)} edits={edits}>
-                  <p className="resume-tailoring-after">맞춤: {item.description}</p>
-                </TailoringCopyReview>
-                {renderEvidence(item.evidenceIds)}
+                {renderCopy(item.sourceId, item.description, review.plan.projects[index].description, item.evidenceIds, review.plan.projects[index].lineCitations)}
               </article>
             );
           })}

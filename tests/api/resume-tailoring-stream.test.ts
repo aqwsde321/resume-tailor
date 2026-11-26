@@ -12,25 +12,29 @@ const resume = createPdfResumeFixture();
 const plan = {
   headline: {
     text: "관리자 도구 경험을 가진 프론트엔드 개발자",
-    evidenceIds: ["experience-1", "project-1"]
+    evidenceIds: ["experience-1", "project-1"],
+    lineCitations: [{ requirementIds: ["preferred-2"], evidenceIds: ["experience-1", "project-1"] }],
   },
   summary: {
     text: "React 기반 관리자 도구와 운영 대시보드 개발 경험을 보유했습니다.",
-    evidenceIds: ["experience-1", "project-1"]
+    evidenceIds: ["experience-1", "project-1"],
+    lineCitations: [{ requirementIds: ["preferred-2"], evidenceIds: ["experience-1", "project-1"] }],
   },
   experience: [
     {
       sourceId: "experience-1",
       description: "운영 도구와 대시보드를 개발했습니다.",
-      evidenceIds: ["experience-1"]
+      evidenceIds: ["experience-1"],
+      lineCitations: [{ requirementIds: ["job-context"], evidenceIds: ["experience-1"] }],
     }
   ],
   projects: [
     {
       sourceId: "project-1",
       description: "관리자 화면과 API를 설계했습니다.",
-      evidenceIds: ["project-1"]
-    }
+      evidenceIds: ["project-1"],
+      lineCitations: [{ requirementIds: ["preferred-2"], evidenceIds: ["project-1"] }],
+    },
   ],
   requirementMatches: [
     {
@@ -62,7 +66,9 @@ const plan = {
       matchType: "direct",
       evidenceIds: ["project-1"],
       reason: "프로젝트에 관리자 대시보드 설계 경험이 있습니다."
-    }
+    },
+    { requirementId: "job-context", matchType: "transferable", evidenceIds: ["experience-1"], reason: "운영 도구 개발 경험이 유사합니다." },
+    { requirementId: "company-context", matchType: "gap", evidenceIds: [], reason: "직접적인 도메인 경험이 확인되지 않습니다." },
   ],
   skillIds: ["skill-2", "skill-1"],
   highlightIds: ["highlight-2"],
@@ -138,7 +144,9 @@ describe("POST /api/resume/tailor/stream", () => {
         description: "QuickLoom 배포 시간을 30% 단축했습니다.", techStack: ["QuickLoom"] },
     };
     const factId = `confirmed-${fact.id}`;
-    const withFact = { ...plan, summary: { text: fact.draft.description, evidenceIds: [factId] } };
+    const withFact = { ...plan, summary: {
+      text: fact.draft.description, evidenceIds: [factId], lineCitations: [{ evidenceIds: [factId], requirementIds: [] }],
+    } };
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce(withFact).mockResolvedValueOnce(withFact);
 
     const response = await post({ resume, company: companyFixture, confirmedExperiences: [fact] });
@@ -158,6 +166,41 @@ describe("POST /api/resume/tailor/stream", () => {
     expect(serializedSchema).toContain("\"minItems\":1");
     expect(serializedSchema).toContain("\"maxItems\":4");
     expect(serializedSchema).toContain("\"maxItems\":6");
+    expect(serializedSchema.match(/"lineCitations":/g)).toHaveLength(4);
+  });
+
+  it("문구별로 인용한 공고 요건과 근거를 보존하고 다른 문구의 근거를 빌려온 연결은 거절한다", async () => {
+    const linkedPlan = {
+      ...plan,
+      summary: {
+        text: "관리자 도구를 개발했습니다.\n운영 대시보드를 설계했습니다.",
+        evidenceIds: ["experience-1", "project-1"],
+        lineCitations: [
+          { requirementIds: ["job-context"], evidenceIds: ["experience-1"] },
+          { requirementIds: ["preferred-2"], evidenceIds: ["project-1"] },
+        ],
+      },
+    };
+    const valid = linkedPlan.summary.lineCitations;
+    const invalid = [
+      [valid[0]],
+      [{ ...valid[0], requirementIds: ["preferred-2"] }, valid[1]],
+      [{ ...valid[0], requirementIds: ["company-context"] }, valid[1]],
+      [{ ...valid[0], evidenceIds: ["invented-source"] }, valid[1]],
+    ];
+    vi.mocked(runSkillJsonStream).mockResolvedValueOnce(linkedPlan);
+    const accepted = parseSse(await (await post({ resume, company: companyFixture })).text());
+    expect(accepted.find((event) => event.event === "result")?.data.data.plan).toEqual(linkedPlan);
+    expect(vi.mocked(runSkillJsonStream).mock.calls[0]?.[0]?.inputText).toContain("company-context");
+
+    for (const lineCitations of invalid) {
+      vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
+        ...linkedPlan, summary: { ...linkedPlan.summary, lineCitations },
+      });
+      const events = parseSse(await (await post({ resume, company: companyFixture })).text());
+      expect(events.find((event) => event.event === "result")).toBeUndefined();
+      expect(events.find((event) => event.event === "error")).toBeDefined();
+    }
   });
 
   it("문구에 등장하는 기술 후보를 받아 검토 화면에 전달한다", async () => {

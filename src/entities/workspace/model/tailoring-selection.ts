@@ -17,9 +17,6 @@ export function buildTailoringReviewRows(current: Resume, source: Resume, plan: 
   const descriptors: { id: string; label: string; evidenceIds: string[]; read: (resume: Resume) => string; addsItem?: boolean; unavailableReason?: string }[] = [
     { id: "headline", label: "한 줄 소개", evidenceIds: plan.headline.evidenceIds, read: (resume) => resume.headline },
     { id: "summary", label: "소개", evidenceIds: plan.summary.evidenceIds, read: (resume) => resume.summary },
-    { id: "skills", label: "강조할 기술", evidenceIds: plan.skillIds, read: (resume) => resume.techStack.join("\n") },
-    { id: "highlights", label: "강조할 성과", evidenceIds: plan.highlightIds, read: (resume) => (resume.pdfHighlights.length ? resume.pdfHighlights : resume.achievements).join("\n") },
-    { id: "strengths", label: "강조할 강점", evidenceIds: plan.strengthIds, read: (resume) => (resume.pdfStrengths.length ? resume.pdfStrengths : resume.strengths).join("\n") },
   ];
   const experienceIdentity = (item: ResumeExperienceItem) => [item.company, item.role, item.period].join("\u0000");
   const projectIdentity = (item: ResumeProjectItem) => [item.name, item.company ?? "", item.period ?? ""].join("\u0000");
@@ -39,6 +36,11 @@ export function buildTailoringReviewRows(current: Resume, source: Resume, plan: 
       addsItem: matches.length === 0,
       unavailableReason: !original ? "제안의 원본 항목을 찾지 못했습니다." : matches.length > 1 ? "같은 제목·소속·기간의 항목이 여러 개입니다. 항목을 구분한 뒤 다시 제안받아 주세요." : undefined });
   }
+  descriptors.push(
+    { id: "skills", label: "강조할 기술", evidenceIds: plan.skillIds, read: (resume) => resume.techStack.join("\n") },
+    { id: "highlights", label: "강조할 성과", evidenceIds: plan.highlightIds, read: (resume) => (resume.pdfHighlights.length ? resume.pdfHighlights : resume.achievements).join("\n") },
+    { id: "strengths", label: "강조할 강점", evidenceIds: plan.strengthIds, read: (resume) => (resume.pdfStrengths.length ? resume.pdfStrengths : resume.strengths).join("\n") },
+  );
   return descriptors.map(({ read, ...row }) => {
     if (row.unavailableReason) return { ...row, before: "", after: "", changed: false, addsItem: false };
     const before = read(current);

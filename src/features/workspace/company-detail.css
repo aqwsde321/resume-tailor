@@ -38,6 +38,8 @@
 .company-detail-generator span { color: #78718b; font-size: 12px; }
 .company-detail-generator-actions { display: flex; flex-direction: column; gap: 10px; }
 .company-detail-generator-actions button { margin: 0; }
+.company-detail-generator-actions summary { cursor: pointer; font-size: 13px; }
+.company-detail-generator-actions details > button { margin-top: 8px; }
 .company-detail-current { margin: 30px 0; }
 .company-detail-current .studio-resume-preview { margin-top: 0; }
 .company-detail-disclosure { margin: 18px 0; border: 1px solid var(--detail-line); border-radius: 10px; background: #fff; }

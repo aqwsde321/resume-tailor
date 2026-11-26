@@ -194,6 +194,7 @@ test("AI 질문으로 모은 두 경험을 검토하고 기존 프로젝트 보�
     return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: { plan, resume } })}\n\nevent: done\ndata: {"ok":true}\n\n` });
   });
   await page.goto(`/workspace/companies/${work.id}`);
+  await page.getByText("다른 원본으로 제안 받기", { exact: true }).click();
   await page.getByRole("button", { name: "공통 원본으로 맞춤 제안 받기" }).click();
   const review = page.getByRole("region", { name: "회사 맞춤 변경 검토" });
   const headline = review.getByRole("article").filter({ has: page.getByRole("checkbox", { name: "한 줄 소개", exact: true }) });

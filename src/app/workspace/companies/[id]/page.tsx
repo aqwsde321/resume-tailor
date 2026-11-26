@@ -60,7 +60,8 @@ export default function CompanyWorkPage() {
   const change = (updater: (work: CompanyWork, workspace: Workspace) => CompanyWork) => update((previous) => ({ ...previous, works: previous.works.map((item) => item.id === id ? { ...updater(item, previous), updatedAt: new Date().toISOString() } : item) }));
   const setResume = (resume: Resume, cause: "before-tailoring" | "before-edit") => change((current) => {
     const document = current.resumeDocument ?? newTextDocument("resume", current.title, resumeToMarkdown(current.resume!));
-    return { ...archiveCompanyVersion(current, cause), resume: ResumeSchema.parse(resume), resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null };
+    const replacePdfSummary = cause === "before-tailoring" && resume.summary !== current.resume?.summary;
+    return { ...archiveCompanyVersion(current, cause), resume: ResumeSchema.parse(resume), intro: replacePdfSummary ? null : current.intro, resumeDocument: { ...document, text: resumeToMarkdown(resume), proposal: null, history: [...document.history, { text: document.text, annotationIds: [], createdAt: new Date().toISOString() }] }, tailoring: null };
   });
   const agent = toAgentRunOptions(workspace.settings);
   const busy = aiTask.busy || refreshing;
@@ -145,7 +146,16 @@ export default function CompanyWorkPage() {
 
     {work.company && <section id="company-stage-edit" className="company-detail-panel" aria-label="맞춤 편집 단계" hidden={stage !== "edit"}>
       {workspace.master && workspace.master.version !== work.sourceResumeVersion && <section className="company-detail-notice"><div><strong>공통 이력서의 새 버전이 있습니다.</strong><p>기준 원본을 바꿔도 회사별 편집본은 유지됩니다.</p></div><button disabled={busy} onClick={() => change((current) => ({ ...refreshCompanySource(current, workspace.master!), tailoring: null }))}>새 공통 원본을 기준으로 선택</button></section>}
-      <section className="company-detail-generator"><div><h2>맞춤 이력서</h2><p>회사에 필요한 경험을 골라 제안합니다. 직접 확인한 변경만 편집본에 반영됩니다.</p><span>공통 원본 버전 {work.sourceResumeVersion}</span></div><div className="company-detail-generator-actions"><button className="primary" disabled={busy || !companyCurrent || !work.resume} onClick={() => tailor(false)}>현재 편집본으로 맞춤 제안 받기</button><button disabled={busy || !companyCurrent || !work.sourceResume} onClick={() => tailor(true)}>공통 원본으로 맞춤 제안 받기</button></div></section>
+      <section className="company-detail-generator">
+        <div><h2>맞춤 이력서</h2><p>공고의 핵심 자격과 업무에 맞는 경험을 이력서 상단에 제안합니다.</p></div>
+        <div className="company-detail-generator-actions">
+          <button className="primary" disabled={busy || !companyCurrent || !work.resume} onClick={() => tailor(false)}>현재 편집본으로 맞춤 제안 받기</button>
+          {work.sourceResume && <details>
+            <summary>다른 원본으로 제안 받기</summary>
+            <button disabled={busy || !companyCurrent} onClick={() => tailor(true)}>공통 원본으로 맞춤 제안 받기</button>
+          </details>}
+        </div>
+      </section>
       {work.tailoring && <TailoringReview key={JSON.stringify(work.tailoring.plan)} work={work} onApply={(resume) => setResume(resume, "before-tailoring")} onDismiss={() => change((current) => ({ ...current, tailoring: null }))} />}
       {work.resume && <>
         <section className="company-detail-current"><div className="company-detail-section-heading"><div><h2>회사별 편집본</h2><p>문장이나 기술을 드래그해 수정 요청을 남기세요. 공통 이력서는 유지됩니다.</p></div><div className="company-version-save">

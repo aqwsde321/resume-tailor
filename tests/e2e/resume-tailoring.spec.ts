@@ -126,7 +126,8 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
       },
       summary: {
         text: "Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다.",
-        evidenceIds: ["experience-1", "project-1"]
+        evidenceIds: ["experience-1", "project-1"],
+        lineCitations: [{ requirementIds: ["requirement-3"], evidenceIds: ["experience-1", "project-1"] }],
       },
       experience: [
         {
@@ -210,9 +211,10 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
   await expect(page.getByRole("button", { name: "회사 맞춤 이력서 만들기" })).toBeVisible();
   await page.getByRole("button", { name: "회사 맞춤 이력서 만들기" }).click();
 
-  await expect(
-    page.getByText("Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다.")
-  ).toBeVisible();
+  const summary = page.locator(".resume-tailoring-copy-change").filter({ has: page.getByRole("heading", { name: "요약", exact: true }) });
+  await summary.getByText("Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다.", { exact: true }).click();
+  await expect(summary.getByText("공고 요건", { exact: true })).toBeVisible();
+  await expect(summary.getByText("프로젝트 · Admin Console", { exact: true })).toBeVisible();
   await expect(page.getByText("프로젝트 · Admin Console").first()).toBeVisible();
   const headline = page.locator(".resume-tailoring-copy-change").filter({ has: page.getByRole("heading", { name: "직무 제목" }) });
   await expect(headline.getByText("수치 200건", { exact: true })).toBeVisible();
@@ -241,11 +243,12 @@ test("회사 맞춤 이력서를 검토하고 적용한 버전으로 지원 기�
 
   const savedResume = await page.evaluate(() => {
     const state = JSON.parse(window.localStorage.getItem("resume-tailor.pipeline.v2") ?? "{}");
-    return state.applications[0].snapshot.resume;
+    return state.applications[0].snapshot;
   });
-  expect(savedResume.summary).toBe(
+  expect(savedResume.resume.summary).toBe(
     "Beta Corp 공고에 맞춰 관리자 도구와 대시보드 경험을 정리했습니다."
   );
-  expect(savedResume.techStack).toEqual(["TypeScript", "React"]);
-  expect(savedResume.headline).toBe("관리자 도구를 개발한 프론트엔드 개발자");
+  expect(savedResume.resume.techStack).toEqual(["TypeScript", "React"]);
+  expect(savedResume.resume.headline).toBe("관리자 도구를 개발한 프론트엔드 개발자");
+  expect(savedResume.intro.longIntro).toBe(savedResume.resume.summary);
 });
