@@ -24,17 +24,21 @@ export function ApplicationSubmission({ work, company, onEmailDraftChange }: {
   onEmailDraftChange: (draft: ApplicationEmailDraft) => void;
 }) {
   const { state, hydrated, patch } = usePipeline();
-  const [selectedId, setSelectedId] = useState(work.applicationEmailDraft?.artifactId ?? "");
+  const [submittedIdOverride, setSubmittedIdOverride] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const inProgress = useRef(false);
   const artifacts = work.artifacts ?? [];
-  const selected = artifacts.find(({ id }) => id === selectedId);
   const submitted = state.applications.find((record) => record.submission?.companyWorkId === work.id);
 
   const draft = work.applicationEmailDraft;
-  const mailto = draft && (selected || submitted) ? buildApplicationMailto(draft) : null;
+  const emailPdf = artifacts.find(({ id }) => id === draft?.artifactId);
+  const selected = artifacts.find(({ id }) => id === (submittedIdOverride ?? emailPdf?.id));
+  const mailto = draft && (emailPdf || submitted) ? buildApplicationMailto(draft) : null;
+  const pdfOptions = [...artifacts].reverse().map((artifact) => (
+    <option key={artifact.id} value={artifact.id}>{artifactLabel(artifact)}</option>
+  ));
 
   async function downloadPinnedPdf(id: string, name: string) {
     setError("");
@@ -80,48 +84,22 @@ export function ApplicationSubmission({ work, company, onEmailDraftChange }: {
 
   return (
     <section className="company-application-submission">
-      <h3>제출본 고정</h3>
-      {submitted ? (
-        <div className="company-submission-actions">
-          <p role="status">제출본을 고정했어요.</p>
-          <span>{submitted.pdfFileName} · 지원일 {submitted.appliedAt ?? "미기록"}</span>
-          <button type="button" onClick={() => void downloadPinnedPdf(submitted.id, submitted.pdfFileName)}>고정한 제출본 다운로드</button>
-          <Link href={`/applications#application-record-${encodeURIComponent(submitted.id)}`}>지원 기록 보기</Link>
-        </div>
-      ) : artifacts.length > 0 ? (
-        <>
-          <p>실제로 제출한 파일을 골라 이 브라우저의 지원 기록에 저장하세요.</p>
-          <label>
-            실제 제출한 PDF
-            <select className="form-select" value={selectedId} disabled={!hydrated || saving} onChange={(event) => {
-              const artifactId = event.target.value || null;
-              setSelectedId(event.target.value);
-              if (draft) onEmailDraftChange({ ...draft, artifactId });
-              setError("");
-            }}>
-              <option value="">PDF 선택</option>
-              {[...artifacts].reverse().map((artifact) => <option key={artifact.id} value={artifact.id}>{artifactLabel(artifact)}</option>)}
-            </select>
-          </label>
-          <div className="company-submission-actions">
-            {selected && <>
-              <a href={`/api/workspace/attachment/${selected.id}`} target="_blank" rel="noreferrer">선택한 PDF 확인</a>
-              <a href={`/api/workspace/attachment/${selected.id}`} download={selected.name}>첨부할 PDF 다운로드</a>
-            </>}
-            <button className="primary" type="button" disabled={!hydrated || saving || !selected} onClick={() => {
-              if (selected) void saveSubmission(selected);
-            }}>{saving ? "제출본 저장 중…" : "지원 완료 기록"}</button>
-          </div>
-        </>
-      ) : <p>이력서 PDF를 만들면 실제 제출한 파일을 지원 기록에 저장할 수 있어요.</p>}
       <details className="company-application-email">
         <summary>최초 지원 메일 초안{draft ? " · 작성됨" : ""}</summary>
         {draft ? <>
           <label>받는 사람<input type="email" value={draft.recipient} maxLength={254} placeholder="공고에서 확인한 지원 이메일" onChange={(event) => onEmailDraftChange({ ...draft, recipient: event.target.value })} /></label>
           <label>메일 제목<input value={draft.subject} maxLength={200} onChange={(event) => onEmailDraftChange({ ...draft, subject: event.target.value })} /></label>
           <label>메일 본문<textarea rows={7} value={draft.body} maxLength={4000} onChange={(event) => onEmailDraftChange({ ...draft, body: event.target.value })} /></label>
-          <p>{selected || submitted ? "메일을 열고 위에서 받은 PDF를 첨부해 주세요." : "첨부할 PDF를 위에서 골라 주세요."}</p>
+          {artifacts.length > 0 && <label>
+            메일에 첨부할 PDF
+            <select className="form-select" value={emailPdf?.id ?? ""} onChange={(event) => onEmailDraftChange({ ...draft, artifactId: event.target.value || null })}>
+              <option value="">PDF 선택</option>
+              {pdfOptions}
+            </select>
+          </label>}
+          <p>{emailPdf || submitted ? "메일 앱에서 PDF를 직접 첨부해 주세요." : "메일에 첨부할 PDF를 준비해 주세요."}</p>
           <div className="company-submission-actions">
+            {emailPdf && <a href={`/api/workspace/attachment/${emailPdf.id}`} download={emailPdf.name}>첨부할 PDF 다운로드</a>}
             {mailto && <a href={mailto}>메일 앱에서 열기</a>}
             <button type="button" disabled={!draft.subject.trim() || !draft.body.trim()} onClick={async () => {
               try {
@@ -138,6 +116,40 @@ export function ApplicationSubmission({ work, company, onEmailDraftChange }: {
           submitted?.submission?.artifactId ?? selected?.id ?? null,
         ))}>지원 메일 초안 만들기</button>}
       </details>
+      <h3>제출본 고정</h3>
+      {submitted ? (
+        <div className="company-submission-actions">
+          <p role="status">제출본을 고정했어요.</p>
+          <span>{submitted.pdfFileName} · 지원일 {submitted.appliedAt ?? "미기록"}</span>
+          <button type="button" onClick={() => void downloadPinnedPdf(submitted.id, submitted.pdfFileName)}>고정한 제출본 다운로드</button>
+          <Link href={`/applications#application-record-${encodeURIComponent(submitted.id)}`}>지원 기록 보기</Link>
+        </div>
+      ) : artifacts.length > 0 ? (
+        <>
+          <p>{submittedIdOverride === undefined && emailPdf
+            ? "메일 초안에서 고른 PDF가 선택되어 있어요. 실제로 보낸 파일을 확인한 뒤 기록하세요."
+            : "실제로 제출한 파일을 골라 이 브라우저의 지원 기록에 저장하세요."}</p>
+          <label>
+            실제 제출한 PDF
+            <select className="form-select" value={selected?.id ?? ""} disabled={!hydrated || saving} onChange={(event) => {
+              setSubmittedIdOverride(event.target.value);
+              setError("");
+            }}>
+              <option value="">PDF 선택</option>
+              {pdfOptions}
+            </select>
+          </label>
+          <div className="company-submission-actions">
+            {selected && <>
+              <a href={`/api/workspace/attachment/${selected.id}`} target="_blank" rel="noreferrer">선택한 PDF 확인</a>
+              <a href={`/api/workspace/attachment/${selected.id}`} download={selected.name}>선택한 PDF 다운로드</a>
+            </>}
+            <button className="primary" type="button" disabled={!hydrated || saving || !selected} onClick={() => {
+              if (selected) void saveSubmission(selected);
+            }}>{saving ? "제출본 저장 중…" : "지원 완료 기록"}</button>
+          </div>
+        </>
+      ) : <p>이력서 PDF를 만들면 실제 제출한 파일을 지원 기록에 저장할 수 있어요.</p>}
       {error && <p role="alert">{error}</p>}
     </section>
   );
