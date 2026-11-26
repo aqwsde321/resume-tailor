@@ -5,9 +5,11 @@ import {
   buildResumeTailoringEvidence,
   buildResumeTailoringTargets,
   isResumeTailoringPlanValid,
+  MAX_GENERATED_SUMMARY_LINES,
   ResumeTailoringPlanSchema,
   ResumeTailoringResultSchema,
-  resumeTailoringOutputSchema
+  resumeTailoringOutputSchema,
+  splitTailoringLines
 } from "@/entities/resume/model/resume-tailoring";
 import {
   AgentRunOptionsSchema,
@@ -85,6 +87,10 @@ export async function POST(request: Request) {
           onLog: (payload) => send("log", payload)
         });
         const plan = parseTaskResult("맞춤 이력서", ResumeTailoringPlanSchema, generated);
+
+        if (splitTailoringLines(plan.summary.text).length > MAX_GENERATED_SUMMARY_LINES) {
+          throw new HttpError(502, "맞춤 이력서 요약이 세 줄을 넘었어요.");
+        }
 
         if (!plan.headline.lineCitations || !isResumeTailoringPlanValid(body.resume, body.company, plan, body.confirmedExperiences)) {
           throw new HttpError(502, "맞춤 이력서 결과에 공고 요건 또는 원본 이력서에 없는 근거가 있어요.");

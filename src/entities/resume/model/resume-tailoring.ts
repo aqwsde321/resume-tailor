@@ -12,6 +12,7 @@ const LineCitationsSchema = z.array(z.object({
 export type TailoringLineCitation = z.infer<typeof LineCitationsSchema>[number];
 const TechnologiesSchema = z.array(z.string().trim().min(1).max(80)).max(30);
 export const MAX_TAILORING_COPY_LENGTH = 1600;
+export const MAX_GENERATED_SUMMARY_LINES = 3;
 const TailoringCopySchema = z.string().trim().min(1).max(MAX_TAILORING_COPY_LENGTH);
 
 const TailoredTextSchema = z
@@ -378,7 +379,7 @@ export const resumeTailoringOutputSchema = {
       required: ["text", "evidenceIds", "technologies", "lineCitations"],
       properties: {
         text: { type: "string", maxLength: MAX_TAILORING_COPY_LENGTH },
-        lineCitations: lineCitationsOutputSchema,
+        lineCitations: { ...lineCitationsOutputSchema, maxItems: MAX_GENERATED_SUMMARY_LINES },
         technologies: technologiesOutputSchema,
         evidenceIds: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } }
       }

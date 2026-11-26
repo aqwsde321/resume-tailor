@@ -217,6 +217,29 @@ describe("POST /api/resume/tailor/stream", () => {
     expect(output.match(/"technologies":/g)).toHaveLength(4);
   });
 
+  it("새 요약은 근거가 검증된 줄이라도 세 줄을 넘기지 않는다", async () => {
+    const lines = [
+      "운영 도구를 개발했습니다.",
+      "관리자 화면을 설계했습니다.",
+      "API를 설계했습니다.",
+      "대시보드를 구현했습니다."
+    ];
+    const summary = {
+      ...plan.summary,
+      lineCitations: lines.map(() => plan.summary.lineCitations[0])
+    };
+    vi.mocked(runSkillJsonStream)
+      .mockResolvedValueOnce({ ...plan, summary: { ...summary, text: lines.slice(0, 3).join("\n"), lineCitations: summary.lineCitations.slice(0, 3) } })
+      .mockResolvedValueOnce({ ...plan, summary: { ...summary, text: lines.join("\n") } });
+
+    const accepted = parseSse(await (await post({ resume, company: companyFixture })).text());
+    expect(accepted.find((event) => event.event === "result")).toBeDefined();
+
+    const rejected = parseSse(await (await post({ resume, company: companyFixture })).text());
+    expect(rejected.find((event) => event.event === "result")).toBeUndefined();
+    expect(rejected.find((event) => event.event === "error")?.data.message).toBe("맞춤 이력서 요약이 세 줄을 넘었어요.");
+  });
+
   it("이력서에 없는 근거 참조를 반환하면 결과를 내보내지 않는다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
       ...plan,
