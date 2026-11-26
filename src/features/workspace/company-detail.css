@@ -184,3 +184,6 @@ html:has(.company-pdf-dialog:modal) { overflow: hidden; }
 .company-requirement-coverage details > p {
   margin-block: 0.5rem;
 }
+
+.company-application-email > * + * { margin-top: 0.6rem; }
+.company-application-email > summary { cursor: pointer; font-weight: 600; }

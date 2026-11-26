@@ -1,4 +1,5 @@
 import { PDF_THEME_IDS } from "@/entities/pdf/model/themes";
+import { ApplicationEmailDraftSchema } from "@/entities/application/model/application-email";
 import { ApplicationSnapshotSchema } from "@/entities/application/model/application-record";
 import { PDF_TEMPLATE_IDS } from "@/entities/pdf/model/templates";
 import { upgradeResultDraftMarkdown } from "./resume-markdown";
@@ -94,6 +95,7 @@ export const CompanyWorkSchema = z.object({
   pdfTemplateId: z.enum(PDF_TEMPLATE_IDS).optional(),
   pdfThemeId: z.enum(PDF_THEME_IDS).exclude(["custom"]).optional(),
   artifacts: z.array(CompanyPdfArtifactSchema).optional(),
+  applicationEmailDraft: ApplicationEmailDraftSchema.optional(),
   sourceResumeVersion: z.number().int().positive().nullable(),
   sourceResume: ResumeSchema.nullable(),
   resume: ResumeSchema.nullable(),

@@ -134,6 +134,20 @@ test("고른 PDF를 지원 완료 기록에 고정하고 새 PDF를 출력한 �
   await expect(save).toBeDisabled();
   await page.getByRole("combobox", { name: "실제 제출한 PDF", exact: true }).selectOption(attachmentIds[0]);
   await expect(page.getByRole("link", { name: "선택한 PDF 확인", exact: true })).toHaveAttribute("href", `/api/workspace/attachment/${attachmentIds[0]}`);
+  await page.getByText("최초 지원 메일 초안", { exact: true }).click();
+  await page.getByRole("button", { name: "지원 메일 초안 만들기", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "받는 사람", exact: true })).toBeEmpty();
+  await page.getByRole("textbox", { name: "받는 사람", exact: true }).fill("jobs@example.com");
+  await page.getByRole("textbox", { name: "메일 제목", exact: true }).fill("개발자 지원");
+  await expect(page.getByRole("link", { name: "메일 앱에서 열기", exact: true })).toHaveAttribute("href", /^mailto:jobs@example\.com\?/);
+  await expect(page.getByRole("link", { name: "첨부할 PDF 다운로드", exact: true })).toHaveAttribute("href", `/api/workspace/attachment/${attachmentIds[0]}`);
+  await expect.poll(() => stored().works[0].applicationEmailDraft?.artifactId).toBe(attachmentIds[0]);
+  await page.reload();
+  await openExport();
+  await expect(page.getByRole("combobox", { name: "실제 제출한 PDF", exact: true })).toHaveValue(attachmentIds[0]);
+  await page.getByText("최초 지원 메일 초안 · 작성됨", { exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "메일 제목", exact: true })).toHaveValue("개발자 지원");
+
   await save.click();
   await expect(page.getByText("선택한 PDF를 불러오지 못했어요.", { exact: true })).toBeVisible();
   attachmentAvailable = true;
@@ -144,6 +158,10 @@ test("고른 PDF를 지원 완료 기록에 고정하고 새 PDF를 출력한 �
   await page.reload();
   await openExport();
   await expect(save).toHaveCount(0);
+  const pinned = page.waitForEvent("download");
+  await page.getByRole("button", { name: "고정한 제출본 다운로드", exact: true }).click();
+  expect(await readFile(await (await pinned).path(), "utf8")).toBe(`%PDF-${attachmentIds[0]}`);
+
   await page.getByRole("link", { name: "지원 기록 보기", exact: true }).click();
   const record = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "예시 회사", exact: true }) });
   await expect(record).toHaveCount(1);

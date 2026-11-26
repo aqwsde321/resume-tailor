@@ -5,6 +5,7 @@ import { useTypstPreview } from "@/features/pdf/ui/use-typst-preview";
 import { IntroSchema } from "@/shared/lib/schemas";
 import { createApplicationSnapshot } from "@/entities/application/model/application-record";
 import type { CompanyPdfArtifact, CompanyWork } from "@/entities/workspace/model/workspace";
+import type { ApplicationEmailDraft } from "@/entities/application/model/application-email";
 import { ApplicationSubmission } from "./application-submission";
 import { resumeToMarkdown } from "@/entities/workspace/model/operations";
 import { PDF_PREVIEW_RENDER_VERSION, PDF_TEMPLATE_OPTIONS, type PdfTemplateId } from "@/entities/pdf/model/templates";
@@ -121,7 +122,7 @@ function DesignGallery({ work, selectedTemplate, selectedTheme, onSelect, onPrev
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function WorkExport({ active, work, onSaved, onDesignChange }: { active: boolean; work: CompanyWork; onDesignChange: (templateId: PdfTemplateId, themeId: PresetThemeId) => void; onSaved: (artifact: CompanyPdfArtifact) => void }) {
+export function WorkExport({ active, work, onSaved, onDesignChange, onEmailDraftChange }: { active: boolean; work: CompanyWork; onDesignChange: (templateId: PdfTemplateId, themeId: PresetThemeId) => void; onSaved: (artifact: CompanyPdfArtifact) => void; onEmailDraftChange: (draft: ApplicationEmailDraft) => void }) {
   const templateId = work.pdfTemplateId;
   const themeId = work.pdfThemeId ?? DEFAULT_PDF_THEME_ID;
   const [detail, setDetail] = useState<{ template: PdfTemplateId; theme: PresetThemeId } | null>(null);
@@ -191,7 +192,7 @@ export function WorkExport({ active, work, onSaved, onDesignChange }: { active: 
         </li>)}
       </ul>
     </details>}
-    <ApplicationSubmission key={work.id} work={work} company={company} />
+    <ApplicationSubmission key={work.id} work={work} company={company} onEmailDraftChange={onEmailDraftChange} />
     {error && <p role="alert">{error}</p>}
   </section>;
 }
