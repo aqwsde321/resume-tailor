@@ -57,6 +57,48 @@ const longResume = createPdfResumeFixture({
 });
 
 describeWithTools("PDF 빌드 결과", () => {
+  it("Classic에서 짧은 경력·프로젝트 목록 뒤에 강점 한 줄만 다음 쪽으로 넘어가지 않는다", async () => {
+    const { experience, projects } = createPdfResumeFixture();
+    const resume = createPdfResumeFixture({
+      techStack: ["Java", "Spring Boot", "k6", "Grafana", "MySQL", "Redis", "Linux"],
+      experience: [
+        {
+          ...experience[0],
+          description: "- 지표와 요청 ID로 중복 주문의 원인을 찾았습니다.\n- 멱등 키를 적용해 8주간 같은 장애가 재발하지 않았습니다.\n- 주문 조회 지연을 820ms에서 310ms로 줄였습니다."
+        },
+        {
+          ...experience[0],
+          company: "Beta",
+          description: "- Linux에서 서비스 로그를 확인했습니다.\n- 배치 실패 알림을 운영 담당자에게 전달했습니다.\n- 사내 권한 관리 API를 개발했습니다."
+        }
+      ],
+      projects: [
+        {
+          ...projects[0],
+          link: "",
+          description: "- 주문 실패율 대시보드를 구성했습니다.\n- 알림에 로그 링크를 추가했습니다.",
+          highlights: []
+        },
+        {
+          ...projects[0],
+          name: "상품 검색 캐시",
+          link: "",
+          description: "- 반복 조회를 Redis에 캐시했습니다.\n- 상품 수정 시 캐시를 무효화했습니다.",
+          highlights: []
+        }
+      ]
+    });
+    const intro = {
+      ...introFixture,
+      longIntro: "멱등 키를 적용해 주문 중복 장애의 재발을 막았습니다.\n주문 조회 지연을 820ms에서 310ms로 줄였습니다."
+    };
+    const { pages, pageTexts } = inspect(await buildResumePdf(resume, intro, companyFixture, "classic"));
+
+    expect(pages).toBe(1);
+    expect(pageTexts[0]).toContain("• 문제 해결");
+    expect(pageTexts[0]).toContain("• 운영 안정성");
+  });
+
   it("첫 페이지만 요청하면 전체 미리보기와 같은 첫 페이지를 반환한다", async () => {
     const full = await buildResumeSvgPreview(longResume, introFixture, companyFixture);
     const thumbnail = await buildResumeSvgPreview(longResume, introFixture, companyFixture, undefined, undefined, undefined, { firstPageOnly: true });

@@ -100,7 +100,14 @@
   #for (index, part) in blocks.enumerate() [
     #if index > 0 { v(0.45em) }
     #if part.kind == "list" {
-      bullet_list(part.lines)
+      // 경력·프로젝트의 목록은 항목마다 별도 블록을 쌓는 대신 목록 간격을 지정한다.
+      list(
+        marker: text(size: 8.5pt, fill: accent)[•],
+        body-indent: 6pt,
+        tight: false,
+        spacing: 0.45em,
+        ..part.lines.map(line => text(size: 8.95pt, fill: ink)[#line]),
+      )
     } else {
       body_copy(part.lines.map(line => [#line]).join(linebreak()))
     }
