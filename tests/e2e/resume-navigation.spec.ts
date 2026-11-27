@@ -102,8 +102,7 @@ test("공통 경험 보완과 회사 공고별 보완의 적용 범위를 구분
   await page.getByRole("button", { name: "공통 경험 보완", exact: true }).click();
   await expect(page.getByText("회사에 관계없이 활용할 실제 경험을 질문으로 정리합니다.", { exact: false })).toBeVisible();
   await page.goto(`/workspace/companies/${work.id}`);
-  await expect(page.getByRole("button", { name: "새 질문 받기", exact: true })).not.toBeVisible();
-  await page.getByText("공고에 맞춰 경험 보완", { exact: true }).click();
-  await expect(page.getByText("공통 이력서는 바뀌지 않습니다.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "공고에 맞춰 경험 보완", exact: true })).toBeVisible();
+  await expect(page.getByText("확인한 문구는 이 회사의 이력서에 반영합니다.", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "새 질문 받기", exact: true })).toBeVisible();
 });

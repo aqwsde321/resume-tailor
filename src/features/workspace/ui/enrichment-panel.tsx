@@ -6,11 +6,13 @@ import type { Company, DiscoveredExperienceDraft, ExperienceDiscoveryTurn, Resum
 import { postSseJson } from "@/shared/lib/stream-client";
 import type { ConfirmedExperience, ConfirmedExperienceScope } from "@/entities/resume/model/confirmed-experience";
 import { toAgentRunOptions } from "@/shared/lib/agent-settings";
+import { isProjectEnrichmentCurrent, type ProjectEnrichmentRevision } from "@/entities/workspace/model/enrichment-application";
+import "../tailoring-review.css";
 type Session = z.infer<typeof EnrichmentSchema>;
 const defaultTopic = "이력서에서 역할·행동·결과가 부족한 경험과 최근에 빠뜨린 경험을 확인해 줘.";
 const topicLimit = 300;
 export type ApprovedDraft = { sessionId: string; id: string; draft: DiscoveredExperienceDraft; target?: string };
-export function EnrichmentPanel({ resume, company, sessions, settings, onChange, onApply, commonExperiences, companyExperiences = [], onSaveExperience, onRemoveExperience, topicRequest, topicInputRef, knownGaps = [], scope = company ? "job" : "common" }: {
+export function EnrichmentPanel({ resume, company, sessions, settings, onChange, onApply, commonExperiences, companyExperiences = [], onSaveExperience, onRemoveExperience, topicRequest, topicInputRef, knownGaps = [], scope = company ? "job" : "common", projectContext, disabled = false }: {
   scope?: "common" | "job"; resume: Resume; company?: Company; sessions: Session[]; settings: Workspace["settings"];
   topicRequest?: { text: string };
   topicInputRef?: Ref<HTMLTextAreaElement>;
@@ -20,6 +22,12 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
   onSaveExperience: (experience: ConfirmedExperience, scope: ConfirmedExperienceScope) => void;
   onRemoveExperience: (id: string) => void;
   onChange: (sessions: Session[]) => void; onApply: (drafts: ApprovedDraft[]) => void;
+  disabled?: boolean;
+  projectContext?: {
+    summary: string;
+    hasPendingEdits: boolean;
+    onApply: (sessionId: string, revision: ProjectEnrichmentRevision) => void;
+  };
 }) {
   const [topicEdit, setTopicEdit] = useState<{ request?: typeof topicRequest; value: string }>();
   const [answerDraft, setAnswerDraft] = useState<{ sessionId: string; value: string }>();
@@ -27,14 +35,26 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
   const [selected, setSelected] = useState<string[]>([]);
   const [experienceScopes, setExperienceScopes] = useState<Record<string, ConfirmedExperienceScope>>({});
   const [technologyEdits, setTechnologyEdits] = useState<Record<string, string>>({});
+  const [projectChoice, setProjectChoice] = useState<{ request?: typeof topicRequest; index: number | null }>();
+  const [revisionEdit, setRevisionEdit] = useState<{ sessionId: string; value: ProjectEnrichmentRevision }>();
   const savedExperiences = [...companyExperiences.map((item) => ({ ...item, scope: "company" as const })),
     ...commonExperiences.map((item) => ({ ...item, scope: "common" as const }))];
   const requestedTopic = topicRequest?.text.slice(0, topicLimit).trim();
-  const topic = topicEdit && topicEdit.request === topicRequest ? topicEdit.value : requestedTopic ?? defaultTopic;
-  const requirement = topic.trim() === requestedTopic ? topicRequest?.text : undefined;
-  const current = topicRequest
-    ? sessions.findLast((session) => requirement ? session.requirement === requirement : session.topic === topic.trim())
-    : sessions.at(-1);
+  const latest = sessions.at(-1);
+  const requirements = [...new Set([...(company?.requirements ?? []), ...(company?.preferredSkills ?? [])])];
+  const topic = topicEdit && topicEdit.request === topicRequest ? topicEdit.value
+    : requestedTopic ?? latest?.topic ?? requirements[0]?.slice(0, topicLimit) ?? defaultTopic;
+  const requirement = topic.trim() === requestedTopic ? topicRequest?.text
+    : requirements.find((entry) => entry.slice(0, topicLimit).trim() === topic.trim());
+  const projectIndex = projectChoice && projectChoice.request === topicRequest ? projectChoice.index ?? undefined
+    : requestedTopic ? undefined : latest?.projectReview?.index;
+  const current = sessions.findLast((session) => session.projectReview?.index === projectIndex &&
+    (requirement && session.requirement ? session.requirement === requirement : session.topic === topic.trim()));
+  const project = projectIndex === undefined ? undefined : resume.projects[projectIndex];
+  const projectReview = current?.projectReview;
+  const projectIsCurrent = !projectReview || Boolean(projectContext && isProjectEnrichmentCurrent(resume, company, projectContext.summary, projectReview));
+  const revision = revisionEdit && revisionEdit.sessionId === current?.id ? revisionEdit.value : projectReview?.revision;
+  const interactionDisabled = disabled || busy;
   const answer = answerDraft && answerDraft.sessionId === current?.id ? answerDraft.value : "";
   const topicBlocked = knownGaps.includes(requirement ?? topic.trim());
   const currentBlocked = current && knownGaps.includes(current.requirement ?? current.topic.trim());
@@ -66,29 +86,73 @@ export function EnrichmentPanel({ resume, company, sessions, settings, onChange,
 
   async function ask(start: boolean) {
     const session: Session | undefined = start
-      ? { id: crypto.randomUUID(), topic: topic.trim(), requirement, status: "question", messages: [], drafts: [] }
+      ? {
+          id: crypto.randomUUID(), topic: topic.trim(), requirement, status: "question", messages: [], drafts: [],
+          projectReview: project && projectIndex !== undefined && company && projectContext
+            ? { index: projectIndex, project, company, summary: projectContext.summary }
+            : undefined,
+        }
       : current;
-    if (!session || (start ? topicBlocked : currentBlocked)) return;
+    if (!session || interactionDisabled || (start ? topicBlocked : currentBlocked || !projectIsCurrent)) return;
     setBusy(true); setError("");
     const messages = start ? [] : [...session.messages, { role: "user" as const, content: answer.trim() }];
     const nextSessions = start ? [...sessions, session] : sessions;
     try {
-      const result = await postSseJson<ExperienceDiscoveryTurn>("/api/experience-discovery", { resume, company, requirement: session.topic.slice(0, topicLimit), messages, agent: toAgentRunOptions(settings) });
+      const result = await postSseJson<ExperienceDiscoveryTurn>("/api/experience-discovery", {
+        resume, company, requirement: session.topic.slice(0, topicLimit), messages,
+        projectIndex: session.projectReview?.index, agent: toAgentRunOptions(settings),
+      });
       const drafts = result.draft ? [...session.drafts, { id: crypto.randomUUID(), draft: result.draft, status: "pending" as const }] : session.drafts;
-      onChange(nextSessions.map((item) => item.id === session.id ? { ...session, status: result.status, messages: [...messages, { role: "assistant", content: result.message }], drafts } : item));
+      onChange(nextSessions.map((item) => item.id === session.id ? {
+        ...session, status: result.status, messages: [...messages, { role: "assistant", content: result.message }], drafts,
+        projectReview: session.projectReview && { ...session.projectReview, revision: result.revision ?? undefined },
+      } : item));
       setAnswerDraft((draft) => draft?.sessionId === session.id ? undefined : draft);
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="card"><h2>{scope === "job" ? "공고와 연결할 경험 보완" : "공통 경험 보완"}</h2>
-    <p>{scope === "job" ? "이 공고에 필요한 경험을 질문으로 확인합니다. 선택한 내용은 이 회사의 이력서에만 반영되며 공통 이력서는 바뀌지 않습니다." : "회사에 관계없이 활용할 실제 경험을 질문으로 정리합니다. 선택한 내용은 공통 이력서 편집 초안에 반영합니다."}</p>
+  return <section className="card"><h2>{scope === "job" ? "공고에 맞춰 경험 보완" : "공통 경험 보완"}</h2>
+    <p>{scope === "job" ? "공고 요건과 관련 프로젝트를 고르면 원본에서 빠진 사실을 질문합니다. 확인한 문구는 이 회사의 이력서에 반영합니다." : "회사에 관계없이 활용할 실제 경험을 질문으로 정리합니다. 선택한 내용은 공통 이력서 편집 초안에 반영합니다."}</p>
+    {projectContext && requirements.length > 0 && <label>공고 요건<select disabled={interactionDisabled} value={requirement ?? ""} onChange={(event) => {
+      setTopicEdit({ request: topicRequest, value: event.target.value.slice(0, topicLimit) });
+    }}>
+      <option value="">직접 입력</option>
+      {requirements.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+    </select></label>}
     <label>보완할 내용<textarea ref={topicInputRef} value={topic} onChange={(event) => setTopicEdit({ request: topicRequest, value: event.target.value })} maxLength={topicLimit} rows={2} /></label>
-    <button disabled={busy || !topic.trim() || topicBlocked} onClick={() => void ask(true)}>{busy ? "답변을 정리하는 중…" : "새 질문 받기"}</button>
+    {projectContext && resume.projects.length > 0 && <label>보완할 프로젝트<select disabled={interactionDisabled} value={project ? projectIndex : ""} onChange={(event) => {
+      setProjectChoice({ request: topicRequest, index: event.target.value === "" ? null : Number(event.target.value) });
+    }}>
+      <option value="">프로젝트 없이 경험 찾기</option>
+      {resume.projects.map((item, index) => <option key={index} value={index}>{item.name || `프로젝트 ${index + 1}`}</option>)}
+    </select></label>}
+    <button disabled={interactionDisabled || !topic.trim() || topicBlocked} onClick={() => void ask(true)}>{busy ? "답변을 정리하는 중…" : "새 질문 받기"}</button>
     {topicBlocked && <p role="status">이 요건은 경험이 없다고 기록했습니다.</p>}
+    {!projectIsCurrent && <p role="status">공고나 이력서 내용이 바뀌었습니다. 현재 내용을 기준으로 새 질문을 받아 주세요.</p>}
     {sessions.map((session) => <details key={session.id} open={session.id === current?.id}><summary>{session.topic}</summary>
       {session.messages.map((message, index) => <article key={index}><strong>{message.role === "assistant" ? "AI 질문·정리" : "내 답변"}</strong><p style={{ whiteSpace: "pre-wrap" }}>{message.content}</p></article>)}
     </details>)}
-    {current?.status === "question" && !currentBlocked && <><label>내 답변<textarea value={answer} onChange={(event) => setAnswerDraft({ sessionId: current.id, value: event.target.value })} maxLength={2000} rows={4} placeholder="없거나 기억나지 않는 내용은 그대로 알려 주세요." /></label><button disabled={busy || !answer.trim() || current.messages.length >= 15} onClick={() => void ask(false)}>답변 보내기</button>{current.messages.length >= 15 && <p>대화가 길어졌습니다. 새 질문으로 이어가 주세요.</p>}</>}
+    {current?.status === "question" && !currentBlocked && projectIsCurrent && <><label>내 답변<textarea value={answer} onChange={(event) => setAnswerDraft({ sessionId: current.id, value: event.target.value })} maxLength={2000} rows={4} placeholder="없거나 기억나지 않는 내용은 그대로 알려 주세요." /></label><button disabled={interactionDisabled || !answer.trim() || current.messages.length >= 15} onClick={() => void ask(false)}>답변 보내기</button>{current.messages.length >= 15 && <p>대화가 길어졌습니다. 새 질문으로 이어가 주세요.</p>}</>}
+    {current?.status === "draft" && !currentBlocked && projectReview && projectContext && revision &&
+      <section className="project-enrichment-review" aria-label="프로젝트와 첫 화면 요약 비교">
+        <h3>{projectReview.project.name || "프로젝트"} 수정안</h3>
+        {(["description", "summary"] as const).map((field) => {
+          const label = field === "description" ? "프로젝트 설명" : "첫 화면 요약";
+          const before = field === "description" ? projectReview.project.description : projectReview.summary;
+          return <div key={field}>
+            <h4>{label}</h4>
+            <div className="project-enrichment-columns">
+              <div><strong>기존 문장</strong><p>{before || "기존 문장 없음"}</p></div>
+              <label>{label} 수정안<textarea rows={4} value={revision[field]} maxLength={field === "description" ? 1600 : 500} onChange={(event) =>
+                setRevisionEdit({ sessionId: current.id, value: { ...revision, [field]: event.target.value } })
+              } /></label>
+            </div>
+          </div>;
+        })}
+        {projectContext.hasPendingEdits && <p role="status">편집 중인 이력서 문서를 먼저 반영해 주세요.</p>}
+        <button type="button" className="primary" disabled={interactionDisabled || !projectIsCurrent || projectContext.hasPendingEdits || !revision.description.trim() || !revision.summary.trim()}
+          onClick={() => projectContext.onApply(current.id, revision)}>확인한 문구 반영</button>
+      </section>}
     {error && <p role="alert">{error}</p>}
     {savedExperiences.length > 0 && <details>
       <summary>다시 사용할 경험 {savedExperiences.length}개</summary>

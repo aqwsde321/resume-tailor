@@ -40,11 +40,11 @@ export function CompanyRequirementCoverage({ work, actionsEnabled, onCheck, onMa
             {evidence.length > 0 && <details><summary>연결한 원본 근거 {evidence.length}개</summary>
               {evidence.map((item) => <blockquote key={item.id}><strong>{item.title}</strong><p>{item.text}</p></blockquote>)}
             </details>}
-            {(status === "unchecked" || status === "known-gap") && <div className="tailoring-requirement-actions">
-              {status === "unchecked" && <button type="button" aria-describedby={labelId} disabled={!actionsEnabled} onClick={() => onCheck(text)}>이 경험 확인하기</button>}
-              <button type="button" aria-describedby={labelId} disabled={!actionsEnabled} onClick={() => onMark(text, status !== "known-gap")}>
+            {status !== "direct" && <div className="tailoring-requirement-actions">
+              {status !== "known-gap" && <button type="button" aria-describedby={labelId} disabled={!actionsEnabled} onClick={() => onCheck(text)}>이 경험 확인하기</button>}
+              {status !== "related" && <button type="button" aria-describedby={labelId} disabled={!actionsEnabled} onClick={() => onMark(text, status !== "known-gap")}>
                 {status === "known-gap" ? "기록 취소" : labels["known-gap"]}
-              </button>
+              </button>}
             </div>}
           </div>;
         })}

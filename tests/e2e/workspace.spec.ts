@@ -329,6 +329,49 @@ test("공고 요건에서 경험 보완을 시작하고 해당 경험 없음 기
   await expect.poll(() => stored().works[0].knownGaps).toEqual([]);
 });
 
+test("맞춤 편집에서 원본 프로젝트 질문을 먼저 받고 확인한 설명과 요약만 반영한다", async ({ page }) => {
+  const source = ResumeSchema.parse({ ...resume, projects: [{ name: "신고 관리 플랫폼", description: "신고 상태 관리 API를 개발했습니다.", highlights: ["PostgreSQL ERD 작성"] }] });
+  const initial = publishMasterResume(createEmptyWorkspace(), newTextDocument("resume", "이력서", "개발 경력"), source);
+  const document = newTextDocument("job", "예시 공고", "비즈니스 상태 전이 구현");
+  const company = CompanySchema.parse({ companyName: "예시 회사", requirements: [document.text] });
+  const work = createCompanyWork(initial.master!, document);
+  const stored = await mockStorage(page, { ...initial, works: [{ ...work, company, companySourceText: document.text,
+    intro: { oneLineIntro: "", shortIntro: "", longIntro: "기존 PDF 상단 요약", fitReasons: [], matchedSkills: [], gapNotes: [], missingButRelevant: [] },
+  }] });
+  await page.route("**/api/experience-discovery", (route) => {
+    const body = route.request().postDataJSON();
+    expect(body.projectIndex).toBe(0);
+    expect(body.requirement).toBe(document.text);
+    const result = body.messages.length === 0
+      ? { status: "question", message: "신고 관리 플랫폼에서 어떤 조건으로 신고 상태를 변경했나요?", draft: null }
+      : { status: "draft", message: "확인한 내용을 정리했습니다.", draft: null,
+          revision: { description: "관리자 검토 뒤 신고 상태를 변경하는 API를 개발했습니다.", summary: "관리자 검토 뒤 신고 상태를 변경하는 API를 구현했습니다." } };
+    return route.fulfill({ contentType: "text/event-stream", body: `event: result\ndata: ${JSON.stringify({ data: result })}\n\nevent: done\ndata: {"ok":true}\n\n` });
+  });
+  await page.goto(`/workspace/companies/${work.id}`);
+  const steps = page.getByRole("region", { name: "맞춤 편집 단계" });
+  await expect(steps.getByRole("heading", { level: 2 }).first()).toHaveText("공고에 맞춰 경험 보완");
+  await steps.getByRole("combobox", { name: "보완할 프로젝트" }).selectOption("0");
+  await steps.getByRole("button", { name: "새 질문 받기" }).click();
+  await expect(steps.getByText("신고 관리 플랫폼에서 어떤 조건으로 신고 상태를 변경했나요?")).toBeVisible();
+  await steps.getByRole("textbox", { name: "내 답변" }).fill("관리자 검토 뒤 상태를 변경했습니다.");
+  await steps.getByRole("button", { name: "답변 보내기" }).click();
+  const review = steps.getByRole("region", { name: "프로젝트와 첫 화면 요약 비교" });
+  await expect(review.getByText("신고 상태 관리 API를 개발했습니다.", { exact: true })).toBeVisible();
+  await expect(review.getByText("기존 PDF 상단 요약", { exact: true })).toBeVisible();
+  const edited = "관리자가 검토한 신고의 상태를 변경하는 API를 구현했습니다.";
+  await review.getByRole("textbox", { name: "프로젝트 설명 수정안" }).fill(edited);
+  expect(stored().works[0].resume?.projects[0].description).toBe(source.projects[0].description);
+  await review.getByRole("button", { name: "확인한 문구 반영" }).click();
+  await expect.poll(() => stored().works[0].resume?.projects[0].description).toBe(edited);
+  expect(stored().works[0].resume?.summary).toBe("관리자 검토 뒤 신고 상태를 변경하는 API를 구현했습니다.");
+  expect(stored().works[0].intro).toBeNull();
+  expect(stored().works[0].resume?.projects[0].highlights).toEqual(source.projects[0].highlights);
+  expect(stored().master?.resume).toEqual(source);
+  await page.getByRole("button", { name: "제출 내용 확인", exact: true }).click();
+  await expect(page.getByRole("region", { name: "제출 내용 확인 단계" })).toContainText("관리자 검토 뒤 신고 상태를 변경하는 API를 구현했습니다.");
+});
+
 test("원본 비교는 최초 원문과 편집본을 구분하고 댓글 보조 도구는 더보기에서 연다", async ({ page }) => {
   const document = newTextDocument("resume", "내 이력서.md", "최초 원문");
   document.text = "수정 중인 내용";

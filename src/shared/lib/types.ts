@@ -121,6 +121,7 @@ export interface ExperienceDiscoveryTurn {
   status: ExperienceDiscoveryStatus;
   message: string;
   draft: DiscoveredExperienceDraft | null;
+  revision?: { description: string; summary: string } | null;
 }
 
 export interface ExperienceDiscoverySession extends ExperienceDiscoveryTurn {

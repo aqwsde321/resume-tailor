@@ -1,7 +1,37 @@
 import { addDiscoveredExperienceToResume } from "@/entities/intro/model/experience-discovery";
-import { ResumeSchema } from "@/shared/lib/schemas";
-import type { DiscoveredExperienceDraft, Resume } from "@/shared/lib/types";
-import type { CompanyWork } from "./workspace";
+import { CompanySchema, ProjectEnrichmentRevisionSchema, ResumeProjectItemSchema, ResumeSchema } from "@/shared/lib/schemas";
+import type { Company, DiscoveredExperienceDraft, Intro, Resume } from "@/shared/lib/types";
+import type { z } from "zod";
+import type { CompanyWork, EnrichmentSchema } from "./workspace";
+
+type ProjectEnrichmentReview = NonNullable<z.infer<typeof EnrichmentSchema>["projectReview"]>;
+export type ProjectEnrichmentRevision = z.infer<typeof ProjectEnrichmentRevisionSchema>;
+
+export function getEnrichmentSummary(resume: Resume, intro: Intro | null): string {
+  return intro?.longIntro.trim() || intro?.shortIntro.trim() || intro?.oneLineIntro.trim() || resume.summary.trim();
+}
+
+export function isProjectEnrichmentCurrent(resume: Resume, company: Company | null | undefined, summary: string, review: ProjectEnrichmentReview): boolean {
+  const project = resume.projects[review.index];
+  return Boolean(project && company) && summary === review.summary &&
+    JSON.stringify(CompanySchema.parse(company)) === JSON.stringify(CompanySchema.parse(review.company)) &&
+    JSON.stringify(ResumeProjectItemSchema.parse(project)) === JSON.stringify(ResumeProjectItemSchema.parse(review.project));
+}
+
+export function applyProjectEnrichmentReview(work: CompanyWork, sessionId: string, draft: ProjectEnrichmentRevision) {
+  const resume = work.resume;
+  const review = work.enrichment.find(({ id, status }) => id === sessionId && status === "draft")?.projectReview;
+  const revision = ProjectEnrichmentRevisionSchema.safeParse(draft);
+  if (!resume || !review?.revision || !revision.success ||
+    !isProjectEnrichmentCurrent(resume, work.company, getEnrichmentSummary(resume, work.intro), review)) return undefined;
+
+  return ResumeSchema.parse({
+    ...resume,
+    summary: revision.data.summary,
+    projects: resume.projects.map((project, index) => index === review.index ? { ...project, description: revision.data.description } : project),
+  });
+}
+
 export function applyEnrichmentDrafts(resume: Resume, drafts: { target?: string; draft: DiscoveredExperienceDraft }[]): Resume {
   let result = structuredClone(resume);
   const unique = (items: string[]) => [...new Set(items.map((item) => item.trim()).filter(Boolean))];

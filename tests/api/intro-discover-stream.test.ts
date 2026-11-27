@@ -132,6 +132,22 @@ describe("POST /api/intro/discover/stream", () => {
     expect(runSkillJsonStream).not.toHaveBeenCalled();
   });
 
+  it("선택한 원본 프로젝트를 질문의 기준으로 보내고 답변 전에는 수정안을 거절한다", async () => {
+    const resume = { ...resumePayload, projects: [{ name: "신고 처리 플랫폼", description: "신고 상태 관리 API를 개발했습니다." }] };
+    const request = { resume, company: companyPayload, requirement: "비즈니스 상태 전이 구현", projectIndex: 0 };
+    const revision = { status: "draft", message: "답변을 반영했습니다.", draft: null, revision: { description: "관리자 승인 시 처리 상태를 변경했습니다.", summary: "신고 처리 상태 전이를 구현했습니다." } };
+    vi.mocked(runSkillJsonStream).mockResolvedValue(revision);
+
+    const premature = parseSse(await (await post(request)).text());
+    expect(premature.some(({ event }) => event === "result")).toBe(false);
+    const result = parseSse(await (await post({ ...request, messages: [{ role: "user", content: "관리자 승인 시에만 처리 상태를 변경했습니다." }] })).text());
+    expect(result.find(({ event }) => event === "result")?.data.data).toEqual(revision);
+    expect(vi.mocked(runSkillJsonStream).mock.calls[1]?.[0].inputText).toContain("[보완할 원본 프로젝트]");
+    expect(vi.mocked(runSkillJsonStream).mock.calls[1]?.[0].inputText.split("[보완할 원본 프로젝트]")[1]).toContain("신고 처리 플랫폼");
+
+    expect((await post({ ...request, projectIndex: 1 })).status).toBe(400);
+  });
+
   it("draft 단계에 형식이 틀린 경험을 받으면 SSE 오류를 반환한다", async () => {
     vi.mocked(runSkillJsonStream).mockResolvedValueOnce({
       status: "draft",

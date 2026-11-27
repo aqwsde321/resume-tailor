@@ -4,7 +4,7 @@ import { ApplicationSnapshotSchema } from "@/entities/application/model/applicat
 import { PDF_TEMPLATE_IDS } from "@/entities/pdf/model/templates";
 import { upgradeResultDraftMarkdown } from "./resume-markdown";
 import { z } from "zod";
-import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ResumeSchema } from "@/shared/lib/schemas";
+import { CompanySchema, DiscoveredExperienceDraftSchema, ExperienceDiscoveryMessageSchema, IntroSchema, ModelReasoningEffortSchema, ProjectEnrichmentRevisionSchema, ResumeProjectItemSchema, ResumeSchema } from "@/shared/lib/schemas";
 import { DocumentChangeSchema } from "./document-review";
 import { ConfirmedExperienceSchema } from "@/entities/resume/model/confirmed-experience";
 import { RequirementMatchSchema, ResumeTailoringPlanSchema } from "@/entities/resume/model/resume-tailoring";
@@ -48,6 +48,13 @@ export const EnrichmentSchema = z.object({
   requirement: z.string().optional(),
   status: z.enum(["question", "draft", "done"]).default("question"),
   messages: z.array(ExperienceDiscoveryMessageSchema),
+  projectReview: z.object({
+    index: z.number().int().nonnegative(),
+    project: ResumeProjectItemSchema,
+    company: CompanySchema,
+    summary: z.string(),
+    revision: ProjectEnrichmentRevisionSchema.optional(),
+  }).strict().optional(),
   drafts: z.array(z.object({ id: Id, draft: DiscoveredExperienceDraftSchema, target: z.string().optional(), status: z.enum(["pending", "accepted", "dismissed"]) }).strict()),
 }).strict();
 

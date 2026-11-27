@@ -28,7 +28,7 @@ const ResumeContactItemSchema = z
   })
   .strict();
 
-const ResumeProjectItemSchema = z
+export const ResumeProjectItemSchema = z
   .object({
     company: z.string().optional(),
     period: z.string().optional(),
@@ -109,19 +109,25 @@ export const DiscoveredExperienceDraftSchema = z
   })
   .strict();
 
+export const ProjectEnrichmentRevisionSchema = z.object({
+  description: z.string().trim().min(1).max(1600),
+  summary: z.string().trim().min(1).max(500),
+}).strict();
+
 export const ExperienceDiscoveryTurnSchema = z
   .object({
     status: z.enum(["question", "draft", "done"]),
     message: z.string().trim().min(1).max(1000),
-    draft: DiscoveredExperienceDraftSchema.nullable()
+    draft: DiscoveredExperienceDraftSchema.nullable(),
+    revision: ProjectEnrichmentRevisionSchema.nullable().optional(),
   })
   .strict()
   .superRefine((turn, context) => {
-    if (turn.status === "draft" && !turn.draft) {
+    if (turn.status === "draft" && Boolean(turn.draft) === Boolean(turn.revision)) {
       context.addIssue({ code: "custom", message: "draft 상태에는 경험 초안이 필요합니다.", path: ["draft"] });
     }
 
-    if (turn.status !== "draft" && turn.draft) {
+    if (turn.status !== "draft" && (turn.draft || turn.revision)) {
       context.addIssue({ code: "custom", message: "draft 외 상태에는 경험 초안을 넣을 수 없습니다.", path: ["draft"] });
     }
   });
@@ -308,4 +314,27 @@ export const experienceDiscoveryOutputSchema = {
       ]
     }
   }
+} as const;
+
+export const projectEnrichmentOutputSchema = {
+  ...experienceDiscoveryOutputSchema,
+  required: [...experienceDiscoveryOutputSchema.required, "revision"],
+  properties: {
+    ...experienceDiscoveryOutputSchema.properties,
+    draft: { type: "null" },
+    revision: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["description", "summary"],
+          properties: {
+            description: { type: "string", maxLength: 1600 },
+            summary: { type: "string", maxLength: 500 },
+          },
+        },
+        { type: "null" },
+      ],
+    },
+  },
 } as const;
